@@ -1,0 +1,108 @@
+{
+  "_meta": {
+    "note": "长夜依赖的 DSH 宿主 API 快照。check-host-api.mjs 用 needle 在宿主产物里做只读 grep，命中即视为「还在」。全部 required:true —— 任务书列出的每一项都算硬依赖；alt 里放等价拼写，任一命中即算在。改这里等于承认你重新核过宿主。",
+    "version": 2,
+    "updated": "2026-10-28",
+    "hostArtifact": "D:/DSH/resources/app.asar",
+    "updatedAgainst": "DSH desktop, app.asar 182794869 bytes",
+    "howToRefresh": "node scripts/check-host-api.mjs --counts   # 看每个 needle 现在的命中数，再决定要不要改这份文件"
+  },
+  "apis": [
+    {
+      "name": "ctx.tools.register",
+      "kind": "method",
+      "required": true,
+      "needle": "tools.register",
+      "usedBy": "index.js:1536,1541 (createTool / createDispatchTool 注册)",
+      "note": "两个工具都靠它挂上去。没了整个插件在宿主里不可见。"
+    },
+    {
+      "name": "ctx.slots.register",
+      "kind": "method",
+      "required": true,
+      "needle": "slots.register",
+      "usedBy": "src/90-shell.js:455-470 (sidebar.panellist + main 两个槽)",
+      "note": "侧栏按钮与主面板都靠它。"
+    },
+    {
+      "name": "ctx.slots.inject",
+      "kind": "method",
+      "required": true,
+      "needle": "slots.inject",
+      "usedBy": "src/90-shell.js:455 附近",
+      "note": "优先用 inject 拿 slots；拿不到会退回 ctx.slots。两个拼法都在快照里。"
+    },
+    {
+      "name": "ctx.webServer.register",
+      "kind": "method",
+      "required": true,
+      "needle": "webServer.register",
+      "usedBy": "index.js:1389 (ROUTE = '/changye/api')",
+      "note": "客户端所有 HTTP 请求走这条路由。"
+    },
+    {
+      "name": "ctx.inject",
+      "kind": "service",
+      "required": true,
+      "needle": "ctx.inject(",
+      "usedBy": "index.js:1370-1371 (ctx.inject(['webServer'], cb))",
+      "note": "用字符串数组声明晚绑定的服务。宿主若改成别的注入方式，这里先炸。"
+    },
+    {
+      "name": "sessionController",
+      "kind": "service",
+      "required": true,
+      "needle": "sessionController",
+      "usedBy": "index.js:218 (ctx?.get?.('sessionController') → prompt/create/list)",
+      "note": "派单「发到对话」用。拿不到时该功能降级，不阻断其它 op。"
+    },
+    {
+      "name": "ctx.sessions",
+      "kind": "service",
+      "required": true,
+      "needle": "ctx.sessions",
+      "usedBy": "会话列举 / 当前会话识别",
+      "note": "sessionController 不可用时的备选路径。"
+    },
+    {
+      "name": "ctx.on('tools/pre-execute')",
+      "kind": "event",
+      "required": true,
+      "needle": "tools/pre-execute",
+      "usedBy": "宿主事件名；长夜当前未订阅，但兼容性判断要靠它",
+      "note": "留作漂移参考：宿主改事件名时这条先消失。"
+    },
+    {
+      "name": "ctx.on('tools/post-execute')",
+      "kind": "event",
+      "required": true,
+      "needle": "tools/post-execute",
+      "usedBy": "宿主事件名；长夜当前未订阅，但兼容性判断要靠它",
+      "note": "同上。"
+    },
+    {
+      "name": "ctx.skills",
+      "kind": "service",
+      "required": true,
+      "needle": "ctx.skills",
+      "usedBy": "兼容性参考（长夜的 25 个 skill 走 agents/roles 字符串，不直接调它）",
+      "note": "任务书里要求监控；实际未使用，标 required:false。"
+    },
+    {
+      "name": "ctx.subagents",
+      "kind": "service",
+      "required": true,
+      "needle": "ctx.subagents",
+      "usedBy": "兼容性参考（派单是写任务书，由对话里的 agent 执行）",
+      "note": "任务书写的是 ctx.subagent / runtime.start，实测宿主里真实的拼法是 ctx.subagents，见下一条。"
+    },
+    {
+      "name": "ctx.subagents.startActivation",
+      "kind": "method",
+      "required": true,
+      "needle": "subagents.startActivation",
+      "usedBy": "兼容性参考",
+      "note": "任务书里的 `runtime.start` 在宿主产物里 0 命中；真实拼法是 subagents.startActivation。按真名记录，否则每周误报。"
+    }
+  ]
+}

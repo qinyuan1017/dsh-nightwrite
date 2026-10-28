@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# 长夜是零运行时依赖的插件：CI 里不装任何 node_modules，
+# 所有脚本都是纯 node（node:fs / node:path / 无第三方包）。
+# 任何一步非零退出都会让整个 job 失败（bash 的默认行为 + 不带 continue-on-error）。
+
+jobs:
+  test:
+    name: test · node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: node 版本
+        run: node -v
+
+      - name: build（src/*.js → lib/client.js，内含 node --check）
+        run: node build.mjs
+
+      - name: test/backend.mjs（112 op 分派 + store 落盘）
+        run: node test/backend.mjs
+
+      - name: test/smoke.mjs（假宿主迷你渲染器，18 页 + 组件）
+        run: node test/smoke.mjs
+
+      - name: test/hooks.mjs（客户端 hooks / store 行为）
+        run: node test/hooks.mjs
+
+      - name: test/skills-check.mjs（25 个 skill 的 frontmatter 与结构）
+        run: node test/skills-check.mjs
+
+      - name: test/wordcount-parity.mjs（服务端与客户端字数一致）
+        run: node test/wordcount-parity.mjs
+
+      - name: test/cssaudit.mjs（CSS 类名与源码交叉审计）
+        run: node test/cssaudit.mjs
+
+      - name: test/css-cover.mjs（样式覆盖率）
+        run: node test/css-cover.mjs
+
+      - name: test/check24.mjs（24 条界面增补标记齐全）
+        run: node test/check24.mjs
+
+      - name: test/qa.mjs（空壳控件 / undefined 上屏 / 无反馈按钮）
+        run: node test/qa.mjs
+
+      # calibrate 需要一份稿子才有统计意义：CI 里现造一个小语料。
+      # 没给目录时它会 exit 2（「没有找到稿子」），那是用法错误，不是回归。
+      - name: test/calibrate.mjs（规则阈值校准，自带语料）
+        run: |
+          CORPUS="$RUNNER_TEMP/corpus"
+          mkdir -p "$CORPUS"
+          cat > "$CORPUS/sample-01.txt" <<'TXT'
+          第一回 夜雨
+
+          他推门进来的时候，雨正下得急。屋里有盏灯，灯芯挑得很低，桌上摊着一卷没写完的纸。
+
+          你回来了。她说。声音不高，也没有抬头。
+
+          他把伞靠在门边，伞尖的水在地上积了一小片。院墙外头有人在喊，喊什么听不清，
+          只有那一声一声的调子顺着雨缝往里钻。
+
+          第二回 城头
+
+          天亮之前雨停了。城头上的人换了一班，甲叶上的水还没干，走一步响一下。
+
+          他站在垛口边上往下看，看见护城河的水涨了半尺，浮着一层断枝和草叶。
+          TXT
+          node test/calibrate.mjs "$CORPUS"
+
+  types:
+    name: types · d.ts 与 index.js 同步
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # 零依赖校验：types/index.d.ts 必须能从 index.js 的 READ_ONLY/WRITE_OPS 重新生成且完全相同。
+      # 有人加了 op 却忘了重新生成类型，这一步就会红。
+      - name: 校验 types/index.d.ts 未漂移
+        run: node scripts/gen-types.mjs --check

@@ -1,0 +1,74 @@
+{
+  "name": "dsh-changye",
+  "version": "0.1.0",
+  "description": "长夜 · AI 主写的小说工作台：驾驶舱 / 大纲 / 生产台 / 验收台（含提案·问题单）/ 世界库 / 侦察 / 设置",
+  "type": "module",
+  "main": "index.js",
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "keywords": [
+    "dsh-plugin",
+    "novel",
+    "ai-writing",
+    "workbench"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "lib/",
+    "src/",
+    "types/",
+    "locale/",
+    "agents/",
+    "skills/",
+    "docs/",
+    "build.mjs",
+    "cordis.patch.yml",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/backend.mjs && node test/smoke.mjs && node test/hooks.mjs && node test/skills-check.mjs && node test/wordcount-parity.mjs && node test/cssaudit.mjs && node test/css-cover.mjs && node test/check24.mjs && node test/qa.mjs",
+    "test:all": "node build.mjs && npm run test && node test/calibrate.mjs",
+    "lint": "eslint index.js lib/ src/ scripts/ test/ build.mjs",
+    "lint:fix": "eslint index.js lib/ src/ scripts/ test/ build.mjs --fix",
+    "format": "prettier --write \"index.js\" \"build.mjs\" \"lib/**/*.js\" \"src/**/*.js\" \"scripts/**/*.mjs\" \"test/**/*.mjs\" \"*.json\"",
+    "format:check": "prettier --check \"index.js\" \"build.mjs\" \"lib/**/*.js\" \"src/**/*.js\" \"scripts/**/*.mjs\" \"test/**/*.mjs\"",
+    "types": "node scripts/gen-types.mjs",
+    "types:check": "node scripts/gen-types.mjs --check",
+    "host-api": "node scripts/check-host-api.mjs --verbose",
+    "check": "node --check index.js && node --check lib/store.js && node --check lib/client.js",
+    "smoke": "node test/smoke.mjs",
+    "backend": "node test/backend.mjs",
+    "css": "node test/css-cover.mjs",
+    "skills": "node test/skills-check.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "prettier": "^3.9.10"
+  }
+}

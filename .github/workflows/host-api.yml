@@ -1,0 +1,41 @@
+name: host-api drift
+
+# 长夜贴着 DSH 宿主的私有契约写：ctx.tools.register / ctx.slots.register /
+# ctx.webServer.register / ctx.inject / ctx.sessions(Controller) / ctx.subagent(s) /
+# ctx.on('tools/pre-execute'|'tools/post-execute') / ctx.skills。
+# 宿主一升级这些名字就可能变，而插件只会在运行时炸成「装了但界面空白」。
+# 每周一跑一次，只在「名字真的不见了」时报警，不做版本对比、不读网络。
+
+on:
+  schedule:
+    # 每周一 03:00 UTC（北京时间 11:00）
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/host-api.json'
+      - 'scripts/check-host-api.mjs'
+      - '.github/workflows/host-api.yml'
+
+jobs:
+  drift:
+    name: check-host-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 脚本自己按平台找宿主：
+      #   1) $DSH_HOST_ROOT / $DSH_ASAR / --asar 参数指定的路径
+      #   2) Windows 的 D:\DSH\resources\app.asar（只读 grep -a，不解包）
+      #   3) 宿主类型声明（*.d.ts / dist 里的 .js）目录
+      # 一处都找不到时：宽限退出 0 —— CI（ubuntu）本来就没有宿主安装，
+      # 这不是漂移，是「没东西可查」。真正的漂移（文件在、名字没了）才 exit 1。
+      - name: 宿主 API 漂移检查
+        env:
+          DSH_ASAR: ${{ vars.DSH_ASAR }}
+          DSH_HOST_ROOT: ${{ vars.DSH_HOST_ROOT }}
+        run: node scripts/check-host-api.mjs --verbose
