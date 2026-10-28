@@ -105,9 +105,9 @@ dispatchPrompt({ ticket, roleInfo, task, materials })  // 生成给主对话的�
   status: 'running',
   currentStage: 'write',
   stages: [
-    { id: 'architect', kind: 'agent', role: 'changye-story-architect', title: '出这一回细纲', status: 'done',
+    { id: 'architect', kind: 'agent', role: 'nightwrite-story-architect', title: '出这一回细纲', status: 'done',
       dispatchId: 'dp_xxx', startedAt, finishedAt, reportId: 'rp_xxx' },
-    { id: 'write-chapter', kind: 'skill', skill: 'changye-write-chapter', title: '写作门禁核对', status: 'running' },
+    { id: 'write-chapter', kind: 'skill', skill: 'nightwrite-write-chapter', title: '写作门禁核对', status: 'running' },
     ...
   ],
   gate: { consistency: { fatal: 0, warn: 2 }, risk: 'low', engagement: 8, pass: true },
@@ -123,29 +123,29 @@ LNW 的 stage 是「动作步骤」（读账本 → 规划 → 写 → 校验）
 ```js
 const CHAIN_STAGES = {
   plan: [
-    { id: 'architect',    kind: 'agent', role: 'changye-story-architect',  title: '出总纲与细纲' },
-    { id: 'plan-novel',   kind: 'skill', skill: 'changye-plan-novel',      title: '规划手册核对' },
-    { id: 'story-bible',  kind: 'skill', skill: 'changye-story-bible',     title: '账本登记' },
+    { id: 'architect',    kind: 'agent', role: 'nightwrite-story-architect',  title: '出总纲与细纲' },
+    { id: 'plan-novel',   kind: 'skill', skill: 'nightwrite-plan-novel',      title: '规划手册核对' },
+    { id: 'story-bible',  kind: 'skill', skill: 'nightwrite-story-bible',     title: '账本登记' },
   ],
   write: [
-    { id: 'writer',       kind: 'agent', role: 'changye-chapter-writer',   title: '执笔正文' },
-    { id: 'write-chapter',kind: 'skill', skill: 'changye-write-chapter',   title: '写作门禁核对' },
-    { id: 'de-ai-style',  kind: 'skill', skill: 'changye-de-ai-style',     title: '去 AI 味' },
+    { id: 'writer',       kind: 'agent', role: 'nightwrite-chapter-writer',   title: '执笔正文' },
+    { id: 'write-chapter',kind: 'skill', skill: 'nightwrite-write-chapter',   title: '写作门禁核对' },
+    { id: 'de-ai-style',  kind: 'skill', skill: 'nightwrite-de-ai-style',     title: '去 AI 味' },
   ],
   audit: [
-    { id: 'consistency',  kind: 'agent', role: 'changye-consistency-checker', title: '事实审校' },
-    { id: 'continuity',   kind: 'skill', skill: 'changye-continuity-pass',    title: '连贯性复检' },
+    { id: 'consistency',  kind: 'agent', role: 'nightwrite-consistency-checker', title: '事实审校' },
+    { id: 'continuity',   kind: 'skill', skill: 'nightwrite-continuity-pass',    title: '连贯性复检' },
   ],
   reader: [
-    { id: 'reader',       kind: 'agent', role: 'changye-reader-proxy',     title: '读者体验' },
-    { id: 'reader-report',kind: 'skill', skill: 'changye-reader-report',   title: '体验报告' },
-    { id: 'drop-off',     kind: 'skill', skill: 'changye-drop-off-check',  title: '流失点定位' },
-    { id: 'engagement',   kind: 'skill', skill: 'changye-engagement-curve',title: '追读曲线' },
+    { id: 'reader',       kind: 'agent', role: 'nightwrite-reader-proxy',     title: '读者体验' },
+    { id: 'reader-report',kind: 'skill', skill: 'nightwrite-reader-report',   title: '体验报告' },
+    { id: 'drop-off',     kind: 'skill', skill: 'nightwrite-drop-off-check',  title: '流失点定位' },
+    { id: 'engagement',   kind: 'skill', skill: 'nightwrite-engagement-curve',title: '追读曲线' },
   ],
   revise: [
-    { id: 'rewrite',      kind: 'agent', role: 'changye-rewrite-specialist', title: '定向改写' },
-    { id: 'revision',     kind: 'skill', skill: 'changye-revision-pass',     title: '修订门禁' },
-    { id: 'recheck',      kind: 'agent', role: 'changye-consistency-checker',title: '回炉复检（不通过则打回）' },
+    { id: 'rewrite',      kind: 'agent', role: 'nightwrite-rewrite-specialist', title: '定向改写' },
+    { id: 'revision',     kind: 'skill', skill: 'nightwrite-revision-pass',     title: '修订门禁' },
+    { id: 'recheck',      kind: 'agent', role: 'nightwrite-consistency-checker',title: '回炉复检（不通过则打回）' },
   ],
 }
 ```
@@ -189,7 +189,7 @@ requireTicket(id, { role, projectId, runId, consume })
   id: 'rp_xxx',
   runId: 'run_a1b2c3',
   dispatchId: 'dp_xxx',
-  role: 'changye-reader-proxy',
+  role: 'nightwrite-reader-proxy',
   chapter: 42,
   status: 'submitted',
   // 结构化字段（服务端按角色模板解析）
@@ -225,18 +225,18 @@ requireTicket(id, { role, projectId, runId, consume })
 
 ### 1. 驾驶舱加「流水线」卡片（`src/20-cockpit.js`）
 
-位置：`cy-hero` 下方、`cy-action` 上方。有运行中的 run 才显示。
+位置：`nw-hero` 下方、`nw-action` 上方。有运行中的 run 才显示。
 
 ```
 ┌─ 第 42 回 · 写作链 ──────────── 2/3 ─┐
-│ ● 执笔正文            changye-chapter-writer  ✓ 2分18秒
-│ ● 写作门禁核对        changye-write-chapter   进行中
-│ ○ 去 AI 味            changye-de-ai-style
+│ ● 执笔正文            nightwrite-chapter-writer  ✓ 2分18秒
+│ ● 写作门禁核对        nightwrite-write-chapter   进行中
+│ ○ 去 AI 味            nightwrite-de-ai-style
 │                    [看详情] [暂停] [中止]
 └──────────────────────────────────────┘
 ```
 
-- 圆点三态复用现有 `.cy-dot-{level}` 配色思路
+- 圆点三态复用现有 `.nw-dot-{level}` 配色思路
 - 「看详情」跳新页
 - 无障碍：`role="list"` + 每行 `aria-label="阶段 2/3 进行中"`
 
@@ -288,24 +288,24 @@ requireTicket(id, { role, projectId, runId, consume })
 ```
 用户：写第 42 回
         ↓
-主对话：changye_run(start, { chapter: 42, chain: 'write' })
+主对话：nightwrite_run(start, { chapter: 42, chain: 'write' })
         → 界面驾驶舱立刻出现流水线卡（第 0 格 running）
         ↓
-主对话：changye_dispatch(role='changye-chapter-writer', stageId='writer', task='写第42回')
+主对话：nightwrite_dispatch(role='nightwrite-chapter-writer', stageId='writer', task='写第42回')
         → 拿到 dispatchId + 任务书
         ↓
 主对话：subagent 起子 agent，把任务书原样交给它
         ↓
-子 agent：读 agents/changye-chapter-writer.md → 读细纲 → 写 → chapter.save
-          → changye_report.submit(dispatchId, raw='【正文】…【引用设定清单】…')
+子 agent：读 agents/nightwrite-chapter-writer.md → 读细纲 → 写 → chapter.save
+          → nightwrite_report.submit(dispatchId, raw='【正文】…【引用设定清单】…')
         ↓
-主对话：changye_run(advance, { stageId: 'writer' })
+主对话：nightwrite_run(advance, { stageId: 'writer' })
         → 界面进度走一格，回执出现在「流水线」页
         ↓
 … 写手 → 门禁 → 去 AI 味 → 审校 → 读者 …
         ↓
-主对话：三道门全过 → changye_run(finish) + review.action(accept)
-        任一不过 → changye_run(advance 到 revise 链起点) 打回
+主对话：三道门全过 → nightwrite_run(finish) + review.action(accept)
+        任一不过 → nightwrite_run(advance 到 revise 链起点) 打回
 ```
 
 **用户只需要说一句话**，后面全自动。这和现在「用户得说『先派架构师』『再派写手』『现在查一致性』」是两回事。
@@ -324,9 +324,9 @@ requireTicket(id, { role, projectId, runId, consume })
 
 变成 **60 个**（读 22 / 写 38）。`readonly` 判定：`run.status/list/get`、`report.list/get` 进 READ，其余进 WRITE。
 
-新增 agent 工具 2 个（`changye_op` 保持单一入口，但给 agent 更明确的两个）：
-- `changye_report` —— 子 agent 交回执专用，强制 `dispatchId`
-- `changye_run` —— 主对话推进用
+新增 agent 工具 2 个（`nightwrite_op` 保持单一入口，但给 agent 更明确的两个）：
+- `nightwrite_report` —— 子 agent 交回执专用，强制 `dispatchId`
+- `nightwrite_run` —— 主对话推进用
 
 ---
 
@@ -341,7 +341,7 @@ requireTicket(id, { role, projectId, runId, consume })
 | **3** | 流水线页 + 驾驶舱卡 | 新建 `src/27-pipeline.js`，改 `20-cockpit.js` `10-core.js` `90-shell.js` `85-css.js` | 约 480 行 |
 | **4** | 验收台 AI 意见抽屉 + 测试 | 改 `40-review.js`，扩 `test/backend.mjs` `test/smoke.mjs` `test/qa.mjs` | 约 200 行 |
 
-外加：`agents/changye-coordinator.md` 里补一段「用 `changye_run` + `changye_report` 而不是自己记进度」，`README.md` 补流水线章节。
+外加：`agents/nightwrite-coordinator.md` 里补一段「用 `nightwrite_run` + `nightwrite_report` 而不是自己记进度」，`README.md` 补流水线章节。
 
 **总估**：新增约 1300 行，改约 400 行。
 

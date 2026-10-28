@@ -129,16 +129,16 @@ function StatusLamp({ toast }) {
     'button',
     {
       type: 'button',
-      className: `cy-lamp${run.writing ? ' on' : ''}`,
+      className: `nw-lamp${run.writing ? ' on' : ''}`,
       onClick: () => toast?.(`模拟：AI 正在写第 ${run.chapter} 回，已出 ${run.words} 字，${run.eta}后交稿`),
       title: '点一下看这一单的详情（演示数据）',
     },
-    h('span', { className: 'cy-lamp-dot' }),
+    h('span', { className: 'nw-lamp-dot' }),
     h(
       'span',
-      { className: 'cy-lamp-body' },
-      h('span', { className: 'cy-lamp-text' }, run.writing ? `正在写第 ${run.chapter} 回` : '队列空闲'),
-      h('span', { className: 'cy-lamp-sub' }, `${run.words}/${run.total} 字`),
+      { className: 'nw-lamp-body' },
+      h('span', { className: 'nw-lamp-text' }, run.writing ? `正在写第 ${run.chapter} 回` : '队列空闲'),
+      h('span', { className: 'nw-lamp-sub' }, `${run.words}/${run.total} 字`),
     ),
   )
 }
@@ -149,30 +149,30 @@ function DayBars({ days, target, toast }) {
   const peak = Math.max(target || 1, ...days.map((row) => row.w))
   return h(
     'div',
-    { className: 'cy-days' },
+    { className: 'nw-days' },
     h(
       'div',
-      { className: 'cy-days-head' },
+      { className: 'nw-days-head' },
       h('span', null, '近两周'),
-      h('span', { className: 'cy-hint' }, `达标 ${days.filter((row) => row.w >= target).length} 天 · 断更 ${days.filter((row) => row.w === 0).length} 天`),
+      h('span', { className: 'nw-hint' }, `达标 ${days.filter((row) => row.w >= target).length} 天 · 断更 ${days.filter((row) => row.w === 0).length} 天`),
     ),
     h(
       'div',
-      { className: 'cy-days-bars' },
+      { className: 'nw-days-bars' },
       days.map((row) => h(
         'button',
         {
           type: 'button',
           key: row.d,
-          className: `cy-day${row.w === 0 ? ' cy-day-off' : row.w >= target ? ' cy-day-ok' : ''}`,
+          className: `nw-day${row.w === 0 ? ' nw-day-off' : row.w >= target ? ' nw-day-ok' : ''}`,
           onClick: () => toast?.(`${row.d}：${row.w === 0 ? '没写' : `${row.w} 字`}`),
           title: `${row.d} · ${row.w} 字`,
         },
-        h('span', { className: 'cy-day-fill', style: { height: `${Math.max(4, (row.w / peak) * 100)}%` } }),
-        h('span', { className: 'cy-day-label' }, row.d.slice(3)),
+        h('span', { className: 'nw-day-fill', style: { height: `${Math.max(4, (row.w / peak) * 100)}%` } }),
+        h('span', { className: 'nw-day-label' }, row.d.slice(3)),
       )),
     ),
-    h('div', { className: 'cy-days-rule' }, h('span', null, `目标 ${target} 字/天`)),
+    h('div', { className: 'nw-days-rule' }, h('span', null, `目标 ${target} 字/天`)),
   )
 }
 
@@ -187,35 +187,35 @@ function ProgressTrack({ progress, volumes, toast }) {
     : [{ name: '全书', chapters: Math.max(1, Number(progress.total) || 1), done: Number(progress.chapter) || 0 }]
   return h(
     'div',
-    { className: 'cy-progress' },
+    { className: 'nw-progress' },
     h(
       'div',
-      { className: 'cy-progress-head' },
-      h('span', { className: 'cy-progress-num' }, `${fmtWords(progress.words)} / ${fmtWords(progress.target)} 字`),
-      h('span', { className: 'cy-progress-meta' }, `第 ${progress.chapter}/${progress.total} 回 · ${String(vols[0].name).split(' · ')[0]}`),
+      { className: 'nw-progress-head' },
+      h('span', { className: 'nw-progress-num' }, `${fmtWords(progress.words)} / ${fmtWords(progress.target)} 字`),
+      h('span', { className: 'nw-progress-meta' }, `第 ${progress.chapter}/${progress.total} 回 · ${String(vols[0].name).split(' · ')[0]}`),
     ),
     h(
       'div',
-      { className: 'cy-progress-track' },
+      { className: 'nw-progress-track' },
       vols.map((vol, index) => h(
         'button',
         {
           type: 'button',
           key: vol.name,
-          className: 'cy-progress-vol',
+          className: 'nw-progress-vol',
           style: { flexGrow: vol.chapters },
           onClick: () => toast?.(`${vol.name}：${vol.done}/${vol.chapters} 章已采纳`),
           title: `${vol.name} · ${vol.done}/${vol.chapters}`,
         },
-        h('span', { className: 'cy-progress-fill', style: { width: `${(vol.done / vol.chapters) * 100}%` } }),
-        index ? h('span', { className: 'cy-progress-sep' }) : null,
-        h('span', { className: 'cy-progress-name' }, vol.name.split(' · ')[1] || vol.name),
+        h('span', { className: 'nw-progress-fill', style: { width: `${(vol.done / vol.chapters) * 100}%` } }),
+        index ? h('span', { className: 'nw-progress-sep' }) : null,
+        h('span', { className: 'nw-progress-name' }, vol.name.split(' · ')[1] || vol.name),
       )),
     ),
     h(
       'div',
-      { className: 'cy-progress-foot' },
-      h('span', { className: 'cy-hint' }, `已完成 ${pct.toFixed(1)}% · 剩余约 ${Math.max(0, progress.total - progress.chapter)} 回`),
+      { className: 'nw-progress-foot' },
+      h('span', { className: 'nw-hint' }, `已完成 ${pct.toFixed(1)}% · 剩余约 ${Math.max(0, progress.total - progress.chapter)} 回`),
     ),
   )
 }
@@ -314,9 +314,9 @@ function CommandPalette({ projectId, onClose, go, toast }) {
     if (!hit) return
     onClose?.()
     if (hit.kind === 'chapter') {
-      // 命中段号通过 cy.openChapter / cy.openPara 带到验收台，那边会滚到并点亮那一段。
-      writeLS('cy.openChapter', String(hit.chapter))
-      if (Number.isFinite(hit.para)) writeLS('cy.openPara', String(hit.para))
+      // 命中段号通过 nw.openChapter / nw.openPara 带到验收台，那边会滚到并点亮那一段。
+      writeLS('nw.openChapter', String(hit.chapter))
+      if (Number.isFinite(hit.para)) writeLS('nw.openPara', String(hit.para))
       go?.('review')
       toast?.(`第 ${hit.chapter} 回 · 第 ${(Number(hit.para) || 0) + 1} 段`)
       return
@@ -342,7 +342,7 @@ function CommandPalette({ projectId, onClose, go, toast }) {
     {
       title: '命令与搜索',
       onClose,
-      footer: h('span', { className: 'cy-hint' }, '↑↓ 选 · Enter 执行 · Esc 关闭'),
+      footer: h('span', { className: 'nw-hint' }, '↑↓ 选 · Enter 执行 · Esc 关闭'),
     },
     h(Input, {
       value: q,
@@ -370,47 +370,47 @@ function CommandPalette({ projectId, onClose, go, toast }) {
     q.trim()
       ? h(
         'div',
-        { className: 'cy-cmdk-scope' },
+        { className: 'nw-cmdk-scope' },
         ['all', 'chapters', 'ledger', 'outline'].map((key) => h(
           'button',
           {
             type: 'button',
             key,
-            className: `cy-seg-btn${scope === key ? ' on' : ''}`,
+            className: `nw-seg-btn${scope === key ? ' on' : ''}`,
               'aria-pressed': scope === key ? 'true' : 'false',
             onClick: () => setScope(key),
           },
           { all: '全部', chapters: '正文', ledger: '账本', outline: '大纲' }[key],
         )),
-        searching ? h('span', { className: 'cy-hint' }, '搜索中…') : null,
-        truncated ? h('span', { className: 'cy-hint' }, '命中太多，只显示前 20 条') : null,
+        searching ? h('span', { className: 'nw-hint' }, '搜索中…') : null,
+        truncated ? h('span', { className: 'nw-hint' }, '命中太多，只显示前 20 条') : null,
       )
       : null,
     h(
       'div',
-      { className: 'cy-cmdk-list' },
+      { className: 'nw-cmdk-list' },
       rows.length
         ? rows.map((row, index) => (row.type === 'heading'
-          ? h('div', { className: 'cy-cmdk-head', key: `h${index}` }, row.text)
+          ? h('div', { className: 'nw-cmdk-head', key: `h${index}` }, row.text)
           : h(
             'button',
             {
               type: 'button',
               key: row.type === 'cmd' ? `c-${row.item.id}` : `s-${row.hit.kind}-${index}`,
-              className: `cy-cmdk-row${index === cursor ? ' on' : ''}${row.type === 'hit' ? ' cy-cmdk-hit' : ''}`,
+              className: `nw-cmdk-row${index === cursor ? ' on' : ''}${row.type === 'hit' ? ' nw-cmdk-hit' : ''}`,
               onMouseEnter: () => setCursor(index),
               onClick: () => run(row),
             },
-            h('span', { className: 'cy-cmdk-icon' }, row.type === 'cmd' ? row.item.icon : (row.hit.kind === 'ledger' ? '📒' : row.hit.kind === 'outline' ? '📐' : '📄')),
-            h('span', { className: 'cy-cmdk-label' }, row.type === 'cmd'
+            h('span', { className: 'nw-cmdk-icon' }, row.type === 'cmd' ? row.item.icon : (row.hit.kind === 'ledger' ? '📒' : row.hit.kind === 'outline' ? '📐' : '📄')),
+            h('span', { className: 'nw-cmdk-label' }, row.type === 'cmd'
               ? row.item.label
               : (row.hit.kind === 'chapter'
                 // 【12 条 #9】服务端现在回所有命中，还带 nth/count。
                 // 只显示「第 N 段」看不出这句在这章里出现了几次，补上「第 2/8 处」。
                 ? `第 ${row.hit.chapter} 回 · 第 ${(Number(row.hit.para) || 0) + 1} 段${Number(row.hit.count) > 1 ? ` · 第 ${row.hit.nth}/${row.hit.count} 处` : ''}`
                 : row.hit.title)),
-            h('span', { className: 'cy-cmdk-hint' }, row.type === 'cmd' ? row.item.hint : String(row.hit.quote ?? '').slice(0, 60)),
-            h('span', { className: 'cy-cmdk-go' }, '↵'),
+            h('span', { className: 'nw-cmdk-hint' }, row.type === 'cmd' ? row.item.hint : String(row.hit.quote ?? '').slice(0, 60)),
+            h('span', { className: 'nw-cmdk-go' }, '↵'),
           )))
         : h(Empty, null, hits ? '没有匹配。' : '没有匹配的命令。'),
     ),
@@ -422,14 +422,14 @@ function CommandPalette({ projectId, onClose, go, toast }) {
 function IntentChips({ onPick, toast }) {
   return h(
     'div',
-    { className: 'cy-chips' },
-    h('span', { className: 'cy-chips-label' }, '最近用过'),
+    { className: 'nw-chips' },
+    h('span', { className: 'nw-chips-label' }, '最近用过'),
     MOCK.intents.map((text, index) => h(
       'button',
       {
         type: 'button',
         key: index,
-        className: 'cy-chip',
+        className: 'nw-chip',
         title: text,
         onClick: () => {
           onPick?.(text)
@@ -466,17 +466,17 @@ function HeatStrip({
 }) {
   return h(
     'div',
-    { className: 'cy-heat' },
-    h('span', { className: 'cy-heat-title' }, '段'),
+    { className: 'nw-heat' },
+    h('span', { className: 'nw-heat-title' }, '段'),
     h(
       'div',
-      { className: 'cy-heat-track' },
+      { className: 'nw-heat-track' },
       paragraphs.map((para, index) => h(
         'button',
         {
           type: 'button',
           key: index,
-          className: `cy-heat-cell cy-heat-${heatTone(para, index, aiHits, issues)}${active === index ? ' on' : ''}`,
+          className: `nw-heat-cell nw-heat-${heatTone(para, index, aiHits, issues)}${active === index ? ' on' : ''}`,
           style: { flexGrow: Math.max(1, Math.min(6, Math.ceil(String(para).length / 60))) },
           onClick: () => onPick?.(index),
           title: `第 ${index + 1} 段 · ${String(para).length} 字 · ${heatTone(para, index, aiHits, issues) === 'bad' ? 'AI 味重' : heatTone(para, index, aiHits, issues) === 'warn' ? '节奏拖' : '好段'}`,
@@ -485,10 +485,10 @@ function HeatStrip({
     ),
     h(
       'div',
-      { className: 'cy-heat-legend' },
-      h('span', { className: 'cy-heat-key cy-heat-good' }, '好'),
-      h('span', { className: 'cy-heat-key cy-heat-warn' }, '拖'),
-      h('span', { className: 'cy-heat-key cy-heat-bad' }, 'AI 味'),
+      { className: 'nw-heat-legend' },
+      h('span', { className: 'nw-heat-key nw-heat-good' }, '好'),
+      h('span', { className: 'nw-heat-key nw-heat-warn' }, '拖'),
+      h('span', { className: 'nw-heat-key nw-heat-bad' }, 'AI 味'),
     ),
   )
 }
@@ -504,9 +504,9 @@ function SourcePop({ source, onClose }) {
       onClose,
       footer: h(Btn, { kind: 'ghost', small: true, onClick: onClose }, '知道了'),
     },
-    h('div', { className: 'cy-source' },
+    h('div', { className: 'nw-source' },
       h(Tag, { tone: 'amber' }, `第 ${source.chapter} 回`),
-      h('p', { className: 'cy-source-quote' }, `「${source.quote}」`),
-      h('p', { className: 'cy-hint' }, '演示数据：真出处由 changye_op 在写账本时一并记下 chapter + quote，点它就能跳回那一段。')),
+      h('p', { className: 'nw-source-quote' }, `「${source.quote}」`),
+      h('p', { className: 'nw-hint' }, '演示数据：真出处由 nightwrite_op 在写账本时一并记下 chapter + quote，点它就能跳回那一段。')),
   )
 }

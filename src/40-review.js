@@ -8,19 +8,19 @@ function ScoreBar({ score, gate }) {
   const tone = score >= 80 ? 'green' : score >= gate ? 'amber' : 'red'
   return h(
     'span',
-    { className: 'cy-score' },
+    { className: 'nw-score' },
     h(Bar, { value: score, max: 100, tone }),
-    h('em', { className: `cy-score-n cy-score-${scoreTone(score)}` }, score || '—'),
+    h('em', { className: `nw-score-n nw-score-${scoreTone(score)}` }, score || '—'),
   )
 }
 
 function ReviewList({ chapters, gate, onOpen, selected }) {
   return h(
     'div',
-    { className: 'cy-rv-list' },
+    { className: 'nw-rv-list' },
     h(
       'div',
-      { className: 'cy-rv-head' },
+      { className: 'nw-rv-head' },
       h('span', null, '章'),
       h('span', null, '标题'),
       h('span', null, '状态'),
@@ -34,18 +34,18 @@ function ReviewList({ chapters, gate, onOpen, selected }) {
         {
           type: 'button',
           key: row.chapter,
-          className: `cy-rv-row${selected === row.chapter ? ' on' : ''}`,
+          className: `nw-rv-row${selected === row.chapter ? ' on' : ''}`,
           onClick: () => onOpen(row.chapter),
         },
-        h('span', { className: 'cy-rv-n' }, row.chapter),
-        h('span', { className: 'cy-rv-title' }, row.title || ''),
+        h('span', { className: 'nw-rv-n' }, row.chapter),
+        h('span', { className: 'nw-rv-title' }, row.title || ''),
         h('span', null, h(Tag, { tone: STATUS_TONE[row.status] || 'grey' }, STATUS_LABEL[row.status] || row.status)),
-        h('span', { className: 'cy-rv-words' }, row.words),
+        h('span', { className: 'nw-rv-words' }, row.words),
         h('span', null, h(ScoreBar, { score: row.score, gate })),
         h(
           'span',
-          { className: 'cy-rv-issues' },
-          row.issues ? h(Tag, { tone: 'amber' }, `${row.issues}`) : h('span', { className: 'cy-hint' }, '—'),
+          { className: 'nw-rv-issues' },
+          row.issues ? h(Tag, { tone: 'amber' }, `${row.issues}`) : h('span', { className: 'nw-hint' }, '—'),
           row.violations ? h(Tag, { tone: 'red' }, `违规 ${row.violations}`) : null,
         ),
       ))
@@ -63,19 +63,19 @@ function IssueRow({
     {
       type: 'button',
       // 【24 条 #14】点问题 → 正文那句亮起来。问题在右、正文在左，不联动就全靠眼睛找。
-      className: `cy-issue${active ? ' cy-issue-on' : ''}`,
+      className: `nw-issue${active ? ' nw-issue-on' : ''}`,
       onClick: () => onPick?.(issue),
       title: issue.quote ? '点一下，跳到正文里这句话' : '这条没有引用原文',
     },
-    h('span', { className: 'cy-issue-n' }, String(index + 1).padStart(2, '0')),
+    h('span', { className: 'nw-issue-n' }, String(index + 1).padStart(2, '0')),
     h(Tag, { tone }, label),
     h(
       'span',
-      { className: 'cy-issue-body' },
-      h('span', { className: 'cy-issue-text' }, issue.text || ''),
-      issue.quote ? h('span', { className: 'cy-issue-quote' }, `「${issue.quote}」`) : null,
+      { className: 'nw-issue-body' },
+      h('span', { className: 'nw-issue-text' }, issue.text || ''),
+      issue.quote ? h('span', { className: 'nw-issue-quote' }, `「${issue.quote}」`) : null,
     ),
-    issue.severity ? h('span', { className: 'cy-issue-sev' }, issue.severity) : null,
+    issue.severity ? h('span', { className: 'nw-issue-sev' }, issue.severity) : null,
   )
 }
 
@@ -127,13 +127,13 @@ function ReviewDetail({
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty])
 
-  // Ctrl+K 搜到的段号（cy.openPara）要能在正文里落地：进来就切段视图、滚到那段、点亮。
+  // Ctrl+K 搜到的段号（nw.openPara）要能在正文里落地：进来就切段视图、滚到那段、点亮。
   // 放在 dirty 之后，且不覆盖用户正在编的稿子（text 由 dirty 守着）。
   useEffect(() => {
     if (!chapter) return
-    const raw = readLS('cy.openPara', '')
+    const raw = readLS('nw.openPara', '')
     if (raw === '') return
-    writeLS('cy.openPara', '')
+    writeLS('nw.openPara', '')
     const at = Number(raw)
     if (!Number.isFinite(at) || at < 0) return
     const bodyNow = String(ch.data?.text ?? '').trim() ? String(ch.data.text) : MOCK.reviewText.join('\n')
@@ -321,24 +321,24 @@ function ReviewDetail({
 
   return h(
     'div',
-    { className: `cy-rv-detail${readMode ? ' cy-rv-read' : ''}` },
+    { className: `nw-rv-detail${readMode ? ' nw-rv-read' : ''}` },
     h(
       'div',
-      { className: 'cy-rv-detail-head' },
+      { className: 'nw-rv-detail-head' },
       h('div', null,
         h('h3', null, `第 ${chapter} 回`),
-        h('span', { className: 'cy-hint' },
+        h('span', { className: 'nw-hint' },
           `${liveWords}${plan ? ` / ${plan}` : ''} 字${dirty ? ' · 未保存' : ''} · ${STATUS_LABEL[meta.status] || meta.status || '草稿'} · 共 ${paras.length} 段`)),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         // 【12 条 #2】自动保存状态要说出来：作者得知道「不用管，它自己会存」。
-        h('span', { className: `cy-hint cy-save-state${dirty ? ' cy-dirty' : ''}` },
+        h('span', { className: `nw-hint nw-save-state${dirty ? ' nw-dirty' : ''}` },
           dirty
             ? (autosave ? '改动未保存 · 4 秒后自动存' : '改动未保存')
             : (savedAt ? `已保存 ${savedAt}` : '已保存')),
         // 【24 条 #15】键盘提示直接印在按钮上，不然没人知道有快捷键。
-        readMode ? null : h('span', { className: 'cy-hint cy-keys' }, 'J/K 换章 · A 采纳 · R 废弃'),
+        readMode ? null : h('span', { className: 'nw-hint nw-keys' }, 'J/K 换章 · A 采纳 · R 废弃'),
         h(Btn, { small: true, kind: 'ghost', onClick: () => onNav?.(-1), title: '上一章（K）' }, 'K ←'),
         h(Btn, { small: true, kind: 'ghost', onClick: () => onNav?.(1), title: '下一章（J）' }, 'J →'),
         // 【12 条 #11】阅读模式：只留正文，把两侧全收起来。
@@ -423,16 +423,16 @@ function ReviewDetail({
     ),
     h(
       'div',
-      { className: 'cy-rv-body' },
+      { className: 'nw-rv-body' },
       h(
         'div',
-        { className: 'cy-rv-doc' },
+        { className: 'nw-rv-doc' },
         h(
           'div',
-          { className: 'cy-rv-docbar' },
+          { className: 'nw-rv-docbar' },
           h(
             'div',
-            { className: 'cy-seg' },
+            { className: 'nw-seg' },
             [
               { value: 'doc', label: '段落视图' },
               { value: 'edit', label: '编辑正文' },
@@ -441,7 +441,7 @@ function ReviewDetail({
               {
                 type: 'button',
                 key: item.value,
-                className: `cy-seg-btn${mode === item.value ? ' on' : ''}`,
+                className: `nw-seg-btn${mode === item.value ? ' on' : ''}`,
               'aria-pressed': mode === item.value ? 'true' : 'false',
                 onClick: () => setMode(item.value),
               },
@@ -452,11 +452,11 @@ function ReviewDetail({
           // 不在编辑模式时点它会先把编辑器打开 —— 否则按钮看起来像坏了。
           h(
             'div',
-            { className: 'cy-rv-undo' },
+            { className: 'nw-rv-undo' },
             h(Btn, {
               small: true,
               kind: 'ghost',
-              className: 'cy-undo-btn',
+              className: 'nw-undo-btn',
               disabled: !editor.canUndo && mode === 'edit',
               title: '撤销上一步（Ctrl+Z）',
               'aria-label': '撤销',
@@ -477,7 +477,7 @@ function ReviewDetail({
             h(Btn, {
               small: true,
               kind: 'ghost',
-              className: 'cy-redo-btn',
+              className: 'nw-redo-btn',
               disabled: !editor.canRedo && mode === 'edit',
               title: '重做（Ctrl+Shift+Z）',
               'aria-label': '重做',
@@ -495,25 +495,25 @@ function ReviewDetail({
                 }
               },
             }, '↷ 重做'),
-            h('span', { className: 'cy-undo-n', title: '撤销栈深度' }, mode === 'edit' ? `${editor.steps} 步可退` : '未在编辑'),
+            h('span', { className: 'nw-undo-n', title: '撤销栈深度' }, mode === 'edit' ? `${editor.steps} 步可退` : '未在编辑'),
           ),
           quotePick
-            ? h('span', { className: 'cy-rv-pick' }, `盯住：${quotePick.text}`)
-            : h('span', { className: 'cy-hint' }, '点右边的「#13」彩带格子或问题，正文会跟着亮'),
+            ? h('span', { className: 'nw-rv-pick' }, `盯住：${quotePick.text}`)
+            : h('span', { className: 'nw-hint' }, '点右边的「#13」彩带格子或问题，正文会跟着亮'),
         ),
         // 【24 条 #13】正文右侧彩带：每段一格，红=AI 味重、橙=节奏拖、绿=好段。点格子滚过去。
         // 颜色来自 chapter.aistyle 扫词表的真命中（style.data.aiHits），不是按段序号染色。
-        h('div', { className: 'cy-heat' },
-          h('span', { className: 'cy-heat-title' }, '段'),
+        h('div', { className: 'nw-heat' },
+          h('span', { className: 'nw-heat-title' }, '段'),
           h(
             'div',
-            { className: 'cy-heat-track' },
+            { className: 'nw-heat-track' },
             paras.map((item, index) => h(
               'button',
               {
                 type: 'button',
                 key: index,
-                className: `cy-heat-cell cy-heat-${heatTone(item, index, style.data?.hits, issues)}${para === index ? ' on' : ''}`,
+                className: `nw-heat-cell nw-heat-${heatTone(item, index, style.data?.hits, issues)}${para === index ? ' on' : ''}`,
                 style: { flexGrow: Math.max(1, Math.min(6, Math.ceil(String(item).length / 60))) },
                 title: `第 ${index + 1} 段 · ${String(item).length} 字 · ${heatTone(item, index, style.data?.hits, issues) === 'bad' ? 'AI 味重' : heatTone(item, index, style.data?.hits, issues) === 'warn' ? '节奏拖' : '好段'}`,
                 onClick: () => {
@@ -531,13 +531,13 @@ function ReviewDetail({
           ),
           h(
             'div',
-            { className: 'cy-heat-legend' },
-            h('span', { className: 'cy-heat-key cy-heat-good' }, '好'),
-            h('span', { className: 'cy-heat-key cy-heat-warn' }, '拖'),
-            h('span', { className: 'cy-heat-key cy-heat-bad' }, 'AI 味'),
+            { className: 'nw-heat-legend' },
+            h('span', { className: 'nw-heat-key nw-heat-good' }, '好'),
+            h('span', { className: 'nw-heat-key nw-heat-warn' }, '拖'),
+            h('span', { className: 'nw-heat-key nw-heat-bad' }, 'AI 味'),
             // 密度是「每千字命中数」：长短章才能横着比。
             style.data
-              ? h('span', { className: 'cy-heat-density' }, `AI 味 ${style.data.density ?? 0}/千字 · 词表 ${style.data.lexicon ?? 0} 条`)
+              ? h('span', { className: 'nw-heat-density' }, `AI 味 ${style.data.density ?? 0}/千字 · 词表 ${style.data.lexicon ?? 0} 条`)
               : null,
           ),
         ),
@@ -552,7 +552,7 @@ function ReviewDetail({
           })
           : h(
             'div',
-            { className: 'cy-para-list' },
+            { className: 'nw-para-list' },
             paras.map((item, index) => h(
               // 段落本身就是按钮：以前是 <p onClick>，Tab 走不到、回车按不动，
               // 键盘用户完全用不了「点段落定位」这条主路径。
@@ -561,18 +561,18 @@ function ReviewDetail({
                 type: 'button',
                 key: index,
                 ref: (node) => { paraRefs.current[index] = node },
-                className: `cy-para cy-para-${heatTone(item, index, style.data?.hits, issues)}${para === index ? ' cy-para-on' : ''}`,
+                className: `nw-para nw-para-${heatTone(item, index, style.data?.hits, issues)}${para === index ? ' nw-para-on' : ''}`,
                 'aria-pressed': para === index ? 'true' : 'false',
                 'aria-label': `第 ${index + 1} 段${para === index ? '（已选中）' : ''}`,
                 onClick: () => setPara(index),
               },
-              h('span', { className: 'cy-para-n' }, String(index + 1)),
+              h('span', { className: 'nw-para-n' }, String(index + 1)),
               item,
             )),
           ),
         h(
           'div',
-          { className: 'cy-rv-acts' },
+          { className: 'nw-rv-acts' },
           h(Btn, { kind: 'primary', onClick: () => act('accept'), disabled: busy }, '✓ 通过并采纳 (A)'),
           h(Btn, { kind: 'ghost', onClick: () => act('rerun'), disabled: busy }, '↻ 打回 · 重跑'),
           h(Btn, { kind: 'ghost', onClick: () => act('manual'), disabled: busy }, '✋ 打回 · 人工修'),
@@ -582,13 +582,13 @@ function ReviewDetail({
       // 【12 条 #11】阅读模式把整个右侧栏收起来：只看正文。
       readMode ? null : h(
         'div',
-        { className: 'cy-rv-side' },
+        { className: 'nw-rv-side' },
         h(
           Card,
           { title: '评分明细' },
           h(
             'div',
-            { className: 'cy-score-grid' },
+            { className: 'nw-score-grid' },
             [
               ['阅读', scores.reader],
               ['逻辑', scores.logic],
@@ -596,47 +596,47 @@ function ReviewDetail({
               ['节奏', scores.rhythm],
             ].map(([label, value]) => h(
               'span',
-              { className: 'cy-score-cell', key: label },
+              { className: 'nw-score-cell', key: label },
               h('em', null, value ?? '—'),
               h('span', null, label),
             )),
           ),
-          h('div', { className: 'cy-score-total' }, h('span', null, '总分'), h(ScoreBar, { score: meta.score ?? 0, gate })),
+          h('div', { className: 'nw-score-total' }, h('span', null, '总分'), h(ScoreBar, { score: meta.score ?? 0, gate })),
         ),
         h(
           Card,
-          { title: '问题清单', extra: h('span', { className: 'cy-card-badge' }, `${issues.length}`) },
+          { title: '问题清单', extra: h('span', { className: 'nw-card-badge' }, `${issues.length}`) },
           issues.length
-            ? h('div', { className: 'cy-issues' }, issues.map((issue, index) => h(IssueRow, {
+            ? h('div', { className: 'nw-issues' }, issues.map((issue, index) => h(IssueRow, {
               issue, index, key: index, active: quotePick === issue, onPick: pickIssue,
             })))
             : h(Empty, null, '没有问题。'),
         ),
         h(
           Card,
-          { title: '违规清单', extra: h('span', { className: 'cy-card-badge' }, `${violations.length}`) },
+          { title: '违规清单', extra: h('span', { className: 'nw-card-badge' }, `${violations.length}`) },
           violations.length
-            ? h('div', { className: 'cy-issues' }, violations.map((row, index) => h(
+            ? h('div', { className: 'nw-issues' }, violations.map((row, index) => h(
               'div',
-              { className: 'cy-issue cy-issue-violation', key: index },
-              h('span', { className: 'cy-issue-n' }, String(index + 1).padStart(2, '0')),
+              { className: 'nw-issue nw-issue-violation', key: index },
+              h('span', { className: 'nw-issue-n' }, String(index + 1).padStart(2, '0')),
               h(Tag, { tone: 'red' }, '硬规则'),
-              h('span', { className: 'cy-issue-body' }, h('span', { className: 'cy-issue-text' }, row.text ?? row.rule ?? String(row))),
+              h('span', { className: 'nw-issue-body' }, h('span', { className: 'nw-issue-text' }, row.text ?? row.rule ?? String(row))),
             )))
             : h(Empty, null, '没有违规。'),
         ),
         h(
           Card,
-          { title: '历史版本', extra: h('span', { className: 'cy-card-badge' }, `${hist.data?.versions?.length ?? 0}`) },
-          h('div', { className: 'cy-hist-ver' },
-            h('p', { className: 'cy-hint' }, hist.data?.versions?.length
+          { title: '历史版本', extra: h('span', { className: 'nw-card-badge' }, `${hist.data?.versions?.length ?? 0}`) },
+          h('div', { className: 'nw-hist-ver' },
+            h('p', { className: 'nw-hint' }, hist.data?.versions?.length
               ? `每次覆盖前自动留底，保留最近 ${hist.data?.keep ?? 20} 版。回滚本身也会留底，滚错了还能滚回来。`
               : '还没有历史版本 —— 第一次覆盖这章之后才有。'),
             (hist.data?.versions ?? []).slice(0, 8).map((row) => h(
               'div',
-              { className: 'cy-ver-row', key: row.name },
-              h('span', { className: 'cy-ver-at' }, String(row.at ?? '').replace('T', ' ').slice(0, 15)),
-              h('span', { className: 'cy-ver-w' }, `${row.words} 字`),
+              { className: 'nw-ver-row', key: row.name },
+              h('span', { className: 'nw-ver-at' }, String(row.at ?? '').replace('T', ' ').slice(0, 15)),
+              h('span', { className: 'nw-ver-w' }, `${row.words} 字`),
               h(Btn, {
                 small: true,
                 kind: 'ghost',
@@ -660,7 +660,7 @@ function ReviewDetail({
             )),
             // 回滚前的当前稿也在历史里，所以才敢给这个按钮。
             hist.data?.versions?.length
-              ? h('p', { className: 'cy-hint' }, '回滚后可再从列表里选回原来那版。')
+              ? h('p', { className: 'nw-hint' }, '回滚后可再从列表里选回原来那版。')
               : null,
           ),
         ),
@@ -668,7 +668,7 @@ function ReviewDetail({
           Card,
           { title: '上下文审计' },
           meta.contextAudit
-            ? h('pre', { className: 'cy-audit' }, String(meta.contextAudit))
+            ? h('pre', { className: 'nw-audit' }, String(meta.contextAudit))
             : h(Empty, null, '这一章没留下上下文审计记录。'),
         ),
         // 【第 1 批】文风校验面板住在右栏：改稿时眼睛盯着正文，
@@ -739,16 +739,16 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
   const [tab, setTab] = useState('chapters')
   // 别的页（问题单 / 逾期伏笔）想直接开某一章，就写这个键再切页；这里读一次就清掉。
   const [open, setOpenState] = useState(() => {
-    const raw = readLS('cy.openChapter', '')
+    const raw = readLS('nw.openChapter', '')
     return raw ? Number(raw) || null : null
   })
   const [filter, setFilter] = useState('review')
   const gate = Number(project?.qualityGate ?? 70)
 
   useEffect(() => {
-    const raw = readLS('cy.openChapter', '')
+    const raw = readLS('nw.openChapter', '')
     if (!raw) return
-    writeLS('cy.openChapter', '')
+    writeLS('nw.openChapter', '')
     setTab('chapters')
     setOpenState(Number(raw) || null)
   }, [refreshKey])
@@ -786,19 +786,19 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
 
   const head = h(
     'div',
-    { className: 'cy-rv-bar' },
+    { className: 'nw-rv-bar' },
     h(
       'div',
-      { className: 'cy-actions' },
+      { className: 'nw-actions' },
       h(
         'div',
-        { className: 'cy-seg' },
+        { className: 'nw-seg' },
         TABS.map((item) => h(
           'button',
           {
             type: 'button',
             key: item.value,
-            className: `cy-seg-btn${tab === item.value ? ' on' : ''}`,
+            className: `nw-seg-btn${tab === item.value ? ' on' : ''}`,
               'aria-pressed': tab === item.value ? 'true' : 'false',
             onClick: () => {
               setTab(item.value)
@@ -811,18 +811,18 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
       tab === 'chapters'
         ? h(
           'div',
-          { className: 'cy-seg' },
+          { className: 'nw-seg' },
           FILTERS.map((item) => h(
             'button',
             {
               type: 'button',
               key: item.value,
-              className: `cy-seg-btn${filter === item.value ? ' on' : ''}`,
+              className: `nw-seg-btn${filter === item.value ? ' on' : ''}`,
               'aria-pressed': filter === item.value ? 'true' : 'false',
               onClick: () => setFilter(item.value),
             },
             item.label,
-            h('span', { className: 'cy-seg-n' }, String(
+            h('span', { className: 'nw-seg-n' }, String(
               item.value === 'all' ? chapters.length
                 : item.value === 'low' ? lowCount
                   : chapters.filter((row) => row.status === item.value).length,
@@ -831,7 +831,7 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
         )
         : null,
     ),
-    h('span', { className: 'cy-hint' }, tab === 'chapters'
+    h('span', { className: 'nw-hint' }, tab === 'chapters'
       ? `质检门槛 ${gate} 分 · 共 ${chapters.length} 章 · ${pending} 章等你拍板`
       : `质检门槛 ${gate} 分`),
   )
@@ -883,5 +883,5 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
         })
         : h(ReviewList, { chapters: rows, gate, onOpen: setOpenState, selected: open }))
 
-  return h('div', { className: 'cy-page cy-review' }, head, body)
+  return h('div', { className: 'nw-page nw-review' }, head, body)
 }

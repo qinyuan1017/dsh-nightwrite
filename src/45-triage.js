@@ -13,6 +13,9 @@ const PROPOSAL_TONE = {
   pending: { label: '待批', tone: 'amber' },
   accepted: { label: '已采纳', tone: 'green' },
   rejected: { label: '已驳回', tone: 'red' },
+  // 过期不是失败：正文被改过，提案指的段落已经不在了。
+  // 独立一档而不是塞进 rejected —— 驳回是人不同意，过期是稿子变了。
+  outdated: { label: '已过期', tone: 'grey' },
 }
 
 const PROBLEM_TONES = {
@@ -30,21 +33,27 @@ const PROBLEM_STATUS_LABEL = { open: '未修', fixed: '已修', ignored: '已忽
 const PROBLEM_STATUS_TONE = { open: 'amber', fixed: 'green', ignored: 'grey' }
 
 function DiffRow({ diff, index }) {
+  // 段落地址：c0012p03 = 第 12 回第 3 段。服务端保存提案时就把它钉下来了，
+  // 采纳时只改这一段——同一句话在别处出现也不会改错。
+  const pid = diff?.anchor?.pid ? String(diff.anchor.pid) : ''
+  const stale = diff?.applicable === false
   return h(
     'div',
-    { className: 'cy-diff' },
-    h('span', { className: 'cy-diff-n' }, String(index + 1).padStart(2, '0')),
+    { className: `nw-diff${stale ? ' nw-diff-stale' : ''}` },
+    h('span', { className: 'nw-diff-n' }, String(index + 1).padStart(2, '0')),
+    pid ? h('span', { className: 'nw-diff-pid', title: stale ? '这一段已经对不上了' : '这条改动只动这一段' }, pid) : null,
+    stale ? h('span', { className: 'nw-diff-tag-stale' }, '对不上') : null,
     h(
       'div',
-      { className: 'cy-diff-cols' },
-      h('div', { className: 'cy-diff-cell cy-diff-before' },
-        h('span', { className: 'cy-diff-tag' }, '改前'),
+      { className: 'nw-diff-cols' },
+      h('div', { className: 'nw-diff-cell nw-diff-before' },
+        h('span', { className: 'nw-diff-tag' }, '改前'),
         h('p', null, diff.before || '（新增，原处为空）')),
-      h('div', { className: 'cy-diff-cell cy-diff-after' },
-        h('span', { className: 'cy-diff-tag' }, '改后'),
+      h('div', { className: 'nw-diff-cell nw-diff-after' },
+        h('span', { className: 'nw-diff-tag' }, '改后'),
         h('p', null, diff.after || '（删除这段）')),
     ),
-    diff.why ? h('span', { className: 'cy-diff-why' }, diff.why) : null,
+    diff.why ? h('span', { className: 'nw-diff-why' }, diff.why) : null,
   )
 }
 
@@ -63,30 +72,33 @@ function ProposalCard({
   const risky = preview.data?.rows?.filter((item) => item.ambiguous || item.missing) ?? []
   return h(
     'div',
-    { className: `cy-prop cy-prop-${row.status}` },
+    { className: `nw-prop nw-prop-${row.status}` },
     h(
       'button',
-      { type: 'button', className: 'cy-prop-head', onClick: () => setOpen(!open) },
-      h('span', { className: 'cy-prop-n' }, `第 ${row.chapter} 回`),
-      h('span', { className: 'cy-prop-title' }, row.title),
+      { type: 'button', className: 'nw-prop-head', onClick: () => setOpen(!open) },
+      h('span', { className: 'nw-prop-n' }, `第 ${row.chapter} 回`),
+      h('span', { className: 'nw-prop-title' }, row.title),
       h(Tag, { tone: row.kind === 'rewrite' ? 'red' : 'grey' }, row.kind === 'rewrite' ? '整章重写' : `${row.diffs.length} 处替换`),
       h(Tag, { tone: tone.tone }, tone.label),
-      h('span', { className: 'cy-prop-go' }, open ? '▾' : '▸'),
+      // 过期的条数直接摆在头上：点进去才发现对不上，等于白点。
+      row.staleCount ? h(Tag, { tone: 'red' }, `过期 ${row.staleCount}`) : null,
+      h('span', { className: 'nw-prop-go' }, open ? '▾' : '▸'),
     ),
-    row.summary ? h('p', { className: 'cy-hint' }, row.summary) : null,
+    row.summary ? h('p', { className: 'nw-hint' }, row.summary) : null,
+    row.hint ? h('p', { className: 'nw-prop-stale-hint' }, row.hint) : null,
     open
       ? h(
         'div',
-        { className: 'cy-prop-body' },
+        { className: 'nw-prop-body' },
         risky.length
           ? h(
             'div',
-            { className: 'cy-prop-warn' },
-            h('span', { className: 'cy-prop-warn-icon' }, '⚠'),
+            { className: 'nw-prop-warn' },
+            h('span', { className: 'nw-prop-warn-icon' }, '⚠'),
             h('span', null, `${risky.length} 处「改前」在正文里不唯一或找不到，采纳会改错位置：`),
             h(
               'ul',
-              { className: 'cy-prop-warn-list' },
+              { className: 'nw-prop-warn-list' },
               risky.map((item) => h('li', { key: item.index },
                 `第 ${item.index + 1} 处 · ${item.missing ? '正文里找不到这句' : `正文里有 ${item.count} 处相同`} ·「${String(item.before ?? '').slice(0, 30)}」`)),
             ),
@@ -94,17 +106,17 @@ function ProposalCard({
           : null,
         row.diffs.map((diff, index) => h(DiffRow, { diff, index, key: index })),
         row.status === 'accepted'
-          ? h('p', { className: 'cy-hint' }, `已写回正文：命中 ${row.applied ?? 0} 处${(row.missed ?? []).length ? `，未命中 ${row.missed.length} 处` : ''}`)
+          ? h('p', { className: 'nw-hint' }, `已写回正文：命中 ${row.applied ?? 0} 处${(row.missed ?? []).length ? `，未命中 ${row.missed.length} 处` : ''}`)
           : null,
       )
       : null,
     h(
       'div',
-      { className: 'cy-prop-foot' },
-      h('span', { className: 'cy-hint' }, `质检门槛 ${gate} · AI 提议，你拍板`),
+      { className: 'nw-prop-foot' },
+      h('span', { className: 'nw-hint' }, `质检门槛 ${gate} · AI 提议，你拍板`),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         h(Btn, { small: true, kind: 'danger', onClick: () => onRemove(row), disabled: busy }, '删除'),
         row.status === 'pending'
           ? h(Btn, { small: true, kind: 'ghost', onClick: () => onDecide(row, 'reject'), disabled: busy }, '✕ 驳回')
@@ -223,32 +235,33 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
     { value: 'pending', label: '待批' },
     { value: 'accepted', label: '已采纳' },
     { value: 'rejected', label: '已驳回' },
+    { value: 'outdated', label: '已过期' },
     { value: 'all', label: '全部' },
   ]
 
   return h(
     'div',
-    { className: 'cy-board' },
+    { className: 'nw-board' },
     h(
       'div',
-      { className: 'cy-rv-bar' },
+      { className: 'nw-rv-bar' },
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         h(
           'div',
-          { className: 'cy-seg' },
+          { className: 'nw-seg' },
           FILTERS.map((item) => h(
             'button',
             {
               type: 'button',
               key: item.value,
-              className: `cy-seg-btn${filter === item.value ? ' on' : ''}`,
+              className: `nw-seg-btn${filter === item.value ? ' on' : ''}`,
               'aria-pressed': filter === item.value ? 'true' : 'false',
               onClick: () => setFilter(item.value),
             },
             item.label,
-            h('span', { className: 'cy-seg-n' }, String(
+            h('span', { className: 'nw-seg-n' }, String(
               item.value === 'all' ? items.length : items.filter((row) => row.status === item.value).length,
             )),
           )),
@@ -269,13 +282,13 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
       ),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         realItems.length === 0
           ? h(
             'button',
             {
               type: 'button',
-              className: `cy-demo-sw${showDemo ? ' on' : ''}`,
+              className: `nw-demo-sw${showDemo ? ' on' : ''}`,
               'aria-pressed': showDemo ? 'true' : 'false',
               onClick: () => {
                 setShowDemo(!showDemo)
@@ -300,38 +313,38 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
       ),
     ),
     rows.length
-      ? h('div', { className: 'cy-prop-list' }, groups.map(([n, groupRows]) => (folded[n]
+      ? h('div', { className: 'nw-prop-list' }, groups.map(([n, groupRows]) => (folded[n]
         ? h(
           'button',
           {
             type: 'button',
             key: `fold-${n}`,
-            className: 'cy-prop-fold',
+            className: 'nw-prop-fold',
             onClick: () => setFolded({ ...folded, [n]: false }),
           },
-          h('span', { className: 'cy-prop-fold-n' }, `第 ${n} 回`),
-          h('span', { className: 'cy-hint' }, `${groupRows.length} 条提案 · 待批 ${groupRows.filter((row) => row.status === 'pending').length} · 点章头展开`),
-          h('span', { className: 'cy-prop-go' }, '▸'),
+          h('span', { className: 'nw-prop-fold-n' }, `第 ${n} 回`),
+          h('span', { className: 'nw-hint' }, `${groupRows.length} 条提案 · 待批 ${groupRows.filter((row) => row.status === 'pending').length} · 点章头展开`),
+          h('span', { className: 'nw-prop-go' }, '▸'),
         )
         : h(
           'div',
-          { className: 'cy-prop-group', key: `group-${n}` },
+          { className: 'nw-prop-group', key: `group-${n}` },
           h(
             'button',
             {
               type: 'button',
-              className: 'cy-prop-group-head',
+              className: 'nw-prop-group-head',
               onClick: () => setFolded({ ...folded, [n]: true }),
             },
-            h('span', { className: 'cy-prop-fold-n' }, `第 ${n} 回`),
-            h('span', { className: 'cy-hint' }, `${groupRows.length} 条`),
-            h('span', { className: 'cy-prop-go' }, '▾'),
+            h('span', { className: 'nw-prop-fold-n' }, `第 ${n} 回`),
+            h('span', { className: 'nw-hint' }, `${groupRows.length} 条`),
+            h('span', { className: 'nw-prop-go' }, '▾'),
           ),
           groupRows.map((row) => h(ProposalCard, {
             key: row.id, row, gate, busy, projectId, demo, onDecide: decide, onRemove: remove,
           })),
         ))))
-      : h(Empty, null, filter === 'pending' ? '没有待批提案。AI 交稿后会用 changye_op 的 proposal.save 提上来。' : '这个状态下没有提案。'),
+      : h(Empty, null, filter === 'pending' ? '没有待批提案。AI 交稿后会用 nightwrite_op 的 proposal.save 提上来。' : '这个状态下没有提案。'),
   )
 }
 
@@ -339,20 +352,20 @@ function ProblemRow({ row, onStatus, onRemove, busy, onOpen }) {
   const tone = PROBLEM_TONES[row.type] ?? PROBLEM_TONES.other
   return h(
     'div',
-    { className: `cy-prob cy-prob-${row.status}` },
+    { className: `nw-prob nw-prob-${row.status}` },
     h(
       'button',
-      { type: 'button', className: 'cy-prob-main', onClick: () => onOpen(row) },
-      h('span', { className: 'cy-prob-n' }, `第 ${row.chapter} 回`),
+      { type: 'button', className: 'nw-prob-main', onClick: () => onOpen(row) },
+      h('span', { className: 'nw-prob-n' }, `第 ${row.chapter} 回`),
       h(Tag, { tone: tone.tone }, tone.label),
       h(Tag, { tone: row.severity === 'critical' ? 'red' : 'grey' }, SEVERITY_LABEL[row.severity] ?? row.severity),
-      h('span', { className: 'cy-prob-text' }, row.text),
+      h('span', { className: 'nw-prob-text' }, row.text),
       h(Tag, { tone: PROBLEM_STATUS_TONE[row.status] ?? 'grey' }, PROBLEM_STATUS_LABEL[row.status] ?? row.status),
     ),
-    row.quote ? h('span', { className: 'cy-prob-quote' }, `「${row.quote}」`) : null,
+    row.quote ? h('span', { className: 'nw-prob-quote' }, `「${row.quote}」`) : null,
     h(
       'span',
-      { className: 'cy-prob-acts' },
+      { className: 'nw-prob-acts' },
       row.status !== 'fixed' ? h(Btn, { small: true, kind: 'primary', onClick: () => onStatus(row, 'fixed'), disabled: busy }, '✓ 已修') : null,
       row.status !== 'open' ? h(Btn, { small: true, kind: 'ghost', onClick: () => onStatus(row, 'open'), disabled: busy }, '↺ 重开') : null,
       row.status !== 'ignored' ? h(Btn, { small: true, kind: 'ghost', onClick: () => onStatus(row, 'ignored'), disabled: busy }, '忽略') : null,
@@ -455,27 +468,27 @@ function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenCha
 
   return h(
     'div',
-    { className: 'cy-board' },
+    { className: 'nw-board' },
     h(
       'div',
-      { className: 'cy-rv-bar' },
+      { className: 'nw-rv-bar' },
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         h(
           'div',
-          { className: 'cy-seg' },
+          { className: 'nw-seg' },
           STATUS_FILTERS.map((item) => h(
             'button',
             {
               type: 'button',
               key: item.value,
-              className: `cy-seg-btn${status === item.value ? ' on' : ''}`,
+              className: `nw-seg-btn${status === item.value ? ' on' : ''}`,
               'aria-pressed': status === item.value ? 'true' : 'false',
               onClick: () => setStatus(item.value),
             },
             item.label,
-            h('span', { className: 'cy-seg-n' }, String(
+            h('span', { className: 'nw-seg-n' }, String(
               item.value === 'all' ? items.length : items.filter((row) => row.status === item.value).length,
             )),
           )),
@@ -501,13 +514,13 @@ function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenCha
       ),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         realItems.length === 0
           ? h(
             'button',
             {
               type: 'button',
-              className: `cy-demo-sw${showDemo ? ' on' : ''}`,
+              className: `nw-demo-sw${showDemo ? ' on' : ''}`,
               'aria-pressed': showDemo ? 'true' : 'false',
               onClick: () => {
                 setShowDemo(!showDemo)
@@ -517,14 +530,14 @@ function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenCha
             showDemo ? '样例开着 · 点它收起' : '看样例（4 条假问题）',
           )
           : null,
-        h('span', { className: 'cy-hint' }, `门槛 ${gate} 分`),
+        h('span', { className: 'nw-hint' }, `门槛 ${gate} 分`),
         h(Btn, { small: true, kind: 'ghost', onClick: () => setDraft({
           chapter: 1, para: 0, type: 'other', severity: 'minor', scope: 'chapter', text: '', quote: '', fix: '',
         }) }, '＋ 记一条'),
       ),
     ),
     rows.length
-      ? h('div', { className: 'cy-prob-list' }, rows.map((row) => h(ProblemRow, {
+      ? h('div', { className: 'nw-prob-list' }, rows.map((row) => h(ProblemRow, {
         key: row.id, row, busy, onStatus: setOne, onRemove: remove, onOpen: (r) => onOpenChapter?.(r.chapter),
       })))
       : h(Empty, null, status === 'open' ? '没有未修问题。验收时记下的毛病会攒在这里。' : '这个筛选下没有条目。'),
@@ -541,7 +554,7 @@ function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenCha
       },
       h(
         'div',
-        { className: 'cy-order-grid' },
+        { className: 'nw-order-grid' },
         h(Field, { label: '第几回' }, h(Input, {
           type: 'number', value: draft.chapter, onChange: (v) => setDraft({ ...draft, chapter: Number(v) || 0 }),
         })),

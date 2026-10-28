@@ -96,13 +96,13 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
   return h(
     Card,
     { title: '冷读', extra: h(Tag, { tone: 'blue' }, '陌生人视角') },
-    h('p', { className: 'cy-hint' }, '把稿子汇成一份 txt，交给一个没读过任何设定的人一次读完。它不查设定矛盾，只回答一个问题：读到这里，想不想继续看。'),
+    h('p', { className: 'nw-hint' }, '把稿子汇成一份 txt，交给一个没读过任何设定的人一次读完。它不查设定矛盾，只回答一个问题：读到这里，想不想继续看。'),
     h(
       'div',
-      { className: 'cy-cold-form' },
+      { className: 'nw-cold-form' },
       h(
         'div',
-        { className: 'cy-seg' },
+        { className: 'nw-seg' },
         [
           { value: 'chapter', label: '单章' },
           { value: 'book', label: '整本' },
@@ -111,7 +111,7 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
           {
             type: 'button',
             key: item.value,
-            className: `cy-seg-btn${scope === item.value ? ' on' : ''}`,
+            className: `nw-seg-btn${scope === item.value ? ' on' : ''}`,
             'aria-pressed': scope === item.value ? 'true' : 'false',
             onClick: () => setScope(item.value),
           },
@@ -130,20 +130,20 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
     pkg
       ? h(
         'div',
-        { className: 'cy-cold-pkg' },
-        h('div', { className: 'cy-cold-file' }, `📄 ${pkg.fileName}`),
-        h('div', { className: 'cy-hint' }, `${pkg.chapters.length} 回 · ${pkg.words} 字${pkg.truncated ? '（原文更长，只放了前一部分）' : ''}`),
+        { className: 'nw-cold-pkg' },
+        h('div', { className: 'nw-cold-file' }, `📄 ${pkg.fileName}`),
+        h('div', { className: 'nw-hint' }, `${pkg.chapters.length} 回 · ${pkg.words} 字${pkg.truncated ? '（原文更长，只放了前一部分）' : ''}`),
         h(
           'div',
-          { className: 'cy-actions' },
+          { className: 'nw-actions' },
           h(Btn, { small: true, kind: 'ghost', onClick: copyPrompt }, '复制提示词'),
         ),
-        h('pre', { className: 'cy-cold-prompt' }, pkg.prompt),
+        h('pre', { className: 'nw-cold-prompt' }, pkg.prompt),
       )
       : null,
     h(
       'div',
-      { className: 'cy-cold-submit' },
+      { className: 'nw-cold-submit' },
       h(Field, { label: '把回执粘回来' }, h(TextArea, {
         value: paste,
         rows: 4,
@@ -152,21 +152,21 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
       })),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         h(Btn, { small: true, kind: 'primary', onClick: submit }, '存进意见池'),
-        h('span', { className: 'cy-hint' }, '以「第N回：」开头的行会被切成一条条意见；带「高光」的记为高光。'),
+        h('span', { className: 'nw-hint' }, '以「第N回：」开头的行会被切成一条条意见；带「高光」的记为高光。'),
       ),
     ),
     (list.data?.items ?? []).length
       ? h(
         'details',
-        { className: 'cy-cold-history' },
+        { className: 'nw-cold-history' },
         h('summary', null, `生成过的冷读包（${list.data.items.length}）`),
         ...list.data.items.slice(0, 12).map((row) => h(
           'div',
-          { className: 'cy-cold-histrow', key: row.name },
-          h('span', { className: 'cy-cold-histname' }, row.name),
-          h('span', { className: 'cy-hint' }, `${(row.bytes / 1024).toFixed(0)} KB`),
+          { className: 'nw-cold-histrow', key: row.name },
+          h('span', { className: 'nw-cold-histname' }, row.name),
+          h('span', { className: 'nw-hint' }, `${(row.bytes / 1024).toFixed(0)} KB`),
         )),
       )
       : null,
@@ -231,15 +231,15 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
       title: '意见池',
       extra: h(
         'div',
-        { className: 'cy-actions' },
-        h('span', { className: 'cy-card-badge' }, `${counts.total}`),
+        { className: 'nw-actions' },
+        h('span', { className: 'nw-card-badge' }, `${counts.total}`),
         h(Btn, { small: true, kind: 'ghost', disabled: collecting, onClick: collect }, collecting ? '拉着…' : '从问题单拉一遍'),
       ),
     },
-    h('p', { className: 'cy-hint' }, '别人说过的、自己记下的、机器扫出来的，都在这里。它只汇总，不替你判断——采纳与否是你的事。'),
+    h('p', { className: 'nw-hint' }, '别人说过的、自己记下的、机器扫出来的，都在这里。它只汇总，不替你判断——采纳与否是你的事。'),
     h(
       'div',
-      { className: 'cy-seg' },
+      { className: 'nw-seg' },
       [
         { value: 'open', label: '待处理' },
         { value: 'adopted', label: '已采纳' },
@@ -250,17 +250,17 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
         {
           type: 'button',
           key: item.value || 'all',
-          className: `cy-seg-btn${status === item.value ? ' on' : ''}`,
+          className: `nw-seg-btn${status === item.value ? ' on' : ''}`,
           'aria-pressed': status === item.value ? 'true' : 'false',
           onClick: () => setStatus(item.value),
         },
         item.label,
-        item.value ? h('span', { className: 'cy-seg-n' }, String(counts[item.value] ?? 0)) : null,
+        item.value ? h('span', { className: 'nw-seg-n' }, String(counts[item.value] ?? 0)) : null,
       )),
     ),
     h(
       'div',
-      { className: 'cy-seg cy-opinion-src' },
+      { className: 'nw-seg nw-opinion-src' },
       [
         { value: '', label: '所有来源' },
         { value: 'coldread', label: '冷读' },
@@ -272,7 +272,7 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
         {
           type: 'button',
           key: item.value || 'all-src',
-          className: `cy-seg-btn${source === item.value ? ' on' : ''}`,
+          className: `nw-seg-btn${source === item.value ? ' on' : ''}`,
           onClick: () => setSource(item.value),
         },
         item.label,
@@ -281,26 +281,26 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
     rows.length
       ? h(
         'div',
-        { className: 'cy-opinion-list' },
+        { className: 'nw-opinion-list' },
         ...rows.map((row) => h(
           'div',
-          { key: row.id, className: `cy-opinion cy-opinion-${row.status}` },
-          h('span', { className: 'cy-opinion-ch' }, `第 ${row.chapter} 回`),
+          { key: row.id, className: `nw-opinion nw-opinion-${row.status}` },
+          h('span', { className: 'nw-opinion-ch' }, `第 ${row.chapter} 回`),
           h(
             'span',
-            { className: 'cy-opinion-body' },
-            h('span', { className: 'cy-opinion-text' }, row.text),
+            { className: 'nw-opinion-body' },
+            h('span', { className: 'nw-opinion-text' }, row.text),
             row.quote
-              ? h('span', { className: 'cy-opinion-quote' }, `「${row.quote}」`)
+              ? h('span', { className: 'nw-opinion-quote' }, `「${row.quote}」`)
               : null,
             row.resolution
-              ? h('span', { className: 'cy-hint' }, `处理：${row.resolution}`)
+              ? h('span', { className: 'nw-hint' }, `处理：${row.resolution}`)
               : null,
           ),
           h(Tag, { tone: row.kind === 'highlight' ? 'green' : 'grey' }, SOURCE_LABEL[row.source] ?? row.source),
           h(
             'span',
-            { className: 'cy-opinion-acts' },
+            { className: 'nw-opinion-acts' },
             row.chapter && onOpenChapter
               ? h(Btn, { small: true, kind: 'ghost', onClick: () => onOpenChapter(row.chapter) }, '去看')
               : null,

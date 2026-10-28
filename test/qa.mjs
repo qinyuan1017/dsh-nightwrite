@@ -123,7 +123,7 @@ function auditTree(page, tree) {
   }
 
   // ── D. 空壳：有好看的类名，里面一个字都没有 ──
-  const SHELLS = ['cy-card', 'cy-hero', 'cy-stat', 'cy-action', 'cy-pcard', 'cy-prop', 'cy-prob', 'cy-issue', 'cy-hist-row', 'cy-scan-row', 'cy-lex-row', 'cy-td-cell']
+  const SHELLS = ['nw-card', 'nw-hero', 'nw-stat', 'nw-action', 'nw-pcard', 'nw-prop', 'nw-prob', 'nw-issue', 'nw-hist-row', 'nw-scan-row', 'nw-lex-row', 'nw-td-cell']
   for (const n of nodes) {
     if (n.kind !== 'el' || typeof n.cls !== 'string') continue
     const hit = n.cls.split(/\s+/).find((c) => SHELLS.includes(c))
@@ -156,8 +156,8 @@ const PAGES = ['cockpit', 'plan', 'studio', 'review', 'world', 'scout', 'setting
 const trees = {}
 for (const page of PAGES) {
   resetHooks()
-  store['cy.page'] = page
-  store['cy.project'] = PROJECT.id
+  store['nw.page'] = page
+  store['nw.project'] = PROJECT.id
   const tree = H.renderNode
     ? null
     : null
@@ -175,8 +175,8 @@ for (const page of PAGES) {
 // ── 3. 深水区：验收详情（正文 + 问题 + 历史 + 词表）──
 {
   resetHooks()
-  store['cy.page'] = 'review'
-  store['cy.openChapter'] = '3'
+  store['nw.page'] = 'review'
+  store['nw.openChapter'] = '3'
   const tree = await mount(captured, {})
   trees.reviewDetail = tree
   for (const t of throwsOf(tree)) report('bad', 'reviewDetail', '组件抛错', `${t.name}: ${t.error}`)
@@ -186,7 +186,7 @@ for (const page of PAGES) {
 // ── 4. 空态：没有作品 ──
 {
   resetHooks()
-  store['cy.page'] = 'cockpit'
+  store['nw.page'] = 'cockpit'
   // Root 的 effect 在 projectId 为空时会自动挑第一个作品，所以光清 store 看不到空态。
   // 临时把 fetch 换成「一个作品都没有」的桩，才真的走到「还没有作品」那一屏。
   const realFetch = global.fetch
@@ -231,8 +231,8 @@ for (const page of PAGES) {
   }
   if (deadInSrc.length) {
     // 浮层自己的「别把点击传给我爹」不算假按钮：它爹是遮罩，传上去就把弹窗关了。
-    const realDead = deadInSrc.filter((body) => !/className: 'cy-modal'/.test(body))
-      .filter((body) => !/stopPropagation/.test(body) || /cy-modal/.test(body) === false)
+    const realDead = deadInSrc.filter((body) => !/className: 'nw-modal'/.test(body))
+      .filter((body) => !/stopPropagation/.test(body) || /nw-modal/.test(body) === false)
     if (realDead.length) {
       report('warn', 'src', 'onClick 里没有任何动作（点了没反应）', realDead.slice(0, 4).join(' ｜ '))
     }
@@ -245,7 +245,7 @@ for (const page of PAGES) {
     const t = trees[page]
     return all(t).filter((n) => n.kind === 'el'
       && typeof n.cls === 'string'
-      && n.cls.split(/\s+/).includes('cy-dock-btn')
+      && n.cls.split(/\s+/).includes('nw-dock-btn')
       && n.cls.split(/\s+/).includes('on')).length
   })
   if (navCounts.some((n) => n !== 1)) {

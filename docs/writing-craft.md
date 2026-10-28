@@ -87,12 +87,12 @@ p99 = 50 意味着 99% 的段落都在 50 字以内。这不是巧合，是长�
 
 | 抓不到的 | 为什么抓不到 | 交给谁 |
 |---|---|---|
-| 人物弧光有没有推进 | 「他变了」不是字符串特征，要看前后 20 章的行为对比 | `changye-character-designer` + `changye-character-state` |
-| 因果链断没断 | 「因为 A 所以 B」在文本里常常只写 B，A 在 5 章前 | `changye-story-architect` + `changye-continuity-pass` |
-| 爽点有没有真的兑现 | 读者等的是一口气，不是某个词 | `changye-emotional-payoff` + `changye-reader-proxy` |
-| 章末钩子强弱 | 可以数「章末最后一句多长」，但强不强要看它有没有制造未闭合的问题 | `changye-chapter-hook` |
-| 伏笔收没收 | 埋和收是两次出现，中间隔几十章，且用词不同 | `changye-foreshadow-ledger` |
-| 这个世界合不合理 | 需要理解设定本身的逻辑 | `changye-worldbuilding-bible` |
+| 人物弧光有没有推进 | 「他变了」不是字符串特征，要看前后 20 章的行为对比 | `nightwrite-character-designer` + `nightwrite-character-state` |
+| 因果链断没断 | 「因为 A 所以 B」在文本里常常只写 B，A 在 5 章前 | `nightwrite-story-architect` + `nightwrite-continuity-pass` |
+| 爽点有没有真的兑现 | 读者等的是一口气，不是某个词 | `nightwrite-emotional-payoff` + `nightwrite-reader-proxy` |
+| 章末钩子强弱 | 可以数「章末最后一句多长」，但强不强要看它有没有制造未闭合的问题 | `nightwrite-chapter-hook` |
+| 伏笔收没收 | 埋和收是两次出现，中间隔几十章，且用词不同 | `nightwrite-foreshadow-ledger` |
+| 这个世界合不合理 | 需要理解设定本身的逻辑 | `nightwrite-worldbuilding-bible` |
 
 **一句自律**：能用正则算的，就用正则算；算不出来的，明确说算不出来，交给 agent。用正则假装能判断「这本书好在哪」，是给自己造假证据。
 

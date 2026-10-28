@@ -5,6 +5,215 @@
  */
 
 /**
+ * 成本卡：读 DSH 自己的会话日志，按真实 token 数算钱。
+ *
+ * 为什么不做「估算器」而做「读日志」：估算是拍脑袋，日志是既成事实。
+ * 会话目录按 cwd 匹配，所以只在「这个项目是在某个工作目录里开的会话」时才有数；
+ * 匹配不到就明说没找到，不假装 0 元。
+ */
+function CostCard({ projectId, toast }) {
+  const [data, setData] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [plan, setPlan] = useState({ chapters: 100, chapterWords: 3000, model: 'deepseek-chat' })
+  const [budget, setBudget] = useState(null)
+
+  const scan = async () => {
+    if (!projectId) {
+      toast('先选一个作品')
+      return
+    }
+    setBusy(true)
+    try {
+      const out = await api('usage.scan', { projectId })
+      setData(out)
+      toast(out.note)
+    } catch (error) {
+      toast(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const estimate = async () => {
+    setBusy(true)
+    try {
+      const out = await api('usage.budget', {
+        chapters: Number(plan.chapters) || 0,
+        chapterWords: Number(plan.chapterWords) || 0,
+        model: plan.model,
+      })
+      setBudget(out)
+      toast(`按这个计划大约 ${fmtCost(out.cost)}`)
+    } catch (error) {
+      toast(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const total = data?.total ?? { turns: 0, steps: 0, toolCalls: 0, inputTokens: 0, outputTokens: 0, cost: 0 }
+  const sessions = data?.sessions ?? []
+
+  return h(
+    Card,
+    {
+      title: '花多少钱了',
+      extra: h(
+        'div',
+        { className: 'nw-actions' },
+        h(Btn, { small: true, kind: 'ghost', disabled: busy || !projectId, onClick: scan }, busy ? '读着…' : '读会话日志'),
+        h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: estimate }, '算预算'),
+      ),
+    },
+    h(Hint, null, '不是估算：直接读 DSH 的会话日志，把输入输出 token 按公开单价折成人民币。会话记在别的目录就匹配不到，会明说没找到。'),
+
+    data
+      ? h('div', { className: 'nw-cost-total' }, [
+        h('div', { key: 'c', className: 'nw-cost-num' }, fmtCost(total.cost)),
+        h('div', { key: 'd', className: 'nw-cost-desc' }, `${total.turns} 轮 / ${total.steps} 步 / ${total.toolCalls} 次工具调用 · 输入 ${fmtWords(total.inputTokens)} token、输出 ${fmtWords(total.outputTokens)} token`),
+      ])
+      : h('p', { className: 'nw-hint' }, data === null ? '还没读。' : ''),
+
+    sessions.length
+      ? h(
+        'div',
+        { className: 'nw-cost-list' },
+        ...sessions.slice(0, 8).map((row) => h(
+          'div',
+          { key: row.sessionId, className: 'nw-cost-row' },
+          h('span', { className: 'nw-cost-name' }, String(row.sessionId).slice(0, 8)),
+          h('span', { className: 'nw-cost-meta' }, `${row.turns} 轮 · ${fmtWords(row.inputTokens)} 入 / ${fmtWords(row.outputTokens)} 出`),
+          h('span', { className: 'nw-cost-money' }, fmtCost(row.cost)),
+        )),
+      )
+      : null,
+
+    h(
+      'div',
+      { className: 'nw-form-grid' },
+      h(Field, { label: '计划写几章' }, h(Input, {
+        type: 'number', value: plan.chapters, onChange: (v) => setPlan({ ...plan, chapters: Number(v) || 0 }),
+      })),
+      h(Field, { label: '每章多少字' }, h(Input, {
+        type: 'number', value: plan.chapterWords, onChange: (v) => setPlan({ ...plan, chapterWords: Number(v) || 0 }),
+      })),
+      h(Field, { label: '用哪个模型' }, h(Select, {
+        value: plan.model,
+        onChange: (v) => setPlan({ ...plan, model: v }),
+        options: [
+          { value: 'deepseek-v4.1-flash', label: 'flash（便宜）' },
+          { value: 'deepseek-chat', label: 'chat（贵些）' },
+        ],
+      })),
+    ),
+    budget
+      ? h('div', { className: 'nw-cost-budget' }, [
+        h(KV, {
+          key: 'kv',
+          rows: [
+            ['预计总字数', `${fmtWords(budget.totalWords ?? 0)} 字`],
+            ['预计 token', `${fmtWords(budget.totalTokens ?? 0)}（入 ${fmtWords(budget.inputTokens ?? 0)} / 出 ${fmtWords(budget.outputTokens ?? 0)}）`],
+            ['预计花费', fmtCost(budget.cost ?? 0)],
+            ['摊到每章', budget.chapters ? fmtCost(Number(budget.cost ?? 0) / budget.chapters) : '—'],
+          ],
+        }),
+        h('p', { key: 'n', className: 'nw-hint' }, budget.note ?? ''),
+      ])
+      : null,
+  )
+}
+
+/**
+ * 写策略卡：原生写工具（write / edit）落到哪些目录该被拦。
+ *
+ * 为什么需要开关而不是一律拦死：模型偶尔就是要直接改设定卡、补一份岗位手册。
+ * 一律拦死会逼人去关整个守卫；给几个勾，代价小得多。
+ * 三档里 off 是一刀切（连提醒都不给），enforce 才是真拦。
+ */
+function WritePolicyCard({ projectId, project, toast, onRefresh }) {
+  const policy = (project?.settings?.writePolicy && typeof project.settings.writePolicy === 'object')
+    ? project.settings.writePolicy
+    : {}
+  const level = ['off', 'warn', 'enforce'].includes(String(policy.level)) ? String(policy.level) : 'warn'
+  const [busy, setBusy] = useState(false)
+
+  const save = async (patch) => {
+    if (!projectId) {
+      toast('先选一个作品')
+      return
+    }
+    setBusy(true)
+    try {
+      await api('project.save', {
+        projectId,
+        patch: { settings: { writePolicy: { ...policy, ...patch } } },
+      })
+      onRefresh?.()
+      toast('写策略已保存')
+    } catch (error) {
+      toast(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const LEVELS = [
+    { value: 'off', label: '不管', hint: '原生 write/edit 改什么都不提醒' },
+    { value: 'warn', label: '提醒', hint: '默认。改完给你一条提示，不拦' },
+    { value: 'enforce', label: '拦住', hint: '必须走 nightwrite_op，绕不过去' },
+  ]
+  const DIRS = [
+    { flag: 'allowChapter', label: '正文 chapters/' },
+    { flag: 'allowLedger', label: '账本 ledger/' },
+    { flag: 'allowFacts', label: '设定卡 facts/' },
+    { flag: 'allowOutline', label: '大纲 outlines/' },
+    { flag: 'allowSkills', label: '手册 agents/ 与 skills/' },
+  ]
+
+  return h(
+    Card,
+    {
+      title: '原生写工具守卫',
+      extra: h(Tag, { tone: level === 'enforce' ? 'red' : (level === 'warn' ? 'amber' : 'grey') }, level),
+    },
+    h(Hint, null, '宿主自带的 write / edit 直接改文件时，这条守卫会读到改动、算一遍 AI 味和保真度再提醒你。只有「拦住」这一档才真的拒绝写入——拒绝会告诉模型改用 nightwrite_op，它不会卡死。'),
+    h(
+      'div',
+      { className: 'nw-policy-row' },
+      ...LEVELS.map((row) => h(
+        'button',
+        {
+          type: 'button',
+          key: row.value,
+          className: `nw-policy-card nw-policy-${row.value}${level === row.value ? ' on' : ''}`,
+          disabled: busy,
+          onClick: () => save({ level: row.value }),
+        },
+        h('span', { className: 'nw-policy-name' }, row.label),
+        h('span', { className: 'nw-policy-hint' }, row.hint),
+      )),
+    ),
+    level === 'enforce'
+      ? h(
+        'div',
+        { className: 'nw-policy-dirs' },
+        ...DIRS.map((row) => h(
+          'label',
+          { key: row.flag, className: 'nw-policy-dir' },
+          h('input', {
+            type: 'checkbox',
+            checked: policy[row.flag] !== false,
+            disabled: busy,
+            onChange: (event) => save({ [row.flag]: event.target.checked }),
+          }),
+          h('span', null, row.label),
+        )),
+      )
+      : h('p', { className: 'nw-hint' }, '只有「拦住」这一档才需要指定哪些目录不许直接改。'),
+  )
+}
+
+/**
  * 【12 条 #8】AI 味词表编辑器。
  *
  * 为什么值得一个独立卡片：验收台那条彩带是从这里扫出来的。
@@ -66,30 +275,30 @@ function AiLexiconCard({ projectId, toast }) {
       title: 'AI 味词表',
       extra: res.loading ? null : h(Tag, { tone: 'grey' }, `生效 ${items.length} 条`),
     },
-    h('p', { className: 'cy-hint' }, '验收台右侧那条彩带就是拿这张表扫出来的。默认表是通用 AI 套话；你把反复用的词加进来，扫出来的才是「你的」毛病。'),
+    h('p', { className: 'nw-hint' }, '验收台右侧那条彩带就是拿这张表扫出来的。默认表是通用 AI 套话；你把反复用的词加进来，扫出来的才是「你的」毛病。'),
     res.error ? h(ErrorBox, { error: res.error, onRetry: res.reload }) : null,
     h(
       'div',
-      { className: 'cy-lex-add' },
+      { className: 'nw-lex-add' },
       h(Input, { value: phrase, placeholder: '要盯的词，比如「缓缓」', onChange: setPhrase }),
       h(Input, { value: hint, placeholder: '为什么烦它（可不填）', onChange: setHint }),
       h(Btn, { kind: 'primary', small: true, onClick: add, disabled: busy || !projectId }, '＋ 加入词表'),
     ),
     h(
       'div',
-      { className: 'cy-lex-list' },
+      { className: 'nw-lex-list' },
       items.length
         ? items.map((row) => {
           const off = disabled.includes(row.pattern)
           return h(
             'div',
-            { className: `cy-lex-row${off ? ' cy-lex-off' : ''}`, key: `${row.source}:${row.pattern}` },
-            h('span', { className: 'cy-lex-word' }, row.pattern),
-            h('span', { className: 'cy-hint' }, row.hint || '（没写原因）'),
+            { className: `nw-lex-row${off ? ' nw-lex-off' : ''}`, key: `${row.source}:${row.pattern}` },
+            h('span', { className: 'nw-lex-word' }, row.pattern),
+            h('span', { className: 'nw-hint' }, row.hint || '（没写原因）'),
             row.source === 'custom' ? h(Tag, { tone: 'blue' }, '你自己加的') : null,
             h(
               'span',
-              { className: 'cy-lex-acts' },
+              { className: 'nw-lex-acts' },
               h(Btn, { small: true, kind: 'ghost', onClick: () => toggle(row.pattern, !off), disabled: busy }, off ? '↺ 启用' : '停用'),
               row.source === 'custom'
                 ? h(Btn, { small: true, kind: 'danger', onClick: () => drop(row.pattern), disabled: busy }, '删除')
@@ -176,12 +385,12 @@ function CorpusCard({ toast }) {
 
     h(
       'div',
-      { className: 'cy-corpus-bar' },
-      h('div', { className: 'cy-corpus-fill', style: { width: `${Math.round((totals.progress ?? 0) * 100)}%` } }),
+      { className: 'nw-corpus-bar' },
+      h('div', { className: 'nw-corpus-fill', style: { width: `${Math.round((totals.progress ?? 0) * 100)}%` } }),
     ),
     h(
       'div',
-      { className: 'cy-corpus-nums' },
+      { className: 'nw-corpus-nums' },
       h('span', null, `目标 ${totals.target ?? 5584} 章（对齐公开拆书语料的统计量级）`),
       h('span', null, totals.gap > 0 ? `还差 ${totals.gap} 章，约 ${totals.booksNeeded} 本 200 章的书` : '统计量级已够'),
     ),
@@ -189,21 +398,21 @@ function CorpusCard({ toast }) {
     books.length
       ? h(
         'div',
-        { className: 'cy-corpus-list' },
+        { className: 'nw-corpus-list' },
         books.map((row) => h(
           'div',
-          { className: 'cy-corpus-row', key: row.id },
-          h('span', { className: 'cy-corpus-name' }, row.name),
+          { className: 'nw-corpus-row', key: row.id },
+          h('span', { className: 'nw-corpus-name' }, row.name),
           h(Tag, { tone: row.source === 'self' ? 'green' : row.source === 'public' ? 'blue' : 'grey' }, row.source === 'self' ? '自己写的' : row.source === 'public' ? '公版' : '已授权'),
-          h('span', { className: 'cy-corpus-meta' }, `${row.chapters} 章 · ${fmtWords(row.chars)}`),
-          h('button', { type: 'button', className: 'cy-icon-btn', title: '移出池子', onClick: () => drop(row.id, row.name) }, '✕'),
+          h('span', { className: 'nw-corpus-meta' }, `${row.chapters} 章 · ${fmtWords(row.chars)}`),
+          h('button', { type: 'button', className: 'nw-icon-btn', title: '移出池子', onClick: () => drop(row.id, row.name) }, '✕'),
         )),
       )
       : h(Empty, null, '池子是空的。先把你正在写的这本书的原文粘进来——自己的语体最值钱。'),
 
     h(
       'div',
-      { className: 'cy-corpus-add' },
+      { className: 'nw-corpus-add' },
       h(Input, { value: name, onChange: (e) => setName(e.target.value ?? ''), placeholder: '书名（可留空）' }),
       h(Select, {
         value: source,
@@ -223,7 +432,7 @@ function CorpusCard({ toast }) {
     }),
     h(
       'div',
-      { className: 'cy-actions' },
+      { className: 'nw-actions' },
       h(Btn, { kind: 'primary', small: true, disabled: busy, onClick: add }, busy ? '收着…' : '收进池子'),
       h(Btn, { small: true, disabled: busy || totals.books < 1, onClick: derive }, '量一遍阈值'),
     ),
@@ -231,18 +440,18 @@ function CorpusCard({ toast }) {
     derived
       ? h(
         'div',
-        { className: 'cy-corpus-out' },
-        h('div', { className: 'cy-corpus-sum' }, derived.summary),
+        { className: 'nw-corpus-out' },
+        h('div', { className: 'nw-corpus-sum' }, derived.summary),
         derived.rules.filter((r) => r.enough).length
           ? h(
             'div',
-            { className: 'cy-corpus-th' },
+            { className: 'nw-corpus-th' },
             derived.rules.filter((r) => r.enough).slice(0, 12).map((r) => h(
               'div',
-              { className: `cy-corpus-th-row${r.noisy ? ' cy-corpus-th-noisy' : ''}`, key: r.id },
-              h('span', { className: 'cy-corpus-th-name' }, r.label),
-              h('span', { className: 'cy-corpus-th-num' }, `语料 p90 ${r.p90}/千字`),
-              h('span', { className: 'cy-corpus-th-num' }, `现在 ${r.current || '—'}`),
+              { className: `nw-corpus-th-row${r.noisy ? ' nw-corpus-th-noisy' : ''}`, key: r.id },
+              h('span', { className: 'nw-corpus-th-name' }, r.label),
+              h('span', { className: 'nw-corpus-th-num' }, `语料 p90 ${r.p90}/千字`),
+              h('span', { className: 'nw-corpus-th-num' }, `现在 ${r.current || '—'}`),
               r.noisy ? h(Tag, { tone: 'amber' }, '会天天报警') : null,
             )),
           )
@@ -323,24 +532,24 @@ function SettingsPage({
 
   return h(
     'div',
-    { className: 'cy-page cy-settings' },
+    { className: 'nw-page nw-settings' },
     h(
       Card,
       { title: '作品数据', extra: h(Btn, { small: true, kind: 'primary', onClick: () => setCreating(true) }, '＋ 新建作品') },
       h(
         'div',
-        { className: 'cy-proj-list' },
+        { className: 'nw-proj-list' },
         projects.length
           ? projects.map((row) => h(
             'button',
             {
               type: 'button',
               key: row.id,
-              className: `cy-proj${row.id === projectId ? ' on' : ''}`,
+              className: `nw-proj${row.id === projectId ? ' on' : ''}`,
               onClick: () => onSwitch?.(row.id),
             },
-            h('span', { className: 'cy-proj-name' }, row.name),
-            h('span', { className: 'cy-proj-meta' }, `${row.chapters} 章 · ${fmtWords(row.words)} 字`),
+            h('span', { className: 'nw-proj-name' }, row.name),
+            h('span', { className: 'nw-proj-meta' }, `${row.chapters} 章 · ${fmtWords(row.words)} 字`),
             row.id === projectId ? h(Tag, { tone: 'amber' }, '当前') : null,
           ))
           : h(Empty, null, '还没有作品。'),
@@ -349,7 +558,7 @@ function SettingsPage({
         ? h(
           Fragment,
           null,
-          h('div', { className: 'cy-form-grid' },
+          h('div', { className: 'nw-form-grid' },
             h(Field, { label: '书名' }, h(Input, { value: draft.name, onChange: (v) => setDraft({ ...draft, name: v }) })),
             h(Field, { label: '题材' }, h(Input, { value: draft.genre, onChange: (v) => setDraft({ ...draft, genre: v }) })),
             h(Field, { label: '每章目标字数' }, h(Input, {
@@ -369,14 +578,14 @@ function SettingsPage({
             })),
             h(Field, { label: '一句话卖点' }, h(Input, { value: draft.logline, onChange: (v) => setDraft({ ...draft, logline: v }) })),
           ),
-          h('div', { className: 'cy-actions' }, h(Btn, { kind: 'primary', onClick: saveProject }, '保存作品设置')),
+          h('div', { className: 'nw-actions' }, h(Btn, { kind: 'primary', onClick: saveProject }, '保存作品设置')),
         )
         : null,
       h(
         'details',
-        { className: 'cy-danger-zone' },
+        { className: 'nw-danger-zone' },
         h('summary', null, '危险区：删除这部作品'),
-        h('p', { className: 'cy-hint' }, '目录会被整份删掉，无法撤销。输入书名确认。'),
+        h('p', { className: 'nw-hint' }, '目录会被整份删掉，无法撤销。输入书名确认。'),
         h(Input, { value: confirm, onChange: setConfirm, placeholder: project?.name ?? '' }),
         h(Btn, { kind: 'danger', onClick: remove }, '确认删除'),
       ),
@@ -389,13 +598,13 @@ function SettingsPage({
           { key: '质检门槛', text: String(project?.qualityGate ?? 70) + ' 分' },
           { key: '每章目标', text: String(project?.targetWords ?? 2500) + ' 字' },
           { key: '月预算', text: `¥${project?.monthlyBudget ?? 600}` },
-          { key: '数据根', text: '~/.dsh/data/dsh-changye', mono: true },
+          { key: '数据根', text: '~/.dsh/data/dsh-nightwrite', mono: true },
         ],
       }),
       h(Hint, null, '预算与门槛存在 project.json 里；每次跑批前由 agent 读它做闸门。'),
     ),
     // 【24 条 #23】【12 条 #12】导出全部数据：以前只弹一句 toast，什么都没生成。
-    // 现在真的打一个 zip：GET /changye/api/export?projectId=... 回字节流，
+    // 现在真的打一个 zip：GET /nightwrite/api/export?projectId=... 回字节流，
     // 前端接成 blob 用 <a download> 落到下载目录。
     h(
       Card,
@@ -403,10 +612,10 @@ function SettingsPage({
         title: '导出全部数据',
         extra: h(Tag, { tone: 'green' }, '真打包'),
       },
-      h('p', { className: 'cy-hint' }, '把这部作品的所有文件打成一个 zip：正文、账本、大纲、队列、提案、问题单、设置、历史版本、回收站。导出的就是磁盘上那棵目录，不带任何私有格式。'),
+      h('p', { className: 'nw-hint' }, '把这部作品的所有文件打成一个 zip：正文、账本、大纲、队列、提案、问题单、设置、历史版本、回收站。导出的就是磁盘上那棵目录，不带任何私有格式。'),
       h(
         'div',
-        { className: 'cy-export-tree' },
+        { className: 'nw-export-tree' },
         [
           ['chapters/', `${chaptersCount} 个 .txt 正文`, 'text'],
           ['chapters/history/', '历史版本（每章最近 20 版）', 'text'],
@@ -419,15 +628,15 @@ function SettingsPage({
           ['project.json', '书名 / 门槛 / 预算', 'json'],
         ].map(([name, desc, kind]) => h(
           'div',
-          { className: 'cy-export-row', key: name },
-          h('span', { className: `cy-export-icon cy-export-${kind}` }, kind === 'text' ? '📄' : '{ }'),
-          h('span', { className: 'cy-export-name' }, name),
-          h('span', { className: 'cy-hint' }, desc),
+          { className: 'nw-export-row', key: name },
+          h('span', { className: `nw-export-icon nw-export-${kind}` }, kind === 'text' ? '📄' : '{ }'),
+          h('span', { className: 'nw-export-name' }, name),
+          h('span', { className: 'nw-hint' }, desc),
         )),
       ),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         h(Btn, {
           kind: 'primary',
           disabled: !projectId || exporting,
@@ -451,7 +660,7 @@ function SettingsPage({
                 throw new Error(message)
               }
               const blob = await res.blob()
-              const files = res.headers.get('x-changye-files') ?? '?'
+              const files = res.headers.get('x-nightwrite-files') ?? '?'
               const name = `${project?.name ?? projectId}-${new Date().toISOString().slice(0, 10)}.zip`
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
@@ -475,10 +684,10 @@ function SettingsPage({
           kind: 'ghost',
           onClick: async () => {
             try {
-              await navigator.clipboard.writeText(`~/.dsh/data/dsh-changye/${projectId ?? '<作品>'}`)
+              await navigator.clipboard.writeText(`~/.dsh/data/dsh-nightwrite/${projectId ?? '<作品>'}`)
               toast('已复制目录路径，直接去文件管理器里拷')
             } catch {
-              toast('复制失败，手动去 ~/.dsh/data/dsh-changye 拿')
+              toast('复制失败，手动去 ~/.dsh/data/dsh-nightwrite 拿')
             }
           },
         }, '复制目录路径'),
@@ -490,7 +699,7 @@ function SettingsPage({
       Card,
       {
         title: '回收站',
-        extra: h('span', { className: 'cy-card-badge' }, `${trash.data?.items?.length ?? 0}`),
+        extra: h('span', { className: 'nw-card-badge' }, `${trash.data?.items?.length ?? 0}`),
       },
       !projectId
         ? h(Empty, null, '还没有作品。')
@@ -499,14 +708,14 @@ function SettingsPage({
           : (trash.data?.items ?? []).length
             ? h(
               'div',
-              { className: 'cy-trash-list' },
+              { className: 'nw-trash-list' },
               trash.data.items.map((row) => h(
                 'div',
-                { className: 'cy-trash-row', key: row.trash },
-                h('span', { className: 'cy-trash-n' }, `第 ${row.chapter} 回`),
-                h('span', { className: 'cy-trash-title' }, row.title),
-                h('span', { className: 'cy-trash-w' }, `${row.words} 字`),
-                h('span', { className: 'cy-hint cy-trash-at' }, `${String(row.at ?? '').slice(0, 8)} ${String(row.at ?? '').slice(9, 15)}`),
+                { className: 'nw-trash-row', key: row.trash },
+                h('span', { className: 'nw-trash-n' }, `第 ${row.chapter} 回`),
+                h('span', { className: 'nw-trash-title' }, row.title),
+                h('span', { className: 'nw-trash-w' }, `${row.words} 字`),
+                h('span', { className: 'nw-hint nw-trash-at' }, `${String(row.at ?? '').slice(0, 8)} ${String(row.at ?? '').slice(9, 15)}`),
                 h(Btn, {
                   small: true,
                   kind: 'ghost',
@@ -550,7 +759,7 @@ function SettingsPage({
         { label: '自动保存' },
         h(
           'div',
-          { className: 'cy-actions' },
+          { className: 'nw-actions' },
           h(Switch, {
             on: readLS(LS.autosave, '1') !== '0',
             onChange: (next) => {
@@ -559,7 +768,7 @@ function SettingsPage({
               onRefresh?.()
             },
           }),
-          h('span', { className: 'cy-hint' }, readLS(LS.autosave, '1') !== '0' ? '停手 4 秒落盘一次' : '关着，切页前会拦你一次'),
+          h('span', { className: 'nw-hint' }, readLS(LS.autosave, '1') !== '0' ? '停手 4 秒落盘一次' : '关着，切页前会拦你一次'),
         ),
       ),
     ),
@@ -571,13 +780,20 @@ function SettingsPage({
     h(AiLexiconCard, { projectId, toast }),
     // 【阶段 B】语料池：阈值从自己的样本里量，不从感觉里拍。
     h(CorpusCard, { toast }),
+    // 【gap 第 7 条】花了多少钱：不是估算，读会话日志。
+    h(CostCard, { projectId, toast }),
+    // 【gap 第 1 条】原生写工具守卫的挡位与目录：守卫在服务端，
+    // 但「拦不拦」是作者的决定，得给个开关。
+    h(WritePolicyCard, {
+      projectId, project, toast, onRefresh,
+    }),
     h(
       Card,
       { title: '界面' },
       // 【24 条 #24】主题三档：暗 / 亮 / 纸。米黄底配宋体，盯久了总得有个柔和的。
       h(
         'div',
-        { className: 'cy-theme-row' },
+        { className: 'nw-theme-row' },
         [
           { value: 'dark', label: '暗色', hint: '默认。夜里写。' },
           { value: 'light', label: '亮色', hint: '白天用。' },
@@ -587,15 +803,15 @@ function SettingsPage({
           {
             type: 'button',
             key: item.value,
-            className: `cy-theme-card cy-theme-${item.value}${theme === item.value ? ' on' : ''}`,
+            className: `nw-theme-card nw-theme-${item.value}${theme === item.value ? ' on' : ''}`,
             onClick: () => {
               setTheme(item.value)
               toast(`已切到「${item.label}」主题`)
             },
           },
-          h('span', { className: 'cy-theme-swatch' }, item.value === 'paper' ? '纸' : ''),
-          h('span', { className: 'cy-theme-name' }, item.label),
-          h('span', { className: 'cy-theme-hint' }, item.hint),
+          h('span', { className: 'nw-theme-swatch' }, item.value === 'paper' ? '纸' : ''),
+          h('span', { className: 'nw-theme-name' }, item.label),
+          h('span', { className: 'nw-theme-hint' }, item.hint),
         )),
       ),
       h(Hint, null, '主题记在 localStorage，只影响长夜这一层，不动宿主界面。'),
@@ -616,7 +832,7 @@ function SettingsPage({
         h(Field, { label: '书名' }, h(Input, { value: form.name, onChange: (v) => setForm({ ...form, name: v }) })),
         h(Field, { label: '题材' }, h(Input, { value: form.genre, onChange: (v) => setForm({ ...form, genre: v }) })),
         h(Field, { label: '一句话卖点' }, h(TextArea, { value: form.logline, rows: 2, onChange: (v) => setForm({ ...form, logline: v }) })),
-        h('div', { className: 'cy-form-grid' },
+        h('div', { className: 'nw-form-grid' },
           h(Field, { label: '每章目标字数' }, h(Input, {
             type: 'number', value: form.targetWords, onChange: (v) => setForm({ ...form, targetWords: Number(v) || 0 }),
           })),

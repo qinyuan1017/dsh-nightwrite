@@ -53,8 +53,8 @@ async function collectFiles(dir, out = []) {
 }
 
 function defaultCorpus() {
-  const root = process.env.CHANGYE_ROOT
-    || path.join(os.homedir(), '.dsh', 'data', 'dsh-changye')
+  const root = process.env.NIGHTWRITE_ROOT
+    || path.join(os.homedir(), '.dsh', 'data', 'dsh-nightwrite')
   return root
 }
 

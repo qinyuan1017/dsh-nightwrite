@@ -1,5 +1,5 @@
 {
-  "name": "dsh-changye",
+  "name": "dsh-nightwrite",
   "version": "0.1.0",
   "description": "长夜 · AI 主写的小说工作台：驾驶舱 / 大纲 / 生产台 / 验收台（含提案·问题单）/ 世界库 / 侦察 / 设置",
   "type": "module",
@@ -58,6 +58,8 @@
     "format:check": "prettier --check \"index.js\" \"build.mjs\" \"lib/**/*.js\" \"src/**/*.js\" \"scripts/**/*.mjs\" \"test/**/*.mjs\"",
     "types": "node scripts/gen-types.mjs",
     "types:check": "node scripts/gen-types.mjs --check",
+    "i18n": "node scripts/gen-i18n.mjs",
+    "i18n:check": "node scripts/gen-i18n.mjs --check",
     "host-api": "node scripts/check-host-api.mjs --verbose",
     "check": "node --check index.js && node --check lib/store.js && node --check lib/client.js",
     "smoke": "node test/smoke.mjs",

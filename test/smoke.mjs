@@ -263,9 +263,9 @@ const PROBLEMS = [
 ]
 
 const ROLES = [
-  { id: 'changye-coordinator', label: '总编', duty: '排产、仲裁、唯一有权派单和签发', canDispatch: true, gate: 'G1/G2/G3', skills: ['changye-plan-novel', 'changye-quality-rubric'] },
-  { id: 'changye-story-architect', label: '故事架构师', duty: '总纲、卷纲、章细纲、伏笔埋设计划', canDispatch: false, gate: '细纲齐全', skills: ['changye-plan-novel'] },
-  { id: 'changye-chapter-writer', label: '正文写手', duty: '按细纲落正文', canDispatch: false, gate: '细纲存在', skills: ['changye-write-chapter'] },
+  { id: 'nightwrite-coordinator', label: '总编', duty: '排产、仲裁、唯一有权派单和签发', canDispatch: true, gate: 'G1/G2/G3', skills: ['nightwrite-plan-novel', 'nightwrite-quality-rubric'] },
+  { id: 'nightwrite-story-architect', label: '故事架构师', duty: '总纲、卷纲、章细纲、伏笔埋设计划', canDispatch: false, gate: '细纲齐全', skills: ['nightwrite-plan-novel'] },
+  { id: 'nightwrite-chapter-writer', label: '正文写手', duty: '按细纲落正文', canDispatch: false, gate: '细纲存在', skills: ['nightwrite-write-chapter'] },
 ]
 // 拆书结果：只给两条章，够断言「黄金三章 / 逐章 / 钩子分布」这几块画得出来。
 const ANALYSES = [
@@ -316,13 +316,13 @@ const SCANS = [
 
 const DISPATCHES = [
   {
-    id: 'dp_aaaaaaaaaaaa', role: 'changye-story-architect', roleLabel: '故事架构师',
+    id: 'dp_aaaaaaaaaaaa', role: 'nightwrite-story-architect', roleLabel: '故事架构师',
     task: '排第三回细纲', chapter: 3, status: 'issued',
     createdAt: '2026-10-27T10:00:00.000Z', expiresAt: new Date(Date.now() + 25 * 60000).toISOString(),
     sessionId: '', lastError: '', report: null, expired: false,
   },
   {
-    id: 'dp_bbbbbbbbbbbb', role: 'changye-consistency-checker', roleLabel: '一致性检查员',
+    id: 'dp_bbbbbbbbbbbb', role: 'nightwrite-consistency-checker', roleLabel: '一致性检查员',
     task: '查第二回设定冲突', chapter: 2, status: 'submitted',
     createdAt: '2026-10-26T10:00:00.000Z', expiresAt: '2026-10-26T11:00:00.000Z',
     sessionId: 'sess-1234', lastError: '', expired: false,
@@ -337,7 +337,7 @@ const DISPATCHES = [
 
 function mockValue(op, payload) {
   switch (op) {
-    case 'ping': return { name: 'changye', version: '0.1.0', ops: 70 }
+    case 'ping': return { name: 'nightwrite', version: '0.1.0', ops: 70 }
     case 'project.list': return { projects: [PROJECT, PROJECT2] }
     case 'project.get': return { project: payload?.projectId === PROJECT2.id ? PROJECT2 : PROJECT }
     case 'overview': return OVERVIEW
@@ -486,16 +486,16 @@ function mockValue(op, payload) {
     case 'taskpack.list':
       return {
         items: [
-          { pack: 'tp-0001-changye-chapter-writer', role: 'changye-chapter-writer', roleLabel: '章节写手', chapter: 3, createdAt: '2026-10-28T01:30:00.000Z', files: 5, omitted: 2, bytes: 24567 },
+          { pack: 'tp-0001-nightwrite-chapter-writer', role: 'nightwrite-chapter-writer', roleLabel: '章节写手', chapter: 3, createdAt: '2026-10-28T01:30:00.000Z', files: 5, omitted: 2, bytes: 24567 },
         ],
         total: 1,
       }
     case 'taskpack.get':
       return {
         pack: payload?.pack,
-        dir: '/data/changye/taskpacks/tp-0001/materials',
+        dir: '/data/nightwrite/taskpacks/tp-0001/materials',
         manifest: {
-          role: 'changye-chapter-writer',
+          role: 'nightwrite-chapter-writer',
           roleLabel: '章节写手',
           chapter: 3,
           files: [
@@ -510,7 +510,7 @@ function mockValue(op, payload) {
             { key: 'corpus', why: '语料池是空的' },
           ],
         },
-        promptSection: '## 给你的材料\n材料不在本单里，在磁盘上：`/data/changye/taskpacks/tp-0001/materials`',
+        promptSection: '## 给你的材料\n材料不在本单里，在磁盘上：`/data/nightwrite/taskpacks/tp-0001/materials`',
       }
     // ── 章级体检四件套（借 oh-story）──
     case 'lint.degenerate':
@@ -752,7 +752,7 @@ process.on('unhandledRejection', (error) => {
 })
 
 // ══ 1. 插件导出契约 ════════════════════════════════════════
-check('导出 name === changye', plugin.name === 'changye')
+check('导出 name === nightwrite', plugin.name === 'nightwrite')
 // 客户端插件只能声明浏览器侧真有的服务。'tools' 是服务端 index.js 的事，
 // 写在客户端 inject 里会让 cordis 等一个永不出现的依赖，apply 一次都不跑（界面全白）。
 check('导出 inject 只含 slots（不含 tools）',
@@ -762,9 +762,9 @@ check('apply 是函数', typeof plugin.apply === 'function')
 check('注册了 main 槽位', regs.some((r) => r.name === 'main'))
 check('注册了 sidebar.panellist 槽位', regs.some((r) => r.name === 'sidebar.panellist'))
 check('main 用 key 而非 id（宿主 MainPanel 读 entryKey）',
-  regs.some((r) => r.name === 'main' && r.key === 'changye'))
+  regs.some((r) => r.name === 'main' && r.key === 'nightwrite'))
 check('main 拿到真组件', typeof captured === 'function')
-check('样式已注入（CHANGYE_CSS 非空）', /cy-shell/.test(src))
+check('样式已注入（NIGHTWRITE_CSS 非空）', /nw-shell/.test(src))
 
 // ══ 2. 六页逐页挂载 ════════════════════════════════════════
 // 逐页冒烟用的页面清单（= src/10-core.js 里 PAGES 的 id 顺序）。
@@ -775,8 +775,8 @@ const seen = {}
 
 for (const page of PAGES) {
   hookMap = new Map()
-  store['cy.page'] = page
-  store['cy.project'] = PROJECT.id
+  store['nw.page'] = page
+  store['nw.project'] = PROJECT.id
   const tree = await mount(captured, {})
   const cls = allCls(tree)
   const tx = allText(tree)
@@ -784,88 +784,88 @@ for (const page of PAGES) {
   seen[page] = { cls, tx, tree }
 
   check(`${page} · 零抛错`, throws.length === 0, throws.slice(0, 3).map((t) => `${t.name}: ${t.error}`).join(' | '))
-  check(`${page} · 外壳 cy-shell`, cls.has('cy-shell'))
-  check(`${page} · 顶栏 cy-top`, cls.has('cy-top'))
-  check(`${page} · 底栏 cy-bottom`, cls.has('cy-bottom'))
-  check(`${page} · 八页导航 ${DOCK_COUNT} 钮`, countCls(tree, 'cy-dock-btn') === DOCK_COUNT)
+  check(`${page} · 外壳 nw-shell`, cls.has('nw-shell'))
+  check(`${page} · 顶栏 nw-top`, cls.has('nw-top'))
+  check(`${page} · 底栏 nw-bottom`, cls.has('nw-bottom'))
+  check(`${page} · 八页导航 ${DOCK_COUNT} 钮`, countCls(tree, 'nw-dock-btn') === DOCK_COUNT)
   check(`${page} · 顶栏有书名`, tx.some((t) => String(t).includes('元末女帝')))
 }
 
 // ── 流水线（派单台） ──
 {
   const { cls, tx, tree } = seen.pipeline
-  check('流水线 · 岗位格 3 个', countCls(tree, 'cy-role') === 3)
-  check('流水线 · 总编格标黄', cls.has('cy-role-boss'))
+  check('流水线 · 岗位格 3 个', countCls(tree, 'nw-role') === 3)
+  check('流水线 · 总编格标黄', cls.has('nw-role-boss'))
   check('流水线 · 岗位名在', tx.some((t) => String(t).includes('故事架构师')))
   check('流水线 · 只有总编带「有权派单」', tx.filter((t) => String(t) === '有权派单').length === 1)
-  check('流水线 · 单据 2 张', countCls(tree, 'cy-dp') === 2)
+  check('流水线 · 单据 2 张', countCls(tree, 'nw-dp') === 2)
   check('流水线 · 待办票有「发到对话」', tx.some((t) => String(t).includes('发到对话')))
-  check('流水线 · 已交票摊出回执', countCls(tree, 'cy-dp-report') === 1)
+  check('流水线 · 已交票摊出回执', countCls(tree, 'nw-dp-report') === 1)
   check('流水线 · 回执结论上屏', tx.some((t) => String(t) === '通过'))
-  check('流水线 · 回执按 ### 切段', countCls(tree, 'cy-dp-sec') === 2)
-  check('流水线 · 开票表单在', cls.has('cy-pipe-form'))
+  check('流水线 · 回执按 ### 切段', countCls(tree, 'nw-dp-sec') === 2)
+  check('流水线 · 开票表单在', cls.has('nw-pipe-form'))
   check('流水线 · 剩余时间算出分钟', tx.some((t) => /还剩 \d+ 分钟/.test(String(t))))
-  check('流水线 · 没有抛错占位', !cls.has('cy-error'))
+  check('流水线 · 没有抛错占位', !cls.has('nw-error'))
 }
 
 // ── 驾驶舱 ──
 {
   const { cls, tx, tree } = seen.cockpit
-  check('驾驶舱 · 四个大数字', countCls(tree, 'cy-stat') === 4)
-  check('驾驶舱 · 欠账 3 条', countCls(tree, 'cy-debt') === 3)
+  check('驾驶舱 · 四个大数字', countCls(tree, 'nw-stat') === 4)
+  check('驾驶舱 · 欠账 3 条', countCls(tree, 'nw-debt') === 3)
   check('驾驶舱 · 今日建议文案', tx.some((t) => String(t).includes('先处理第 2 回')))
-  check('驾驶舱 · 最近产出取 overview.recent', countCls(tree, 'cy-recent-row') === 3)
-  check('驾驶舱 · 最近章节 3 行', countCls(tree, 'cy-recent-row') === 3)
-  check('驾驶舱 · 没有抛错占位', !cls.has('cy-error'))
+  check('驾驶舱 · 最近产出取 overview.recent', countCls(tree, 'nw-recent-row') === 3)
+  check('驾驶舱 · 最近章节 3 行', countCls(tree, 'nw-recent-row') === 3)
+  check('驾驶舱 · 没有抛错占位', !cls.has('nw-error'))
 }
 
 // ── 大纲 ──
 {
   const { cls, tx, tree } = seen.plan
-  check('大纲 · 方案卡在', cls.has('cy-plan-brief'))
-  check('大纲 · 八个方案字段 + 卷/章两组 = 10 格', countCls(tree, 'cy-plan-field') === 10)
-  // 【24 条 #7/#8】骨架默认是卡片墙；列表视图仍在 cy-plan-rows 里，所以两个锚点都算在。
-  check('大纲 · 骨架区在（卡片墙）', cls.has('cy-pcards') || cls.has('cy-plan-rows'))
+  check('大纲 · 方案卡在', cls.has('nw-plan-brief'))
+  check('大纲 · 八个方案字段 + 卷/章两组 = 10 格', countCls(tree, 'nw-plan-field') === 10)
+  // 【24 条 #7/#8】骨架默认是卡片墙；列表视图仍在 nw-plan-rows 里，所以两个锚点都算在。
+  check('大纲 · 骨架区在（卡片墙）', cls.has('nw-pcards') || cls.has('nw-plan-rows'))
   // 卷 2 个 + 三视图 3 个 = 5 片
-  check('大纲 · 卷切换 2 + 三视图 3 = 5 片', countCls(tree, 'cy-seg-btn') === 2 + 3)
-  check('大纲 · 每卷 2 章 = 2 张卡', countCls(tree, 'cy-pcard') === 2)
+  check('大纲 · 卷切换 2 + 三视图 3 = 5 片', countCls(tree, 'nw-seg-btn') === 2 + 3)
+  check('大纲 · 每卷 2 章 = 2 张卡', countCls(tree, 'nw-pcard') === 2)
   check('大纲 · 送去生产台按钮在', tx.some((t) => String(t).includes('送去生产台')))
 }
 
 // ── 生产台 ──
 {
   const { cls, tx, tree } = seen.studio
-  check('生产台 · 三栏网格', cls.has('cy-studio-cols'))
-  check('生产台 · 模板 2 个', countCls(tree, 'cy-tpl') === 2)
-  check('生产台 · 上下文包在', cls.has('cy-ctx'))
-  check('生产台 · 队列 2 行', countCls(tree, 'cy-q-row') === 2)
+  check('生产台 · 三栏网格', cls.has('nw-studio-cols'))
+  check('生产台 · 模板 2 个', countCls(tree, 'nw-tpl') === 2)
+  check('生产台 · 上下文包在', cls.has('nw-ctx'))
+  check('生产台 · 队列 2 行', countCls(tree, 'nw-q-row') === 2)
   check('生产台 · 世界状态喂进上下文', tx.some((t) => String(t).includes('金丹三层')))
-  check('生产台 · 指令单在', cls.has('cy-order'))
+  check('生产台 · 指令单在', cls.has('nw-order'))
 }
 
 // ── 顶栏三个快动作（从底栏搬上来） ──
 {
   const { tx, tree } = seen.cockpit
-  const inTop = all(tree).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('cy-top-right'))
+  const inTop = all(tree).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('nw-top-right'))
   const topText = inTop.length ? allText(inTop[0]).map(String).join(' ') : ''
   check('顶栏 · 续写一章在顶栏', topText.includes('续写一章'), topText.slice(0, 60))
   check('顶栏 · 连更 3 章在顶栏', topText.includes('连更 3 章'))
   check('顶栏 · 体检在顶栏', topText.includes('体检'))
   check('顶栏 · 队列状态在顶栏', /队列空闲|\d+ 章在队列里/.test(topText), topText.slice(0, 80))
   // 【24 条 #2】底栏右侧现在常驻「最新 / 新章」两个按钮。
-  const bottom = all(seen.cockpit.tree || []).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('cy-bottom-acts'))
+  const bottom = all(seen.cockpit.tree || []).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('nw-bottom-acts'))
   const bottomText = bottom.length ? allText(bottom[0]).map(String).join(' ') : ''
 
-  check('底栏 · 右侧两个常驻按钮', seen.cockpit.cls.has('cy-bottom-acts') && bottomText.includes('最新') && bottomText.includes('新章'), bottomText.slice(0, 60))
+  check('底栏 · 右侧两个常驻按钮', seen.cockpit.cls.has('nw-bottom-acts') && bottomText.includes('最新') && bottomText.includes('新章'), bottomText.slice(0, 60))
 }
 
 // ── 验收台 ──
 {
   const { cls, tree } = seen.review
-  check('验收台 · 列表在', cls.has('cy-rv-list'))
-  check('验收台 · 默认待验收只 1 行', countCls(tree, 'cy-rv-row') === 1)
-  // 验收台现在是「五个抽屉 + 四个筛选片」= 9 个 cy-seg-btn（新增冷读、意见池）
-  check('验收台 · 五抽屉 + 四筛选 = 9 片', countCls(tree, 'cy-seg-btn') === 9)
+  check('验收台 · 列表在', cls.has('nw-rv-list'))
+  check('验收台 · 默认待验收只 1 行', countCls(tree, 'nw-rv-row') === 1)
+  // 验收台现在是「五个抽屉 + 四个筛选片」= 9 个 nw-seg-btn（新增冷读、意见池）
+  check('验收台 · 五抽屉 + 四筛选 = 9 片', countCls(tree, 'nw-seg-btn') === 9)
 }
 
 // ══ 深水区：提案抽屉 ═══════════════════════════════════════
@@ -879,9 +879,10 @@ for (const page of PAGES) {
   const throws = throwsOf(tree)
   check('提案抽屉 · 零抛错', throws.length === 0, throws.slice(0, 2).map((t) => `${t.name}: ${t.error}`).join(' | '))
   // 默认筛选是「待批」，所以只画那条 pending 的
-  check('提案抽屉 · 默认只画待批 1 条', countCls(tree, 'cy-prop') === 1)
-  check('提案抽屉 · 待批样式在', cls.has('cy-prop-pending') && !cls.has('cy-prop-accepted'))
-  check('提案抽屉 · 状态筛选 4 片', countCls(tree, 'cy-seg-btn') === 4)
+  check('提案抽屉 · 默认只画待批 1 条', countCls(tree, 'nw-prop') === 1)
+  check('提案抽屉 · 待批样式在', cls.has('nw-prop-pending') && !cls.has('nw-prop-accepted'))
+  // 5 片：待批 / 已采纳 / 已驳回 / 已过期 / 全部 —— 过期是稿子变了，不是人驳回的，得能单独看。
+  check('提案抽屉 · 状态筛选 5 片', countCls(tree, 'nw-seg-btn') === 5)
   check('提案抽屉 · 卡片上写着「AI 提议，你拍板」', tx.some((t) => String(t).includes('你拍板')))
   check('提案抽屉 · 待批才有采纳按钮', tx.some((t) => String(t).includes('采纳并写回')))
 }
@@ -896,9 +897,9 @@ for (const page of PAGES) {
   const tx = allText(tree)
   const throws = throwsOf(tree)
   check('问题单抽屉 · 零抛错', throws.length === 0, throws.slice(0, 2).map((t) => `${t.name}: ${t.error}`).join(' | '))
-  check('问题单抽屉 · 默认只出未修 2 条', countCls(tree, 'cy-prob') === 2)
-  check('问题单抽屉 · 状态筛选 4 片', countCls(tree, 'cy-seg-btn') === 4)
-  check('问题单抽屉 · 类型/严重度标签在', cls.has('cy-tag-amber') && cls.has('cy-tag-red'))
+  check('问题单抽屉 · 默认只出未修 2 条', countCls(tree, 'nw-prob') === 2)
+  check('问题单抽屉 · 状态筛选 4 片', countCls(tree, 'nw-seg-btn') === 4)
+  check('问题单抽屉 · 类型/严重度标签在', cls.has('nw-tag-amber') && cls.has('nw-tag-red'))
   check('问题单抽屉 · 能记一条', tx.some((t) => String(t).includes('记一条')))
   check('问题单抽屉 · 未修条目有「已修」按钮', tx.some((t) => String(t).includes('已修')))
 }
@@ -906,27 +907,27 @@ for (const page of PAGES) {
 // ── 世界库 ──
 {
   const { cls, tree } = seen.world
-  check('世界库 · 侧栏 8 类', countCls(tree, 'cy-world-nav-btn') === 8)
-  check('世界库 · 世界状态横幅', cls.has('cy-ws-banner'))
-  check('世界库 · 表格在', cls.has('cy-table'))
+  check('世界库 · 侧栏 8 类', countCls(tree, 'nw-world-nav-btn') === 8)
+  check('世界库 · 世界状态横幅', cls.has('nw-ws-banner'))
+  check('世界库 · 表格在', cls.has('nw-table'))
   // 第四片是「地图」——地点类独有的空间视图，所以是 4。
-  check('世界库 · 四视图切换（含地图）', countCls(tree, 'cy-seg-btn') === 4)
-  check('世界库 · 人物表 2 行', countCls(tree, 'cy-table-row') === 2)
+  check('世界库 · 四视图切换（含地图）', countCls(tree, 'nw-seg-btn') === 4)
+  check('世界库 · 人物表 2 行', countCls(tree, 'nw-table-row') === 2)
 }
 
 // ── 侦察 ──
 {
   const { tree } = seen.scout
-  check('侦察 · 四块卡片', countCls(tree, 'cy-scout-card') === 4)
+  check('侦察 · 四块卡片', countCls(tree, 'nw-scout-card') === 4)
 }
 
 // ── 设置 ──
 {
   const { cls, tree } = seen.settings
-  check('设置 · 作品 2 个', countCls(tree, 'cy-proj') === 2)
-  check('设置 · 危险区在', cls.has('cy-danger-zone'))
+  check('设置 · 作品 2 个', countCls(tree, 'nw-proj') === 2)
+  check('设置 · 危险区在', cls.has('nw-danger-zone'))
   // 【24 条 #24】主题从开关改成三档卡片：暗 / 亮 / 纸。
-  check('设置 · 主题三档', countCls(tree, 'cy-theme-card') === 3)
+  check('设置 · 主题三档', countCls(tree, 'nw-theme-card') === 3)
 }
 
 // ══ 3. 深水区：验收详情（一次打开第 3 回） ═══════════════════
@@ -939,50 +940,50 @@ for (const page of PAGES) {
   const tx = allText(tree)
   const throws = throwsOf(tree)
   check('验收详情 · 零抛错', throws.length === 0, throws.slice(0, 2).map((t) => `${t.name}: ${t.error}`).join(' | '))
-  check('验收详情 · 正文与侧栏分栏', cls.has('cy-rv-doc') && cls.has('cy-rv-side'))
-  check('验收详情 · 四类评分格', countCls(tree, 'cy-score-cell') === 4)
-  check('验收详情 · 问题 3 条 + 违规 1 条 = 4 行', countCls(tree, 'cy-issue') === 4)
+  check('验收详情 · 正文与侧栏分栏', cls.has('nw-rv-doc') && cls.has('nw-rv-side'))
+  check('验收详情 · 四类评分格', countCls(tree, 'nw-score-cell') === 4)
+  check('验收详情 · 问题 3 条 + 违规 1 条 = 4 行', countCls(tree, 'nw-issue') === 4)
   check('验收详情 · IssueRow 组件实例 3 个', all(tree).filter((n) => n.kind === 'comp' && n.name === 'IssueRow').length === 3)
-  check('验收详情 · 违规 1 条', countCls(tree, 'cy-issue-violation') === 1)
+  check('验收详情 · 违规 1 条', countCls(tree, 'nw-issue-violation') === 1)
   // 【24 条 #13】正文默认走「段落视图」（不是 textarea），右侧配彩带。
-  const paras = all(tree).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('cy-para'))
+  const paras = all(tree).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('nw-para'))
   check('验收详情 · 段落视图渲染正文', paras.length >= 1 && tx.some((t) => String(t).includes('城头夜雨')), 'paragraphs=' + paras.length)
-  check('验收详情 · 彩带格子数与段落一致', countCls(tree, 'cy-heat-cell') === paras.length, 'heat=' + countCls(tree, 'cy-heat-cell') + ' para=' + paras.length)
+  check('验收详情 · 彩带格子数与段落一致', countCls(tree, 'nw-heat-cell') === paras.length, 'heat=' + countCls(tree, 'nw-heat-cell') + ' para=' + paras.length)
   check('验收详情 · 采纳/废弃按钮', tx.some((t) => String(t).includes('采纳')) && tx.some((t) => String(t).includes('废弃')))
   // 【第 1 批】文风校验面板装在右栏，不是列表页。
-  check('校验 · 面板在（cy-lint）', cls.has('cy-lint'))
+  check('校验 · 面板在（nw-lint）', cls.has('nw-lint'))
   check('校验 · 有硬伤就给红结论', tx.some((t) => /有 1 处硬伤/.test(String(t))))
-  check('校验 · 三档筛选片', countCls(tree, 'cy-lint-seg') === 1)
-  check('校验 · 命中行 3 条', countCls(tree, 'cy-lint-hit') === 3)
-  check('校验 · 硬伤行标红', countCls(tree, 'cy-lint-blocking') === 1)
-  check('校验 · 提示行标黄', countCls(tree, 'cy-lint-advisory') === 2)
+  check('校验 · 三档筛选片', countCls(tree, 'nw-lint-seg') === 1)
+  check('校验 · 命中行 3 条', countCls(tree, 'nw-lint-hit') === 3)
+  check('校验 · 硬伤行标红', countCls(tree, 'nw-lint-blocking') === 1)
+  check('校验 · 提示行标黄', countCls(tree, 'nw-lint-advisory') === 2)
   check('校验 · 引文上屏', tx.some((t) => String(t).includes('他不是不知道')))
-  check('校验 · 命中行可点（button）', all(tree).filter((n) => n.tag === 'button' && String(n.props?.className ?? '').includes('cy-lint-hit')).every((n) => typeof n.props?.onClick === 'function'))
-  check('校验 · 规则说明可折叠', all(tree).some((n) => n.tag === 'details' && String(n.props?.className ?? '').includes('cy-lint-about')))
+  check('校验 · 命中行可点（button）', all(tree).filter((n) => n.tag === 'button' && String(n.props?.className ?? '').includes('nw-lint-hit')).every((n) => typeof n.props?.onClick === 'function'))
+  check('校验 · 规则说明可折叠', all(tree).some((n) => n.tag === 'details' && String(n.props?.className ?? '').includes('nw-lint-about')))
   // 【阶段 A】每条命中都挂一个「为什么」钮，判据默认收起
   // 退化单独一档：命中说明这段不是文，该整章重跑，不是逐句改。
   check('校验 · 退化是独立一档（不是混在硬伤里）',
     /value: 'degenerate'/.test(src) && /only === 'degenerate'/.test(src))
   check('校验 · 结论句退化优先于硬伤', /这段不是文，整章重跑/.test(src))
-  check('校验 · 每条命中都有「为什么」钮', countCls(tree, 'cy-lint-why-btn') === countCls(tree, 'cy-lint-hit'))
-  check('校验 · 判据默认收起', countCls(tree, 'cy-lint-why') === 0)
+  check('校验 · 每条命中都有「为什么」钮', countCls(tree, 'nw-lint-why-btn') === countCls(tree, 'nw-lint-hit'))
+  check('校验 · 判据默认收起', countCls(tree, 'nw-lint-why') === 0)
   // 【阶段 C】本书阈值卡：装了才可能让人看见「凭什么按这个标准判我」
-  check('阈值 · 卡片在（cy-lint-cal）', cls.has('cy-lint-cal'))
+  check('阈值 · 卡片在（nw-lint-cal）', cls.has('nw-lint-cal'))
   check('阈值 · 写明已调几条', tx.some((t) => /2 条已按本书调整/.test(String(t))))
   check('阈值 · 量过之后说量了多少章', tx.some((t) => /12 章/.test(String(t))))
   check('阈值 · 有「量一遍」按钮', all(tree).some((n) => n.tag === 'button' && typeof n.props?.onClick === 'function' && allText(n).join('').includes('量一遍')))
-  check('阈值 · 明细默认收起', countCls(tree, 'cy-lint-cal-list') === 0)
+  check('阈值 · 明细默认收起', countCls(tree, 'nw-lint-cal-list') === 0)
   check('阈值 · 结论可折叠', all(tree).some((n) => n.tag === 'details' && allText(n).join('').includes('量出来的结论')))
 }
 
 // ══ 4. 断点回环：hook 状态在自己身上改，不污染别人 ═════════
 {
   hookMap = new Map()
-  store['cy.page'] = 'review'
+  store['nw.page'] = 'review'
   const first = await mount(captured, {})
-  const rowsFirst = countCls(first, 'cy-rv-row')
+  const rowsFirst = countCls(first, 'nw-rv-row')
   // 模拟用户点第二个筛选片（已采纳）→ useState setter 打 dirty，重挂一轮
-  const segs = all(first).filter((n) => typeof n.cls === 'string' && n.cls.split(/\s+/).includes('cy-seg-btn'))
+  const segs = all(first).filter((n) => typeof n.cls === 'string' && n.cls.split(/\s+/).includes('nw-seg-btn'))
   check('验收台 · 抽屉/筛选片都是按钮', segs.length === 9 && segs.every((n) => n.kind === 'el' && n.tag === 'button'))
   check('验收台 · 初次行数 = 1（待验收）', rowsFirst === 1)
 }
@@ -990,8 +991,8 @@ for (const page of PAGES) {
 // ══ 5. 无作品时的兜底 ═══════════════════════════════════════
 {
   hookMap = new Map()
-  store['cy.page'] = 'cockpit'
-  delete store['cy.project']
+  store['nw.page'] = 'cockpit'
+  delete store['nw.project']
   win.fetch = global.fetch = async (url, opt) => {
     let op = ''
     try { op = JSON.parse(opt.body).op } catch { /* 空 */ }
@@ -1008,8 +1009,8 @@ for (const page of PAGES) {
 // ══ 6. 后端报错时的显示 ═════════════════════════════════════
 {
   hookMap = new Map()
-  store['cy.page'] = 'cockpit'
-  store['cy.project'] = PROJECT.id
+  store['nw.page'] = 'cockpit'
+  store['nw.project'] = PROJECT.id
   win.fetch = global.fetch = async () => ({ json: async () => ({ ok: false, error: { code: 'fs', message: '目录不可写' } }), status: 500 })
   const tree = await mount(captured, {})
   const tx = allText(tree)
@@ -1036,8 +1037,8 @@ for (const page of PAGES) {
     fetchCalls.push(op)
     return { json: async () => ({ ok: true, value: mockValue(op, payload) }), status: 200 }
   }
-  store['cy.page'] = 'cockpit'
-  store['cy.project'] = PROJECT.id
+  store['nw.page'] = 'cockpit'
+  store['nw.project'] = PROJECT.id
   const T = (page) => seen[page].tree
   const clickable = (tree, cls) => all(tree)
     .filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes(cls))
@@ -1047,16 +1048,16 @@ for (const page of PAGES) {
   {
     const t = T('cockpit')
     const tx = allText(t).map(String).join(' ')
-    check('#1 状态灯 · 灯泡 + 灯点都在', countCls(t, 'cy-lamp') === 1 && countCls(t, 'cy-lamp-dot') === 1)
+    check('#1 状态灯 · 灯泡 + 灯点都在', countCls(t, 'nw-lamp') === 1 && countCls(t, 'nw-lamp-dot') === 1)
     check('#1 状态灯 · 写着正在写第几回', /正在写第 \d+ 回/.test(tx), tx.slice(0, 80))
     check('#1 状态灯 · 带字数进度', /\d+\/2500 字/.test(tx))
-    check('#1 状态灯 · 可点', clickable(t, 'cy-lamp'))
+    check('#1 状态灯 · 可点', clickable(t, 'nw-lamp'))
   }
 
   // ── 2. 底栏右侧两个按钮 ──
   {
     const t = T('cockpit')
-    const acts = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('cy-bottom-acts'))
+    const acts = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-bottom-acts'))
     const names = acts.length ? allText(acts[0]).map(String) : []
     check('#2 底栏 · 右侧动作区在', acts.length === 1)
     check('#2 底栏 · 两个按钮：最新 / 新章', names.some((x) => x.includes('最新')) && names.some((x) => x.includes('新章')), names.join('|'))
@@ -1065,8 +1066,8 @@ for (const page of PAGES) {
   // ── 3. Ctrl+K 命令面板 ──
   {
     const t = T('cockpit')
-    check('#3 命令面板 · 顶栏有 Ctrl+K 入口', countCls(t, 'cy-cmdk-open') >= 1)
-    const btn = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('cy-cmdk-open'))
+    check('#3 命令面板 · 顶栏有 Ctrl+K 入口', countCls(t, 'nw-cmdk-open') >= 1)
+    const btn = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-cmdk-open'))
     check('#3 命令面板 · 入口可点', typeof btn?.props?.onClick === 'function')
     check('#3 命令面板 · 组件挂着全局 Ctrl+K 监听', /addEventListener\('keydown'/.test(src) && /ctrlKey \|\| event\.metaKey/.test(src))
   }
@@ -1074,8 +1075,8 @@ for (const page of PAGES) {
   // ── 4. 一句大白话 + 一个按钮 ──
   {
     const t = T('cockpit')
-    check('#4 行动卡 · 在', countCls(t, 'cy-action') === 1)
-    const actionCard = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('cy-action'))
+    check('#4 行动卡 · 在', countCls(t, 'nw-action') === 1)
+    const actionCard = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-action'))
     const cardBtns = actionCard
       ? all([actionCard]).filter((n) => n.kind === 'el' && n.tag === 'button' && typeof n.props?.onClick === 'function')
       : []
@@ -1086,10 +1087,10 @@ for (const page of PAGES) {
   // ── 5. 两周柱状图 ──
   {
     const t = T('cockpit')
-    check('#5 柱状图 · 容器在', countCls(t, 'cy-days') === 1)
-    check('#5 柱状图 · 14 根柱子', countCls(t, 'cy-day') === 14)
-    check('#5 柱状图 · 断更的柱子有专用样式', countCls(t, 'cy-day-off') === 2)
-    check('#5 柱状图 · 每根柱子可点', clickable(t, 'cy-day'))
+    check('#5 柱状图 · 容器在', countCls(t, 'nw-days') === 1)
+    check('#5 柱状图 · 14 根柱子', countCls(t, 'nw-day') === 14)
+    check('#5 柱状图 · 断更的柱子有专用样式', countCls(t, 'nw-day-off') === 2)
+    check('#5 柱状图 · 每根柱子可点', clickable(t, 'nw-day'))
   }
 
   // ── 6. 全书进度条 ──
@@ -1097,47 +1098,47 @@ for (const page of PAGES) {
     const t = T('cockpit')
     const tx = allText(t).map(String).join(' ')
     // 【12 条 #4】进度条已接真数据：卷分段来自大纲（MOCK 里 2 卷），不再是写死的 3 段。
-    check('#6 进度条 · 容器 + 卷分段跟大纲走', countCls(t, 'cy-progress') === 1 && countCls(t, 'cy-progress-vol') === OUTLINE.volumes.length, `${countCls(t, 'cy-progress-vol')} 段 / 大纲 ${OUTLINE.volumes.length} 卷`)
+    check('#6 进度条 · 容器 + 卷分段跟大纲走', countCls(t, 'nw-progress') === 1 && countCls(t, 'nw-progress-vol') === OUTLINE.volumes.length, `${countCls(t, 'nw-progress-vol')} 段 / 大纲 ${OUTLINE.volumes.length} 卷`)
     // fmtWords 会把 12840 写成「1.3 万」，所以按“万 / 字 / 第 N/M 回”三项认。
     check('#6 进度条 · 字数 / 回数都上屏', /\/\s*[\d.]+\s*万?\s*字/.test(tx) && /第 \d+\/\d+ 回/.test(tx), tx.slice(0, 120))
-    check('#6 进度条 · 每段卷可点', clickable(t, 'cy-progress-vol'))
+    check('#6 进度条 · 每段卷可点', clickable(t, 'nw-progress-vol'))
   }
 
   // ── 7. 卡片墙 ──
   {
     const t = T('plan')
-    check('#7 卡片墙 · 容器在', countCls(t, 'cy-pcards') === 1)
-    check('#7 卡片墙 · 每章一张卡', countCls(t, 'cy-pcard') === 2)
+    check('#7 卡片墙 · 容器在', countCls(t, 'nw-pcards') === 1)
+    check('#7 卡片墙 · 每章一张卡', countCls(t, 'nw-pcard') === 2)
   }
 
   // ── 8. 三视图 ──
   {
     const t = T('plan')
-    check('#8 三视图 · 切换条在', countCls(t, 'cy-plan-viewbar') === 1)
-    check('#8 三视图 · 卷 2 + 视图 3 = 5 片', countCls(t, 'cy-seg-btn') === 5)
-    const bar = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('cy-plan-viewbar'))
+    check('#8 三视图 · 切换条在', countCls(t, 'nw-plan-viewbar') === 1)
+    check('#8 三视图 · 卷 2 + 视图 3 = 5 片', countCls(t, 'nw-seg-btn') === 5)
+    const bar = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-plan-viewbar'))
     check('#8 三视图 · 每片可点', bar ? allText(bar).length >= 3 : false)
   }
 
   // ── 9. AI 填整卷摘要 ──
   check('#9 AI 填整卷 · 按钮文案在', allText(T('plan')).some((t) => String(t).includes('AI 填这卷')))
-  check('#9 AI 填整卷 · 挂在卷级（不是章级）', countCls(T('plan'), 'cy-fillbar') >= 1)
+  check('#9 AI 填整卷 · 挂在卷级（不是章级）', countCls(T('plan'), 'nw-fillbar') >= 1)
 
   // ── 10. 上下文可拖可关 ──
   {
     const t = T('studio')
-    const rows = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('cy-ctx-row'))
+    const rows = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-ctx-row'))
     check('#10 上下文 · 行可拖', rows.length > 0 && rows.every((n) => n.props?.draggable === true), `rows=${rows.length}`)
-    check('#10 上下文 · 每行有抓手', countCls(t, 'cy-ctx-grip') === rows.length)
-    check('#10 上下文 · 每行有关闭开关', countCls(t, 'cy-ctx-sw') === rows.length)
-    check('#10 上下文 · 开关可点', clickable(t, 'cy-ctx-sw'))
+    check('#10 上下文 · 每行有抓手', countCls(t, 'nw-ctx-grip') === rows.length)
+    check('#10 上下文 · 每行有关闭开关', countCls(t, 'nw-ctx-sw') === rows.length)
+    check('#10 上下文 · 开关可点', clickable(t, 'nw-ctx-sw'))
   }
 
   // ── 11. 预算条 ──
   {
     const t = T('studio')
     const tx = allText(t).map(String).join(' ')
-    check('#11 预算条 · 计量条在', countCls(t, 'cy-ctx-meter') === 1)
+    check('#11 预算条 · 计量条在', countCls(t, 'nw-ctx-meter') === 1)
     check('#11 预算条 · 百分比上屏', /\d+% 已用/.test(tx), tx.slice(0, 120))
     check('#11 预算条 · 剩余/超出提示在', /还能塞|超了/.test(tx))
   }
@@ -1145,9 +1146,9 @@ for (const page of PAGES) {
   // ── 12. 意图复用 ──
   {
     const t = T('studio')
-    check('#12 意图复用 · 容器在', countCls(t, 'cy-chips') === 1)
-    check('#12 意图复用 · 最近三条', countCls(t, 'cy-chip') === 3)
-    check('#12 意图复用 · 每条可点', clickable(t, 'cy-chip'))
+    check('#12 意图复用 · 容器在', countCls(t, 'nw-chips') === 1)
+    check('#12 意图复用 · 最近三条', countCls(t, 'nw-chip') === 3)
+    check('#12 意图复用 · 每条可点', clickable(t, 'nw-chip'))
   }
 
   // ── 13 / 14 / 15：验收详情 ──
@@ -1157,21 +1158,21 @@ for (const page of PAGES) {
       projectId: PROJECT.id, chapter: 3, gate: 70, onClose() {}, onChanged() {}, toast() {},
     })
     const tx = allText(t).map(String).join(' ')
-    const paras = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('cy-para'))
-    check('#13 彩带 · 容器在', countCls(t, 'cy-heat') === 1)
-    check('#13 彩带 · 格子数与段落一致', countCls(t, 'cy-heat-cell') === paras.length && paras.length > 0, `heat=${countCls(t, 'cy-heat-cell')} para=${paras.length}`)
-    check('#13 彩带 · 格子可点（点了滚过去）', clickable(t, 'cy-heat-cell'))
+    const paras = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-para'))
+    check('#13 彩带 · 容器在', countCls(t, 'nw-heat') === 1)
+    check('#13 彩带 · 格子数与段落一致', countCls(t, 'nw-heat-cell') === paras.length && paras.length > 0, `heat=${countCls(t, 'nw-heat-cell')} para=${paras.length}`)
+    check('#13 彩带 · 格子可点（点了滚过去）', clickable(t, 'nw-heat-cell'))
     check('#13 彩带 · 三档图例在', /AI 味/.test(tx) && /好/.test(tx) && /拖/.test(tx))
 
-    // 违规行（cy-issue-violation）是展示条，不是问题；只核对真问题行是按钮且挂了 onClick。
+    // 违规行（nw-issue-violation）是展示条，不是问题；只核对真问题行是按钮且挂了 onClick。
     const issues = all(t).filter((n) => n.kind === 'el'
-      && String(n.cls ?? '').split(/\s+/).includes('cy-issue')
-      && !String(n.cls ?? '').split(/\s+/).includes('cy-issue-violation'))
+      && String(n.cls ?? '').split(/\s+/).includes('nw-issue')
+      && !String(n.cls ?? '').split(/\s+/).includes('nw-issue-violation'))
     check('#14 点问题 · 每条问题是按钮', issues.length > 0 && issues.every((n) => n.tag === 'button'), `issues=${issues.length}`)
     check('#14 点问题 · 每条挂了 onClick', issues.every((n) => typeof n.props?.onClick === 'function'))
-    check('#14 点问题 · 有高亮态样式钩子', /cy-issue-on/.test(src))
+    check('#14 点问题 · 有高亮态样式钩子', /nw-issue-on/.test(src))
 
-    check('#15 键盘流 · 提示条在', countCls(t, 'cy-keys') === 1)
+    check('#15 键盘流 · 提示条在', countCls(t, 'nw-keys') === 1)
     check('#15 键盘流 · 写着 J/K/A/R', /J\/K/.test(tx) && /A 采纳/.test(tx) && /R 废弃/.test(tx), tx.slice(-80))
     check('#15 键盘流 · 真挂了 keydown 监听', /addEventListener\('keydown'/.test(src) && /key === 'j'/.test(src) && /key === 'r'/.test(src))
   }
@@ -1185,7 +1186,7 @@ for (const page of PAGES) {
     const tx = allText(t).map(String).join(' ')
     check('#16 提案批量 · 全采纳按钮', /全采纳/.test(tx))
     check('#16 提案批量 · 全驳回按钮', /全驳回/.test(tx))
-    check('#16 提案批量 · 按章分组', countCls(t, 'cy-prop-group') >= 1)
+    check('#16 提案批量 · 按章分组', countCls(t, 'nw-prop-group') >= 1)
   }
 
   // ── 17. 问题单只看本章 ──
@@ -1195,58 +1196,58 @@ for (const page of PAGES) {
       projectId: PROJECT.id, gate: 70, toast() {}, onRefresh() {}, refreshKey: 0,
     })
     check('#17 只看本章 · 筛选器在', allText(t).some((x) => String(x).includes('只看')), allText(t).map(String).join('|').slice(0, 120))
-    check('#17 只看本章 · 条数没被筛掉', countCls(t, 'cy-prob') === 2)
+    check('#17 只看本章 · 条数没被筛掉', countCls(t, 'nw-prob') === 2)
   }
 
   // ── 18. 账本格出处 ──
   {
     const t = T('world')
-    const cells = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('cy-td-cell'))
+    const cells = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-td-cell'))
     check('#18 账本出处 · 每格都是按钮', cells.length > 0 && cells.every((n) => n.tag === 'button'), `cells=${cells.length}`)
     check('#18 账本出处 · 每格挂了 onClick', cells.every((n) => typeof n.props?.onClick === 'function'))
-    check('#18 账本出处 · 有定位图标位', countCls(t, 'cy-td-pin') === cells.length)
+    check('#18 账本出处 · 有定位图标位', countCls(t, 'nw-td-pin') === cells.length)
   }
 
   // ── 19. 关系图过滤 ──
   {
-    store['cy.page'] = 'world'
-    store['cy.worldview'] = 'graph'
+    store['nw.page'] = 'world'
+    store['nw.worldview'] = 'graph'
     hookMap = new Map()
     const t = await mount(captured, {})
-    check('#19 关系图 · 图在', countCls(t, 'cy-graph-svg') === 1)
-    check('#19 关系图 · 过滤条在', countCls(t, 'cy-graph-bar') === 1)
-    check('#19 关系图 · 4 视图 + 1 过滤 = 5 片', countCls(t, 'cy-seg-btn') === 5)
+    check('#19 关系图 · 图在', countCls(t, 'nw-graph-svg') === 1)
+    check('#19 关系图 · 过滤条在', countCls(t, 'nw-graph-bar') === 1)
+    check('#19 关系图 · 4 视图 + 1 过滤 = 5 片', countCls(t, 'nw-seg-btn') === 5)
     check('#19 关系图 · 过滤可切', /只看最近出场/.test(allText(t).map(String).join(' ')))
-    store['cy.worldview'] = 'table'
+    store['nw.worldview'] = 'table'
   }
 
   // ── 20. 逾期伏笔标红 ──
   {
-    store['cy.page'] = 'world'
-    store['cy.worldview'] = 'timeline'
+    store['nw.page'] = 'world'
+    store['nw.worldview'] = 'timeline'
     hookMap = new Map()
     const t = await mount(captured, {})
-    check('#20 逾期伏笔 · 红框区在', countCls(t, 'cy-tl-overdue') === 1)
-    check('#20 逾期伏笔 · 逾期条目上屏', countCls(t, 'cy-tl-overdue-row') >= 1)
+    check('#20 逾期伏笔 · 红框区在', countCls(t, 'nw-tl-overdue') === 1)
+    check('#20 逾期伏笔 · 逾期条目上屏', countCls(t, 'nw-tl-overdue-row') >= 1)
     check('#20 逾期伏笔 · 写着逾期几回', /已逾期 \d+ 回/.test(allText(t).map(String).join(' ')))
-    store['cy.worldview'] = 'table'
+    store['nw.worldview'] = 'table'
   }
 
   // ── 21. 最近干过什么 ──
   {
     const t = T('scout')
-    check('#21 侦察产出 · 容器在', countCls(t, 'cy-hist') === 1)
-    check('#21 侦察产出 · 四条记录', countCls(t, 'cy-hist-row') === 4)
-    check('#21 侦察产出 · 每条可点展开', clickable(t, 'cy-hist-row') || countCls(t, 'cy-hist-detail') >= 0)
+    check('#21 侦察产出 · 容器在', countCls(t, 'nw-hist') === 1)
+    check('#21 侦察产出 · 四条记录', countCls(t, 'nw-hist-row') === 4)
+    check('#21 侦察产出 · 每条可点展开', clickable(t, 'nw-hist-row') || countCls(t, 'nw-hist-detail') >= 0)
   }
 
   // ── 22. 扫榜结果表格 ──
   {
     const t = T('scout')
-    check('#22 扫榜表 · 表格在', countCls(t, 'cy-scan') === 1)
-    check('#22 扫榜表 · 7 列表头', countCls(t, 'cy-scan-th') === 7)
-    check('#22 扫榜表 · 6 行数据', countCls(t, 'cy-scan-row') === 6)
-    check('#22 扫榜表 · 表头可点排序', clickable(t, 'cy-scan-th'))
+    check('#22 扫榜表 · 表格在', countCls(t, 'nw-scan') === 1)
+    check('#22 扫榜表 · 7 列表头', countCls(t, 'nw-scan-th') === 7)
+    check('#22 扫榜表 · 6 行数据', countCls(t, 'nw-scan-row') === 6)
+    check('#22 扫榜表 · 表头可点排序', clickable(t, 'nw-scan-th'))
     check('#22 扫榜表 · 有导出 CSV 出口', allText(t).some((x) => String(x).includes('导出 CSV')))
   }
 
@@ -1256,23 +1257,23 @@ for (const page of PAGES) {
     const tx = allText(t).map(String).join(' ')
     check('拆书 · 面板在', tx.includes('拆书台') && tx.includes('开始拆'))
     check('拆书 · 说明算得出来的先算', tx.includes('算得出来的先算出来'))
-    check('拆书 · 列出已拆过的书', countCls(t, 'cy-ana-hist-row') === 1)
+    check('拆书 · 列出已拆过的书', countCls(t, 'nw-ana-hist-row') === 1)
     check('拆书 · 那一次写着拆了几章', /2 章 ·/.test(tx))
-    check('拆书 · 可点开看结果', clickable(t, 'cy-ana-hist-main'))
+    check('拆书 · 可点开看结果', clickable(t, 'nw-ana-hist-main'))
     check('导入 · 面板在', tx.includes('导入已有的书'))
     check('导入 · 预检与真导入两个钮', tx.includes('先认一遍') && tx.includes('真导进去'))
-    check('导入 · 两种模式可选', countCls(t, 'cy-import-opts') === 1)
+    check('导入 · 两种模式可选', countCls(t, 'nw-import-opts') === 1)
     check('扫榜 · 粘贴解析面板在', tx.includes('榜单文本') && tx.includes('解析'))
-    check('扫榜 · 列出解析过的榜单', countCls(t, 'cy-scan-hist-row') === 1)
-    check('扫榜 · 尽力抓取是可折叠的次要路', countCls(t, 'cy-scan-auto') === 1)
+    check('扫榜 · 列出解析过的榜单', countCls(t, 'nw-scan-hist-row') === 1)
+    check('扫榜 · 尽力抓取是可折叠的次要路', countCls(t, 'nw-scan-auto') === 1)
   }
 
   // ── 23. 导出全部数据 ──
   {
     const t = T('settings')
-    check('#23 导出 · 目录树在', countCls(t, 'cy-export-tree') === 1)
+    check('#23 导出 · 目录树在', countCls(t, 'nw-export-tree') === 1)
     // 【12 条 #12】导出列的是 9 类（原来 7 类，加了 history/.trash 两类真目录）。
-    check('#23 导出 · 列了 9 类文件', countCls(t, 'cy-export-row') === 9, `${countCls(t, 'cy-export-row')} 行`)
+    check('#23 导出 · 列了 9 类文件', countCls(t, 'nw-export-row') === 9, `${countCls(t, 'nw-export-row')} 行`)
     check('#23 导出 · 打包出口可点', /打包/.test(allText(t).map(String).join(' ')) && /复制目录路径/.test(allText(t).map(String).join(' ')))
   }
 
@@ -1280,10 +1281,10 @@ for (const page of PAGES) {
   {
     const t = T('settings')
     const tx = allText(t).map(String).join(' ')
-    check('#24 主题 · 三张卡', countCls(t, 'cy-theme-card') === 3)
+    check('#24 主题 · 三张卡', countCls(t, 'nw-theme-card') === 3)
     check('#24 主题 · 有「纸」这一档', /纸/.test(tx))
-    check('#24 主题 · 三张都可点', clickable(t, 'cy-theme-card'))
-    check('#24 主题 · 纸档样式真的写了', /cy-theme-paper/.test(src) && /#f0e8d8/.test(src))
+    check('#24 主题 · 三张都可点', clickable(t, 'nw-theme-card'))
+    check('#24 主题 · 纸档样式真的写了', /nw-theme-paper/.test(src) && /#f0e8d8/.test(src))
   }
 }
 
@@ -1300,24 +1301,24 @@ for (const page of PAGES) {
       projectId: PROJECT.id, chapter: 3, gate: 70, onClose() {}, onChanged() {}, toast() {},
     })
     const tx = allText(t).map(String).join(' ')
-    check('版本 · 卡片在', countCls(t, 'cy-hist-ver') === 1)
-    check('版本 · 列出 2 版', countCls(t, 'cy-ver-row') === 2)
+    check('版本 · 卡片在', countCls(t, 'nw-hist-ver') === 1)
+    check('版本 · 列出 2 版', countCls(t, 'nw-ver-row') === 2)
     check('版本 · 说明保留几版', /保留最近 20 版/.test(tx), tx.slice(0, 0) || '')
     check('版本 · 每版都有回滚按钮', all(t).filter((n) => n.kind === 'el'
-      && String(n.cls ?? '').split(/\s+/).includes('cy-ver-row'))
+      && String(n.cls ?? '').split(/\s+/).includes('nw-ver-row'))
       .every((row) => all(row).some((n) => n.tag === 'button' && typeof n.props?.onClick === 'function')))
     check('版本 · 回滚调 chapter.restore', /chapter\.restore/.test(src))
   }
 
   // ── 2. 回收站 ──
   {
-    store['cy.page'] = 'settings'
-    store['cy.project'] = PROJECT.id
+    store['nw.page'] = 'settings'
+    store['nw.project'] = PROJECT.id
     hookMap = new Map()
     const t = await mount(captured, {})
     const tx = allText(t).map(String).join(' ')
-    check('回收站 · 列表在', countCls(t, 'cy-trash-list') === 1)
-    check('回收站 · 一行记录', countCls(t, 'cy-trash-row') === 1)
+    check('回收站 · 列表在', countCls(t, 'nw-trash-list') === 1)
+    check('回收站 · 一行记录', countCls(t, 'nw-trash-row') === 1)
     check('回收站 · 有还原与彻底删除', /还原/.test(tx) && /彻底删除/.test(tx))
     check('回收站 · 说明移到 .trash', /\.trash/.test(tx), tx.slice(0, 0) || '')
     check('回收站 · 走 chapter.recover / purge', /chapter\.recover/.test(src) && /chapter\.purge/.test(src))
@@ -1329,24 +1330,24 @@ for (const page of PAGES) {
     const t = await mount(plugin._test.CommandPalette, {
       projectId: PROJECT.id, onClose() {}, go() {}, toast() {},
     })
-    check('搜索 · 面板外壳在', countCls(t, 'cy-cmdk-list') === 1)
-    check('搜索 · 打开时只列命令', countCls(t, 'cy-cmdk-head') === 0)
+    check('搜索 · 面板外壳在', countCls(t, 'nw-cmdk-list') === 1)
+    check('搜索 · 打开时只列命令', countCls(t, 'nw-cmdk-head') === 0)
     check('搜索 · 调了 search op', /api\('search'/.test(src))
     check('搜索 · 有范围切换片', /'all', 'chapters', 'ledger', 'outline'/.test(src))
-    check('搜索 · 命中带段号跳验收台', /cy\.openPara/.test(src))
+    check('搜索 · 命中带段号跳验收台', /nw\.openPara/.test(src))
     check('搜索 · Input 有无障碍名', /'aria-label': '命令与全文搜索'/.test(src))
   }
 
   // ── 4. 队列派给 agent ──
   {
-    store['cy.page'] = 'studio'
-    store['cy.project'] = PROJECT.id
+    store['nw.page'] = 'studio'
+    store['nw.project'] = PROJECT.id
     hookMap = new Map()
     const t = await mount(captured, {})
     const tx = allText(t).map(String).join(' ')
     check('派单 · 按钮在', /派给 agent/.test(tx))
-    check('派单 · 拼 prompt 含关键 op', /changye_op/.test(src) && /proposal\.save/.test(src))
-    check('派单 · 剪贴板失败有退路', countCls(t, 'cy-dispatch') === 0 && /setDispatchText/.test(src))
+    check('派单 · 拼 prompt 含关键 op', /nightwrite_op/.test(src) && /proposal\.save/.test(src))
+    check('派单 · 剪贴板失败有退路', countCls(t, 'nw-dispatch') === 0 && /setDispatchText/.test(src))
   }
 
   // ── 6. AI 味词表（彩带真值） ──
@@ -1365,7 +1366,7 @@ for (const page of PAGES) {
   // ── 7. 提案采纳前告警 ──
   {
     check('提案告警 · 调 proposal.preview', /api\('proposal\.preview'/.test(src))
-    check('提案告警 · 有告警块与样式', /cy-prop-warn/.test(src) && /cy-prop-warn-list/.test(src))
+    check('提案告警 · 有告警块与样式', /nw-prop-warn/.test(src) && /nw-prop-warn-list/.test(src))
     check('提案告警 · 说清会改错位置', /改错位置/.test(src))
   }
 
@@ -1380,7 +1381,7 @@ for (const page of PAGES) {
   // ── 9. 无障碍 ──
   {
     const segs = all(T('review')).filter((n) => n.kind === 'el'
-      && String(n.cls ?? '').split(/\s+/).includes('cy-seg-btn'))
+      && String(n.cls ?? '').split(/\s+/).includes('nw-seg-btn'))
     check('无障碍 · 分段按钮都有 aria-pressed', segs.length > 0 && segs.every((n) => typeof n.props?.['aria-pressed'] === 'string'), `segs=${segs.length}`)
     check('无障碍 · aria-pressed 值合法', segs.every((n) => ['true', 'false'].includes(n.props['aria-pressed'])))
     check('无障碍 · Switch 有可读名', /aria-label/.test(src) && /已开启/.test(src))
@@ -1397,9 +1398,9 @@ for (const page of PAGES) {
     })
     // Btn 组件节点自己也带着 className 属性，数元素节点才不会重复计一次。
     const elCount = (tree, cls) => all(tree).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes(cls)).length
-    check('QA1 · 撤销 / 重做按钮上屏', elCount(rv, 'cy-undo-btn') === 1 && elCount(rv, 'cy-redo-btn') === 1,
-      `undo=${elCount(rv, 'cy-undo-btn')} redo=${elCount(rv, 'cy-redo-btn')}`)
-    check('QA1 · 有栈深度提示', countCls(rv, 'cy-undo-n') === 1)
+    check('QA1 · 撤销 / 重做按钮上屏', elCount(rv, 'nw-undo-btn') === 1 && elCount(rv, 'nw-redo-btn') === 1,
+      `undo=${elCount(rv, 'nw-undo-btn')} redo=${elCount(rv, 'nw-redo-btn')}`)
+    check('QA1 · 有栈深度提示', countCls(rv, 'nw-undo-n') === 1)
     check('QA1 · 撤销条带反馈文案', allText(rv).some((t) => String(t).includes('撤销')))
     check('QA1 · Ctrl+Z / Ctrl+Shift+Z 绑定', /key !== 'z' && key !== 'y'/.test(src))
     check('QA1 · 换章时清栈', /resetText\(remote\)/.test(src) && /const reset = \(next = ''\)/.test(src))
@@ -1411,13 +1412,13 @@ for (const page of PAGES) {
 
     // 第二档窄屏：720px 断点得真的存在，且管到顶栏底栏。
     check('QA3 · 有 720px 断点', /@media \(max-width:720px\)/.test(src))
-    check('QA3 · 窄屏收顶栏与 dock', /\.cy-top\{flex-direction:column/.test(src) && /\.cy-dock\{gap:2px;overflow-x:auto/.test(src))
-    check('QA3 · 窄屏表格可横滑', /\.cy-ledger-row,\.cy-scan-row\{min-width:560px\}/.test(src))
+    check('QA3 · 窄屏收顶栏与 dock', /\.nw-top\{flex-direction:column/.test(src) && /\.nw-dock\{gap:2px;overflow-x:auto/.test(src))
+    check('QA3 · 窄屏表格可横滑', /\.nw-ledger-row,\.nw-scan-row\{min-width:560px\}/.test(src))
 
     // 预算拦截：超了要问，且暂停时不排单。
     check('QA4 · 超预算会拦一道', /const budgetCheck = \(\) =>/.test(src) && /window\.confirm\(/.test(src))
-    check('QA4 · 顶栏写明超了多少', countCls(T('cockpit'), 'cy-budget') >= 0 && /cy-budget-stop cy-budget-halt/.test(src))
-    check('QA4 · 暂停时快动作有提示', /className: paused \? 'cy-btn-halt' : ''/.test(src) && /现在是暂停状态/.test(src))
+    check('QA4 · 顶栏写明超了多少', countCls(T('cockpit'), 'nw-budget') >= 0 && /nw-budget-stop nw-budget-halt/.test(src))
+    check('QA4 · 暂停时快动作有提示', /className: paused \? 'nw-btn-halt' : ''/.test(src) && /现在是暂停状态/.test(src))
   }
 }
 // ══ 【借 LNW 六项】地图 / 成书 / 检查更新 / 冷读 / 意见池 / 简报 ══
@@ -1428,20 +1429,20 @@ for (const page of PAGES) {
   hookMap = new Map()
   const map = await mount(plugin._test.MapView, { projectId: PROJECT.id, toast() {} })
   check('地图 · 零抛错', throwsOf(map).length === 0, throwsOf(map).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
-  check('地图 · 画布在', countCls(map, 'cy-map-stage') === 1)
-  check('地图 · 三个地点点', countCls(map, 'cy-map-node') === 3, `${countCls(map, 'cy-map-node')} 点`)
-  check('地图 · 账本里没有的点画成灰', countCls(map, 'cy-map-orphan') === 1)
-  check('地图 · 一条连线', countCls(map, 'cy-map-edge') === 1)
-  check('地图 · 连线列表一行', countCls(map, 'cy-map-edgerow') === 1)
+  check('地图 · 画布在', countCls(map, 'nw-map-stage') === 1)
+  check('地图 · 三个地点点', countCls(map, 'nw-map-node') === 3, `${countCls(map, 'nw-map-node')} 点`)
+  check('地图 · 账本里没有的点画成灰', countCls(map, 'nw-map-orphan') === 1)
+  check('地图 · 一条连线', countCls(map, 'nw-map-edge') === 1)
+  check('地图 · 连线列表一行', countCls(map, 'nw-map-edgerow') === 1)
   check('地图 · 有「从账本同步」出口', allText(map).some((x) => String(x).includes('从账本同步')))
 
   // ── 成书导出：四种格式 ──
   hookMap = new Map()
   const book = await mount(plugin._test.BookExport, { projectId: PROJECT.id, project: PROJECT, toast() {} })
   check('成书 · 零抛错', throwsOf(book).length === 0, throwsOf(book).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
-  check('成书 · 四个格式牌', countCls(book, 'cy-book-format') === 4, `${countCls(book, 'cy-book-format')} 个`)
+  check('成书 · 四个格式牌', countCls(book, 'nw-book-format') === 4, `${countCls(book, 'nw-book-format')} 个`)
   check('成书 · 四格式都写清了', ['TXT', 'Markdown', 'EPUB', 'Word'].every((k) => allText(book).map(String).join(' ').includes(k)))
-  check('成书 · 能选跳过的章', countCls(book, 'cy-book-skip') === 1)
+  check('成书 · 能选跳过的章', countCls(book, 'nw-book-skip') === 1)
 
   // ── 检查更新 ──
   hookMap = new Map()
@@ -1457,8 +1458,8 @@ for (const page of PAGES) {
   check('冷读 · 零抛错', throwsOf(cold).length === 0, throwsOf(cold).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
   check('冷读 · 单章/整本两档', allText(cold).map(String).join(' ').includes('单章') && allText(cold).map(String).join(' ').includes('整本'))
   check('冷读 · 有「生成冷读包」钮', allText(cold).some((x) => String(x).includes('生成冷读包')))
-  check('冷读 · 有回执粘贴区', countCls(cold, 'cy-cold-submit') === 1)
-  check('冷读 · 列出生成过的包', countCls(cold, 'cy-cold-histrow') === 1)
+  check('冷读 · 有回执粘贴区', countCls(cold, 'nw-cold-submit') === 1)
+  check('冷读 · 列出生成过的包', countCls(cold, 'nw-cold-histrow') === 1)
 
   // ── 意见池 ──
   hookMap = new Map()
@@ -1466,8 +1467,8 @@ for (const page of PAGES) {
     projectId: PROJECT.id, toast() {}, refreshKey: 0, onOpenChapter() {},
   })
   check('意见池 · 零抛错', throwsOf(opi).length === 0, throwsOf(opi).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
-  check('意见池 · 默认只出待处理 2 条', countCls(opi, 'cy-opinion') === 2, `${countCls(opi, 'cy-opinion')} 条`)
-  check('意见池 · 四档状态片', countCls(opi, 'cy-seg-btn') >= 8)
+  check('意见池 · 默认只出待处理 2 条', countCls(opi, 'nw-opinion') === 2, `${countCls(opi, 'nw-opinion')} 条`)
+  check('意见池 · 四档状态片', countCls(opi, 'nw-seg-btn') >= 8)
   check('意见池 · 能从问题单拉', allText(opi).some((x) => String(x).includes('从问题单拉一遍')))
   check('意见池 · 每条都能采纳/不改', allText(opi).some((x) => String(x).includes('采纳')) && allText(opi).some((x) => String(x).includes('不改')))
 
@@ -1492,7 +1493,7 @@ for (const page of PAGES) {
   const tx = allText(t).map(String).join(' ')
   check('体检 · 零抛错', throwsOf(t).length === 0, throwsOf(t).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
   // 四条检查是「点一下才跑」的：不点就先给一个入口，不假装已经查过。
-  check('体检 · 没查之前只给一个入口', tx.includes('查一遍') && countCls(t, 'cy-health-row') === 0)
+  check('体检 · 没查之前只给一个入口', tx.includes('查一遍') && countCls(t, 'nw-health-row') === 0)
   check('体检 · 明说只报告不改稿', tx.includes('都只报告不改稿'))
   check('体检 · 挂在验收详情里', /readMode \? null : h\(ChapterHealth, \{/.test(src))
   check('体检 · 在校验面板下面（先判是不是文，再谈文笔）',
@@ -1505,11 +1506,11 @@ for (const page of PAGES) {
   const t = await mount(plugin._test.TaskPackBoard, { projectId: PROJECT.id, toast() {}, refreshKey: 0 })
   const tx = allText(t).map(String).join(' ')
   check('任务包 · 零抛错', throwsOf(t).length === 0, throwsOf(t).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
-  check('任务包 · 列出一个包', countCls(t, 'cy-tp-row') === 1)
+  check('任务包 · 列出一个包', countCls(t, 'nw-tp-row') === 1)
   check('任务包 · 写明几份材料', tx.includes('5 份'))
   check('任务包 · 少给的项标出来', tx.includes('少给 2 项'))
   // 默认收起：展开就得读 manifest，不该一进页面就把所有包全读一遍。
-  check('任务包 · 默认不展开', countCls(t, 'cy-tp-body') === 0)
+  check('任务包 · 默认不展开', countCls(t, 'nw-tp-body') === 0)
   check('任务包 · 挂在流水线页', /h\(TaskPackBoard, \{ projectId, toast/.test(src))
 }
 let pass = 0

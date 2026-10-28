@@ -51,41 +51,41 @@ function ScoutHistory({ toast }) {
   const [open, setOpen] = useState('h1')
   return h(
     Card,
-    { title: '最近干过什么', extra: h('span', { className: 'cy-card-badge' }, `${MOCK.history.length} 条`) },
-    h('div', { className: 'cy-hist' }, MOCK.history.map((row) => h(
+    { title: '最近干过什么', extra: h('span', { className: 'nw-card-badge' }, `${MOCK.history.length} 条`) },
+    h('div', { className: 'nw-hist' }, MOCK.history.map((row) => h(
       'div',
-      { className: `cy-hist-row${open === row.id ? ' on' : ''}`, key: row.id },
+      { className: `nw-hist-row${open === row.id ? ' on' : ''}`, key: row.id },
       h(
         'button',
         {
           type: 'button',
-          className: 'cy-hist-main',
+          className: 'nw-hist-main',
           onClick: () => {
             const next = open === row.id ? '' : row.id
             setOpen(next)
             if (next) toast?.(`${row.title} · ${row.at}`)
           },
         },
-        h('span', { className: 'cy-hist-icon' }, row.icon),
+        h('span', { className: 'nw-hist-icon' }, row.icon),
         h(
           'span',
-          { className: 'cy-hist-body' },
-          h('span', { className: 'cy-hist-title' }, row.title),
-          h('span', { className: 'cy-hist-sub' }, row.sub),
+          { className: 'nw-hist-body' },
+          h('span', { className: 'nw-hist-title' }, row.title),
+          h('span', { className: 'nw-hist-sub' }, row.sub),
         ),
         h(Tag, { tone: 'grey' }, row.kind),
-        h('span', { className: 'cy-hist-at' }, row.age),
-        h('span', { className: 'cy-prop-go' }, open === row.id ? '▾' : '▸'),
+        h('span', { className: 'nw-hist-at' }, row.age),
+        h('span', { className: 'nw-prop-go' }, open === row.id ? '▾' : '▸'),
       ),
       open === row.id
         ? h(
           'div',
-          { className: 'cy-hist-detail' },
+          { className: 'nw-hist-detail' },
           h('p', null, `${row.sub}`),
-          h('p', { className: 'cy-hint' }, `发生时间：${row.at} · 产出已落回工作区（演示数据）`),
+          h('p', { className: 'nw-hint' }, `发生时间：${row.at} · 产出已落回工作区（演示数据）`),
           h(
             'div',
-            { className: 'cy-actions' },
+            { className: 'nw-actions' },
             h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`打开产物：${row.title}（演示）`) }, '打开产物'),
             h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`已按「${row.kind}」再跑一次（演示）`) }, '再跑一次'),
           ),
@@ -130,7 +130,7 @@ function ScanTable({ toast }) {
     Card,
     {
       title: '扫榜结果',
-      extra: h('div', { className: 'cy-actions' },
+      extra: h('div', { className: 'nw-actions' },
         h(Tag, { tone: 'blue' }, '演示数据'),
         h(Btn, {
           small: true,
@@ -140,16 +140,16 @@ function ScanTable({ toast }) {
     },
     h(
       'div',
-      { className: 'cy-scan' },
+      { className: 'nw-scan' },
       h(
         'div',
-        { className: 'cy-scan-head' },
+        { className: 'nw-scan-head' },
         cols.map((col) => h(
           'button',
           {
             type: 'button',
             key: col.key,
-            className: `cy-scan-th${sortKey === col.key ? ' on' : ''}`,
+            className: `nw-scan-th${sortKey === col.key ? ' on' : ''}`,
             onClick: () => {
               if (sortKey === col.key) setAsc(!asc)
               else {
@@ -167,17 +167,17 @@ function ScanTable({ toast }) {
         'button',
         {
           type: 'button',
-          className: 'cy-scan-row',
+          className: 'nw-scan-row',
           key: row.rank,
           onClick: () => toast?.(`《${row.book}》· ${row.platform} · ${row.genre} · 收藏 ${row.collect} · 钩子：${row.hook}`),
         },
-        h('span', { className: 'cy-scan-td cy-scan-rank' }, String(row.rank)),
-        h('span', { className: 'cy-scan-td' }, row.platform),
-        h('span', { className: 'cy-scan-td cy-scan-book' }, row.book),
-        h('span', { className: 'cy-scan-td' }, h(Tag, { tone: 'grey' }, row.genre)),
-        h('span', { className: 'cy-scan-td cy-scan-num' }, row.collect),
-        h('span', { className: 'cy-scan-td cy-scan-hook' }, row.hook),
-        h('span', { className: `cy-scan-td cy-scan-trend${/↓/.test(row.trend) ? ' down' : /↑/.test(row.trend) ? ' up' : ''}` }, row.trend),
+        h('span', { className: 'nw-scan-td nw-scan-rank' }, String(row.rank)),
+        h('span', { className: 'nw-scan-td' }, row.platform),
+        h('span', { className: 'nw-scan-td nw-scan-book' }, row.book),
+        h('span', { className: 'nw-scan-td' }, h(Tag, { tone: 'grey' }, row.genre)),
+        h('span', { className: 'nw-scan-td nw-scan-num' }, row.collect),
+        h('span', { className: 'nw-scan-td nw-scan-hook' }, row.hook),
+        h('span', { className: `nw-scan-td nw-scan-trend${/↓/.test(row.trend) ? ' down' : /↑/.test(row.trend) ? ' up' : ''}` }, row.trend),
       )),
     ),
   )
@@ -209,19 +209,19 @@ function ScoutPage({
 
   return h(
     'div',
-    { className: 'cy-page cy-scout' },
-    h('p', { className: 'cy-scout-lead' }, '这四件事由本机已安装的 oh-story 技能承担。长夜只负责把任务说清楚，然后交给对话里的 agent。'),
+    { className: 'nw-page nw-scout' },
+    h('p', { className: 'nw-scout-lead' }, '这四件事由本机已安装的 oh-story 技能承担。长夜只负责把任务说清楚，然后交给对话里的 agent。'),
     h(
       'div',
-      { className: 'cy-scout-grid' },
+      { className: 'nw-scout-grid' },
       SCOUT_CASES.map((item) => h(
         'section',
-        { className: 'cy-scout-card', key: item.id },
-        h('div', { className: 'cy-scout-head' }, h('span', { className: 'cy-scout-icon' }, item.icon), h('h3', null, item.name)),
-        h('p', { className: 'cy-scout-desc' }, item.desc),
-        h('div', { className: 'cy-scout-meta' },
+        { className: 'nw-scout-card', key: item.id },
+        h('div', { className: 'nw-scout-head' }, h('span', { className: 'nw-scout-icon' }, item.icon), h('h3', null, item.name)),
+        h('p', { className: 'nw-scout-desc' }, item.desc),
+        h('div', { className: 'nw-scout-meta' },
           h(Tag, { tone: 'teal' }, item.skill),
-          h('span', { className: 'cy-hint' }, item.need)),
+          h('span', { className: 'nw-hint' }, item.need)),
         // 四张卡各有一个「组装指令」，读屏念四下同名的按钮分不清点的是哪个。
         // 名字里带上这一格做什么，才认得出。
         h(Btn, { kind: 'ghost', small: true, onClick: () => launch(item), title: `${item.name}：${item.desc}` }, `组装指令 · ${item.name}`),
@@ -256,8 +256,8 @@ function ScoutPage({
           onChange: setDetail,
           placeholder: '把具体要查 / 要拆的东西写在这里',
         })),
-        h(Field, { label: '将发出的指令' }, h('pre', { className: 'cy-cmd' }, command)),
-        h('p', { className: 'cy-hint' }, '复制后粘到对话里。技能会自己读 SOP、自己派角色、把结果落回工作区。'),
+        h(Field, { label: '将发出的指令' }, h('pre', { className: 'nw-cmd' }, command)),
+        h('p', { className: 'nw-hint' }, '复制后粘到对话里。技能会自己读 SOP、自己派角色、把结果落回工作区。'),
       )
       : null,
   )

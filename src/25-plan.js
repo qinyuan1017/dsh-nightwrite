@@ -4,7 +4,7 @@
  * 补的是工作流中间断掉的一截：老板给一句话方案 → 出卷 / 章骨架 → 才谈得上下指令单。
  *
  * 这一页不假装自己能写故事：骨架是机械算出来的（卷数 × 每卷章数），
- * 每章的摘要 / 钩子由 AI 通过 changye_op 的 outline.save 回填，
+ * 每章的摘要 / 钩子由 AI 通过 nightwrite_op 的 outline.save 回填，
  * 人在这里改，改完一键把「第几回 + 意图」塞进生产台。
  */
 
@@ -28,7 +28,7 @@ function outlinePrompt(brief) {
     line('hook', '开场钩子'),
     line('ending', '结局方向'),
     `- 规模：${brief?.volumes ?? 3} 卷，每卷 ${brief?.chaptersPerVolume ?? 20} 章\n`,
-    '\n做法：先 changye_op 调 outline.get 拿到当前骨架（卷号 / 章号已经在里面），',
+    '\n做法：先 nightwrite_op 调 outline.get 拿到当前骨架（卷号 / 章号已经在里面），',
     '再把每章的 title / summary / hook 填好，用 outline.save 整份写回。',
     '摘要只写「这一章发生什么、主角状态怎么变」，一句话；钩子写「结尾让人翻页的那一下」。',
   ].join('')
@@ -49,15 +49,15 @@ function PlanBrief({ brief, onEdit, onSave, onGenerate, onCopy, busy }) {
     Card,
     {
       title: '老板的方案',
-      extra: h('span', { className: 'cy-card-badge' }, '先有方案，才有骨架'),
-      className: 'cy-plan-brief',
+      extra: h('span', { className: 'nw-card-badge' }, '先有方案，才有骨架'),
+      className: 'nw-plan-brief',
     },
     h(
       'div',
-      { className: 'cy-plan-grid' },
+      { className: 'nw-plan-grid' },
       FIELDS.map((field) => h(
         'div',
-        { className: `cy-plan-field${field.rows > 1 ? ' cy-plan-wide' : ''}`, key: field.key },
+        { className: `nw-plan-field${field.rows > 1 ? ' nw-plan-wide' : ''}`, key: field.key },
         h(Field, { label: field.label }, field.rows > 1
           ? h(TextArea, {
             value: brief[field.key] ?? '',
@@ -73,7 +73,7 @@ function PlanBrief({ brief, onEdit, onSave, onGenerate, onCopy, busy }) {
       )),
       h(
         'div',
-        { className: 'cy-plan-field' },
+        { className: 'nw-plan-field' },
         h(Field, { label: '几卷' }, h(Input, {
           type: 'number',
           value: brief.volumes,
@@ -82,7 +82,7 @@ function PlanBrief({ brief, onEdit, onSave, onGenerate, onCopy, busy }) {
       ),
       h(
         'div',
-        { className: 'cy-plan-field' },
+        { className: 'nw-plan-field' },
         h(Field, { label: '每卷几章' }, h(Input, {
           type: 'number',
           value: brief.chaptersPerVolume,
@@ -92,11 +92,11 @@ function PlanBrief({ brief, onEdit, onSave, onGenerate, onCopy, busy }) {
     ),
     h(
       'div',
-      { className: 'cy-plan-foot' },
-      h('span', { className: 'cy-hint' }, `共 ${(brief.volumes || 0) * (brief.chaptersPerVolume || 0)} 章的位置`),
+      { className: 'nw-plan-foot' },
+      h('span', { className: 'nw-hint' }, `共 ${(brief.volumes || 0) * (brief.chaptersPerVolume || 0)} 章的位置`),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         h(Btn, { kind: 'ghost', onClick: onCopy, disabled: busy }, '复制给 AI 的提示词'),
         h(Btn, { kind: 'ghost', onClick: onSave, disabled: busy }, '只存方案'),
         h(Btn, { kind: 'primary', onClick: onGenerate, disabled: busy }, busy ? '生成中…' : '生成骨架'),
@@ -109,11 +109,11 @@ function PlanRow({ row, onEdit, onSend }) {
   const tone = OUTLINE_STATUS[row.status] ?? OUTLINE_STATUS.todo
   return h(
     'div',
-    { className: 'cy-plan-row' },
-    h('span', { className: 'cy-plan-n' }, `第 ${row.chapter} 回`),
+    { className: 'nw-plan-row' },
+    h('span', { className: 'nw-plan-n' }, `第 ${row.chapter} 回`),
     h(
       'span',
-      { className: 'cy-plan-main' },
+      { className: 'nw-plan-main' },
       h(Input, {
         value: row.title,
         placeholder: '这一回的标题',
@@ -142,24 +142,24 @@ function PlanCard({ row, onEdit, onSend, onOpen }) {
   const empty = !String(row.title ?? '').trim() && !String(row.summary ?? '').trim()
   return h(
     'div',
-    { className: `cy-pcard${empty ? ' cy-pcard-empty' : ''}${row.status === 'written' ? ' cy-pcard-done' : ''}` },
+    { className: `nw-pcard${empty ? ' nw-pcard-empty' : ''}${row.status === 'written' ? ' nw-pcard-done' : ''}` },
     h(
       'div',
-      { className: 'cy-pcard-head' },
-      h('span', { className: 'cy-pcard-n' }, `第 ${row.chapter} 回`),
+      { className: 'nw-pcard-head' },
+      h('span', { className: 'nw-pcard-n' }, `第 ${row.chapter} 回`),
       h(Tag, { tone: tone.tone }, tone.label),
     ),
-    h('div', { className: 'cy-pcard-title' }, row.title || h('span', { className: 'cy-pcard-ph' }, '（还没标题）')),
-    h('p', { className: 'cy-pcard-sum' }, row.summary || h('span', { className: 'cy-pcard-ph' }, '这一章发生什么？')),
+    h('div', { className: 'nw-pcard-title' }, row.title || h('span', { className: 'nw-pcard-ph' }, '（还没标题）')),
+    h('p', { className: 'nw-pcard-sum' }, row.summary || h('span', { className: 'nw-pcard-ph' }, '这一章发生什么？')),
     h(
       'div',
-      { className: 'cy-pcard-hook' },
-      h('span', { className: 'cy-pcard-hook-k' }, '钩'),
-      h('span', null, row.hook || h('span', { className: 'cy-pcard-ph' }, '章末那一下还没写')),
+      { className: 'nw-pcard-hook' },
+      h('span', { className: 'nw-pcard-hook-k' }, '钩'),
+      h('span', null, row.hook || h('span', { className: 'nw-pcard-ph' }, '章末那一下还没写')),
     ),
     h(
       'div',
-      { className: 'cy-pcard-foot' },
+      { className: 'nw-pcard-foot' },
       h(Btn, { small: true, kind: 'ghost', onClick: onOpen }, '编辑'),
       h(Btn, { small: true, kind: 'ghost', onClick: onSend }, '送去生产台'),
     ),
@@ -171,27 +171,27 @@ function PlanTimeline({ volumes, onSend }) {
   const max = Math.max(1, ...volumes.map((vol) => vol.chapters.length))
   return h(
     'div',
-    { className: 'cy-ptl' },
+    { className: 'nw-ptl' },
     volumes.map((vol) => h(
       'div',
-      { className: 'cy-ptl-vol', key: vol.id },
-      h('div', { className: 'cy-ptl-head' }, h('span', null, vol.title), h('span', { className: 'cy-hint' }, `${vol.chapters.length} 章`)),
+      { className: 'nw-ptl-vol', key: vol.id },
+      h('div', { className: 'nw-ptl-head' }, h('span', null, vol.title), h('span', { className: 'nw-hint' }, `${vol.chapters.length} 章`)),
       h(
         'div',
-        { className: 'cy-ptl-rail', style: { width: `${(vol.chapters.length / max) * 100}%` } },
+        { className: 'nw-ptl-rail', style: { width: `${(vol.chapters.length / max) * 100}%` } },
         vol.chapters.map((row) => h(
           'button',
           {
             type: 'button',
             key: row.chapter,
-            className: `cy-ptl-dot cy-ptl-${row.status || 'todo'}`,
+            className: `nw-ptl-dot nw-ptl-${row.status || 'todo'}`,
             title: `第 ${row.chapter} 回 · ${row.title || '未命名'} · ${(OUTLINE_STATUS[row.status] ?? OUTLINE_STATUS.todo).label}`,
             onClick: () => onSend(row),
           },
         )),
       ),
     )),
-    h('p', { className: 'cy-hint' }, '点是章：灰=未排，琥珀=已有稿，绿=已采纳。点一下直接送去生产台。'),
+    h('p', { className: 'nw-hint' }, '点是章：灰=未排，琥珀=已有稿，绿=已采纳。点一下直接送去生产台。'),
   )
 }
 
@@ -202,12 +202,12 @@ function FillVolumeBar({ vol, busy, onFill, toast }) {
   const empty = vol.chapters.filter((row) => !String(row.summary ?? '').trim()).length
   return h(
     'div',
-    { className: 'cy-fillbar' },
+    { className: 'nw-fillbar' },
     h(
       'div',
-      { className: 'cy-fillbar-main' },
-      h('span', { className: 'cy-fillbar-title' }, `本卷还有 ${empty} 章没摘要`),
-      h('span', { className: 'cy-hint' }, '按卷一次派活，比一章一章敲快二十倍；填完仍然可以逐张改。'),
+      { className: 'nw-fillbar-main' },
+      h('span', { className: 'nw-fillbar-title' }, `本卷还有 ${empty} 章没摘要`),
+      h('span', { className: 'nw-hint' }, '按卷一次派活，比一章一章敲快二十倍；填完仍然可以逐张改。'),
     ),
     h(Btn, {
       kind: 'primary',
@@ -314,7 +314,7 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
 
   return h(
     'div',
-    { className: 'cy-page cy-plan' },
+    { className: 'nw-page nw-plan' },
     h(PlanBrief, {
       brief: current,
       busy,
@@ -330,29 +330,29 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
           title: '卷章骨架',
           extra: h(
             'div',
-            { className: 'cy-plan-vols' },
+            { className: 'nw-plan-vols' },
             volumes.map((vol) => h(
               'button',
               {
                 type: 'button',
                 key: vol.id,
-                className: `cy-seg-btn${active && active.index === vol.index ? ' on' : ''}`,
+                className: `nw-seg-btn${active && active.index === vol.index ? ' on' : ''}`,
               'aria-pressed': active && active.index === vol.index ? 'true' : 'false',
                 onClick: () => setOpenVol(vol.index),
               },
               vol.title,
-              h('span', { className: 'cy-seg-n' }, String(vol.chapters.length)),
+              h('span', { className: 'nw-seg-n' }, String(vol.chapters.length)),
             )),
           ),
         },
-        h('p', { className: 'cy-hint' }, '摘要与钩子由 AI 回填（changye_op → outline.save），这里可以直接改；改完按「保存骨架」落盘。'),
+        h('p', { className: 'nw-hint' }, '摘要与钩子由 AI 回填（nightwrite_op → outline.save），这里可以直接改；改完按「保存骨架」落盘。'),
         h(FillVolumeBar, { vol: active, busy, onFill: () => {}, toast }),
         h(
           'div',
-          { className: 'cy-plan-viewbar' },
+          { className: 'nw-plan-viewbar' },
           h(
             'div',
-            { className: 'cy-seg' },
+            { className: 'nw-seg' },
             [
               { value: 'cards', label: '卡片' },
               { value: 'list', label: '列表' },
@@ -362,20 +362,20 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
               {
                 type: 'button',
                 key: item.value,
-                className: `cy-seg-btn${view === item.value ? ' on' : ''}`,
+                className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
               'aria-pressed': view === item.value ? 'true' : 'false',
                 onClick: () => setView(item.value),
               },
               item.label,
             )),
           ),
-          h('span', { className: 'cy-hint' }, active ? `${active.chapters.length} 章` : ''),
+          h('span', { className: 'nw-hint' }, active ? `${active.chapters.length} 章` : ''),
         ),
         active
           ? (view === 'cards'
             ? h(
               'div',
-              { className: 'cy-pcards' },
+              { className: 'nw-pcards' },
               active.chapters.map((row, ci) => h(PlanCard, {
                 key: row.chapter,
                 row,
@@ -388,7 +388,7 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
               ? h(PlanTimeline, { volumes, onSend: send })
               : h(
                 'div',
-                { className: 'cy-plan-rows' },
+                { className: 'nw-plan-rows' },
                 active.chapters.map((row, ci) => h(PlanRow, {
                   key: row.chapter,
                   row,
@@ -399,11 +399,11 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
           : null,
         h(
           'div',
-          { className: 'cy-plan-foot' },
-          h('span', { className: 'cy-hint' }, `${volumes.length} 卷 · ${volumes.reduce((n, v) => n + v.chapters.length, 0)} 章`),
+          { className: 'nw-plan-foot' },
+          h('span', { className: 'nw-hint' }, `${volumes.length} 卷 · ${volumes.reduce((n, v) => n + v.chapters.length, 0)} 章`),
           h(
             'div',
-            { className: 'cy-actions' },
+            { className: 'nw-actions' },
             h(Btn, { kind: 'ghost', onClick: () => res.reload() }, '丢弃改动'),
             h(Btn, { kind: 'primary', onClick: saveTree, disabled: busy }, '保存骨架'),
           ),

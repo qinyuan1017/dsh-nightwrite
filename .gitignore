@@ -1,9 +1,11 @@
 # ── 依赖 ────────────────────────────────────────────────
 node_modules/
 
-# ── 构建产物（唯一：由 build.mjs 拼出来）────────────────
-# 注意：lib/*.js 里只有 client.js 是产物，其余 25 个模块都是源码，必须入库。
-lib/client.js
+# ── 构建产物 ────────────────────────────────────────────
+# lib/*.js 里只有 client.js 是产物，其余 25 个模块都是源码。
+# client.js **必须入库**：它是插件的运行产物，宿主按 ./client 导出直接取这个文件，
+# 仓库里没有它 = 装下来白屏（构建在 CI 里做，不做在安装时，因为宿主不跑 postinstall）。
+# 防漂移靠 CI 的「build 后 git diff --exit-code lib/client.js」这一步。
 lib/client.js.*
 
 # ── 备份 / 临时 ─────────────────────────────────────────
@@ -16,9 +18,9 @@ lib/client.js.*
 test/_*.mjs
 test/_*.js
 
-# ── 长夜的数据目录（CHANGYE_ROOT 默认落在 ~/.dsh/data/dsh-changye，
-#    如果有人把 CHANGYE_ROOT 指到仓库里，别把书稿和账本提交进来）──
-.changye-data/
+# ── 长夜的数据目录（NIGHTWRITE_ROOT 默认落在 ~/.dsh/data/dsh-nightwrite，
+#    如果有人把 NIGHTWRITE_ROOT 指到仓库里，别把书稿和账本提交进来）──
+.nightwrite-data/
 data/
 projects/
 

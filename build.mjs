@@ -27,12 +27,12 @@ for (const file of files) {
   parts.push(`// ═════════ ${file} ═════════\n${text.trimEnd()}\n`)
 }
 
-const head = 'window.__ModuleLoader__.load({\n  id: \'dsh-changye\',\n  factory(require) {\n'
+const head = 'window.__ModuleLoader__.load({\n  id: \'dsh-nightwrite\',\n  factory(require) {\n'
 // factory 必须交出一个插件对象：宿主拿到 apply 去挂槽位。
 // inject 只能是浏览器侧真有的服务。客户端没有 tools（那是服务端 index.js 的事），
 // 写 'tools' 会让 cordis 永远等不到依赖、apply 一次都不跑 —— 症状就是插件装了但界面空白。
 // _test 里塞三个内部组件，供 test/smoke.mjs 直接渲染深水区（宿主不会读它）。
-const tail = '\nreturn { name: \'changye\', inject: [\'slots\'], apply, _test: { Root, Workbench, ReviewDetail, PlanPage, ProposalBoard, ProblemBoard, CommandPalette, SourcePop, StatusLamp, PipelinePage, DispatchRow, RoleCard, LintPanel, LintBlockModal, LintCalibration, MapView, BookExport, UpdateCard, ColdReadPanel, OpinionBoard, BriefingCard, ChapterHealth, TaskPackBoard } }\n  },\n})\n'
+const tail = '\nreturn { name: \'nightwrite\', inject: [\'slots\'], apply, _test: { Root, Workbench, ReviewDetail, PlanPage, ProposalBoard, ProblemBoard, CommandPalette, SourcePop, StatusLamp, PipelinePage, DispatchRow, RoleCard, LintPanel, LintBlockModal, LintCalibration, MapView, BookExport, UpdateCard, ColdReadPanel, OpinionBoard, BriefingCard, ChapterHealth, TaskPackBoard } }\n  },\n})\n'
 
 const body = parts.join('\n')
 const out = `${head}${body}${tail}`

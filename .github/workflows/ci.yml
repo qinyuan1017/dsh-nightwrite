@@ -33,10 +33,15 @@ jobs:
       - name: build（src/*.js → lib/client.js，内含 node --check）
         run: node build.mjs
 
-      - name: test/backend.mjs（112 op 分派 + store 落盘）
+      # lib/client.js 是入库产物（宿主安装时不跑构建，仓库里没有就是白屏）。
+      # 有人只改了 src 忘了重新 build 并提交，这一步就会红。
+      - name: 校验 lib/client.js 未漂移
+        run: git diff --exit-code lib/client.js
+
+      - name: test/backend.mjs（119 op 分派 + store 落盘）
         run: node test/backend.mjs
 
-      - name: test/smoke.mjs（假宿主迷你渲染器，18 页 + 组件）
+      - name: test/smoke.mjs（假宿主迷你渲染器，8 页 + 组件）
         run: node test/smoke.mjs
 
       - name: test/hooks.mjs（客户端 hooks / store 行为）
@@ -60,29 +65,11 @@ jobs:
       - name: test/qa.mjs（空壳控件 / undefined 上屏 / 无反馈按钮）
         run: node test/qa.mjs
 
-      # calibrate 需要一份稿子才有统计意义：CI 里现造一个小语料。
+      # calibrate 需要一份稿子才有统计意义：用仓库里自带的 scripts/ci-corpus。
       # 没给目录时它会 exit 2（「没有找到稿子」），那是用法错误，不是回归。
-      - name: test/calibrate.mjs（规则阈值校准，自带语料）
-        run: |
-          CORPUS="$RUNNER_TEMP/corpus"
-          mkdir -p "$CORPUS"
-          cat > "$CORPUS/sample-01.txt" <<'TXT'
-          第一回 夜雨
-
-          他推门进来的时候，雨正下得急。屋里有盏灯，灯芯挑得很低，桌上摊着一卷没写完的纸。
-
-          你回来了。她说。声音不高，也没有抬头。
-
-          他把伞靠在门边，伞尖的水在地上积了一小片。院墙外头有人在喊，喊什么听不清，
-          只有那一声一声的调子顺着雨缝往里钻。
-
-          第二回 城头
-
-          天亮之前雨停了。城头上的人换了一班，甲叶上的水还没干，走一步响一下。
-
-          他站在垛口边上往下看，看见护城河的水涨了半尺，浮着一层断枝和草叶。
-          TXT
-          node test/calibrate.mjs "$CORPUS"
+      # 语料入库（不是 heredoc 现造）是因为它是测试夹具，改了要能被 review 到。
+      - name: test/calibrate.mjs（规则阈值校准，用 scripts/ci-corpus）
+        run: node test/calibrate.mjs scripts/ci-corpus
 
   types:
     name: types · d.ts 与 index.js 同步
@@ -92,7 +79,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      # 零依赖校验：types/index.d.ts 必须能从 index.js 的 READ_ONLY/WRITE_OPS 重新生成且完全相同。
+      # 零依赖校验：types/index.d.ts 必须能从 index.js 的 READ_OPS/WRITE_OPS 重新生成且完全相同。
       # 有人加了 op 却忘了重新生成类型，这一步就会红。
       - name: 校验 types/index.d.ts 未漂移
         run: node scripts/gen-types.mjs --check
+      # locale/zh.json 必须能从 src/*.js 重新抽取且完全相同。
+      # 有人改了界面文案却忘了同步键表，这一步就会红（en.json 缺键时 t() 退回中文，不会红）。
+      - name: 校验 locale/zh.json 未漂移
+        run: node scripts/gen-i18n.mjs --check
+      # eslint-globals.json 是 src 片段间共享作用域的名字表，改了 src 要去重生成。
+      - name: 校验 eslint-globals.json 未漂移
+        run: node scripts/gen-eslint-globals.mjs --check

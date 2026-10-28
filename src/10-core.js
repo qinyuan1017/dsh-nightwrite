@@ -2,7 +2,7 @@
  * 长夜 · 常量 / 小工具 / 基础控件
  *
  * React 由宿主模块表提供，无构建、无外部依赖。
- * 所有数据走同源 RPC：POST /changye/api，body { op, payload }。
+ * 所有数据走同源 RPC：POST /nightwrite/api，body { op, payload }。
  */
 
 const React = require('react')
@@ -11,22 +11,22 @@ const { useState, useEffect, useMemo, useRef, useCallback, memo } = React
 const Fragment = React.Fragment
 
 // ── 常量 ────────────────────────────────────────────────────
-const PANEL_ID = 'changye'
-const ROUTE = '/changye/api'
+const PANEL_ID = 'nightwrite'
+const ROUTE = '/nightwrite/api'
 const LS = {
-  project: 'cy.project',
-  page: 'cy.page',
-  theme: 'cy.theme',
-  worldKind: 'cy.worldkind',
-  worldView: 'cy.worldview',
-  orderChapter: 'cy.order.chapter',
-  orderIntent: 'cy.order.intent',
-  paused: 'cy.paused',
-  autosave: 'cy.autosave',
-  readMode: 'cy.readmode',
+  project: 'nw.project',
+  page: 'nw.page',
+  theme: 'nw.theme',
+  worldKind: 'nw.worldkind',
+  worldView: 'nw.worldview',
+  orderChapter: 'nw.order.chapter',
+  orderIntent: 'nw.order.intent',
+  paused: 'nw.paused',
+  autosave: 'nw.autosave',
+  readMode: 'nw.readmode',
   // 【QA】底栏「⏭ 最新」与命令面板跳章都写这个键，验收台读它直接打开那一回。
-  openChapter: 'cy.openChapter',
-  openPara: 'cy.openPara',
+  openChapter: 'nw.openChapter',
+  openPara: 'nw.openPara',
 }
 
 // 七页：方案 → 大纲 → 指令 → 验收，四个阶段各自一站。
@@ -163,7 +163,7 @@ function setDirtyGuard(active, label, flush) {
 
 /** 本地草稿：键里带作品与章号，换章不会串。 */
 function draftKey(projectId, chapter) {
-  return `cy.draft.${projectId}.${chapter}`
+  return `nw.draft.${projectId}.${chapter}`
 }
 
 function readDraft(projectId, chapter) {
@@ -244,7 +244,7 @@ const STATUS_TONE = {
 let cachedBoot = null
 function bootInfo() {
   if (cachedBoot) return cachedBoot
-  const raw = window.__CHANGYE_BOOT__
+  const raw = window.__NIGHTWRITE_BOOT__
   cachedBoot = raw && typeof raw === 'object' ? raw : { apiUrl: ROUTE }
   return cachedBoot
 }
@@ -307,53 +307,53 @@ function useAsync(fn, deps, { skip = false } = {}) {
 // ── 基础控件 ────────────────────────────────────────────────
 
 function Btn({ kind = '', small = false, className = '', children, ...rest }) {
-  const cls = `cy-btn${kind ? ` cy-btn-${kind}` : ''}${small ? ' cy-btn-sm' : ''}${className ? ` ${className}` : ''}`
+  const cls = `nw-btn${kind ? ` nw-btn-${kind}` : ''}${small ? ' nw-btn-sm' : ''}${className ? ` ${className}` : ''}`
   return h('button', { type: 'button', className: cls, ...rest }, children)
 }
 
 function Tag({ tone = 'grey', children }) {
-  return h('span', { className: `cy-tag cy-tag-${tone}` }, children)
+  return h('span', { className: `nw-tag nw-tag-${tone}` }, children)
 }
 
 function Card({ title, extra, className = '', children, ...rest }) {
   return h(
     'section',
-    { className: `cy-card${className ? ` ${className}` : ''}`, ...rest },
+    { className: `nw-card${className ? ` ${className}` : ''}`, ...rest },
     title
-      ? h('div', { className: 'cy-card-head' }, h('h3', null, title), h('div', { className: 'cy-card-line' }), extra)
+      ? h('div', { className: 'nw-card-head' }, h('h3', null, title), h('div', { className: 'nw-card-line' }), extra)
       : null,
     children,
   )
 }
 
 function Hint({ children }) {
-  return h('p', { className: 'cy-hint' }, children)
+  return h('p', { className: 'nw-hint' }, children)
 }
 
 function Empty({ children }) {
-  return h('div', { className: 'cy-empty' }, children)
+  return h('div', { className: 'nw-empty' }, children)
 }
 
 function KV({ rows }) {
   return h(
     'div',
-    { className: 'cy-kv-wrap' },
+    { className: 'nw-kv-wrap' },
     rows.map((row) => h(
       'div',
-      { className: 'cy-kv', key: row.key },
-      h('span', { className: 'cy-kv-k' }, row.key),
-      h('span', { className: `cy-kv-v${row.mono ? ' cy-mono' : ''}` }, row.text),
+      { className: 'nw-kv', key: row.key },
+      h('span', { className: 'nw-kv-k' }, row.key),
+      h('span', { className: `nw-kv-v${row.mono ? ' nw-mono' : ''}` }, row.text),
     )),
   )
 }
 
 function Field({ label, children }) {
-  return h('div', { className: 'cy-field' }, h('label', null, label), children)
+  return h('div', { className: 'nw-field' }, h('label', null, label), children)
 }
 
 function Input({ value, onChange, ...rest }) {
   return h('input', {
-    className: 'cy-input',
+    className: 'nw-input',
     value: value ?? '',
     onChange: (event) => onChange?.(event.target.value),
     ...rest,
@@ -362,7 +362,7 @@ function Input({ value, onChange, ...rest }) {
 
 function TextArea({ value, onChange, rows = 3, ...rest }) {
   return h('textarea', {
-    className: 'cy-input cy-textarea',
+    className: 'nw-input nw-textarea',
     rows,
     value: value ?? '',
     onChange: (event) => onChange?.(event.target.value),
@@ -373,7 +373,7 @@ function TextArea({ value, onChange, rows = 3, ...rest }) {
 function Select({ value, onChange, options }) {
   return h(
     'select',
-    { className: 'cy-input', value: value ?? '', onChange: (event) => onChange?.(event.target.value) },
+    { className: 'nw-input', value: value ?? '', onChange: (event) => onChange?.(event.target.value) },
     options.map((item) => h('option', { key: item.value, value: item.value }, item.label)),
   )
 }
@@ -382,7 +382,7 @@ function Select({ value, onChange, options }) {
 function Switch({ on, onChange, label = '开关' }) {
   return h('button', {
     type: 'button',
-    className: `cy-switch${on ? ' on' : ''}`,
+    className: `nw-switch${on ? ' on' : ''}`,
     onClick: () => onChange?.(!on),
     'aria-pressed': on ? 'true' : 'false',
     'aria-label': `${label}（${on ? '已开启' : '已关闭'}）`,
@@ -392,11 +392,11 @@ function Switch({ on, onChange, label = '开关' }) {
 function Toast({ items }) {
   return h(
     'div',
-    { className: 'cy-toast-wrap' },
+    { className: 'nw-toast-wrap' },
     items.map((item) => h(
       'div',
-      { className: 'cy-toast', key: item.id },
-      h('span', { className: 'cy-toast-mark' }, '›'),
+      { className: 'nw-toast', key: item.id },
+      h('span', { className: 'nw-toast-mark' }, '›'),
       item.text,
     )),
   )
@@ -545,11 +545,11 @@ function Modal({ title, onClose, children, footer }) {
 
   return h(
     'div',
-    { className: 'cy-modal-mask', onClick: onClose },
+    { className: 'nw-modal-mask', onClick: onClose },
     h(
       'div',
       {
-        className: 'cy-modal',
+        className: 'nw-modal',
         ref: boxRef,
         role: 'dialog',
         'aria-modal': 'true',
@@ -559,12 +559,12 @@ function Modal({ title, onClose, children, footer }) {
       },
       h(
         'div',
-        { className: 'cy-modal-head' },
+        { className: 'nw-modal-head' },
         h('h3', null, title),
-        h('button', { type: 'button', className: 'cy-icon-btn', onClick: onClose, 'aria-label': '关闭' }, '✕'),
+        h('button', { type: 'button', className: 'nw-icon-btn', onClick: onClose, 'aria-label': '关闭' }, '✕'),
       ),
-      h('div', { className: 'cy-modal-body' }, children),
-      footer ? h('div', { className: 'cy-modal-foot' }, footer) : null,
+      h('div', { className: 'nw-modal-body' }, children),
+      footer ? h('div', { className: 'nw-modal-foot' }, footer) : null,
     ),
   )
 }
@@ -574,17 +574,17 @@ function Modal({ title, onClose, children, footer }) {
 // 用 DOM 里的弹窗浮层做统一闸门 —— Modal 是唯一入口，跑不掉。
 function modalOpen() {
   if (typeof document === 'undefined') return false
-  return !!document.querySelector('.cy-modal-mask')
+  return !!document.querySelector('.nw-modal-mask')
 }
 
 function Loading({ text = '读取中…' }) {
-  return h('div', { className: 'cy-loading' }, h('span', { className: 'cy-spin' }), text)
+  return h('div', { className: 'nw-loading' }, h('span', { className: 'nw-spin' }), text)
 }
 
 function ErrorBox({ error, onRetry }) {
   return h(
     'div',
-    { className: 'cy-error' },
+    { className: 'nw-error' },
     h('span', null, error?.message || '出错了'),
     onRetry ? h(Btn, { small: true, kind: 'ghost', onClick: onRetry }, '重试') : null,
   )
@@ -592,5 +592,5 @@ function ErrorBox({ error, onRetry }) {
 
 function Bar({ value, max = 100, tone = 'amber' }) {
   const pct = Math.max(0, Math.min(100, ((Number(value) || 0) / (Number(max) || 1)) * 100))
-  return h('span', { className: `cy-bar cy-bar-${tone}` }, h('i', { style: { width: `${pct}%` } }))
+  return h('span', { className: `nw-bar nw-bar-${tone}` }, h('i', { style: { width: `${pct}%` } }))
 }

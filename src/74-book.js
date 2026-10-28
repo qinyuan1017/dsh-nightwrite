@@ -40,9 +40,9 @@ function BookExport({ projectId, project, toast }) {
         throw new Error(message)
       }
       const blob = await res.blob()
-      const chapters = res.headers.get('x-changye-chapters') ?? '?'
-      const words = res.headers.get('x-changye-words') ?? '?'
-      const skipped = res.headers.get('x-changye-skipped') ?? '0'
+      const chapters = res.headers.get('x-nightwrite-chapters') ?? '?'
+      const words = res.headers.get('x-nightwrite-words') ?? '?'
+      const skipped = res.headers.get('x-nightwrite-skipped') ?? '0'
       const name = `${project?.name ?? projectId}.${format === 'md' ? 'md' : format}`
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -64,29 +64,29 @@ function BookExport({ projectId, project, toast }) {
   return h(
     Card,
     { title: '导出成书', extra: h(Tag, { tone: 'green' }, '真文件') },
-    h('p', { className: 'cy-hint' }, '把已写的章拼成一本完整的书。和上面的「导出全部数据」不同：那个给自己备份目录，这个给读者。'),
+    h('p', { className: 'nw-hint' }, '把已写的章拼成一本完整的书。和上面的「导出全部数据」不同：那个给自己备份目录，这个给读者。'),
     h(
       'div',
-      { className: 'cy-book-formats' },
+      { className: 'nw-book-formats' },
       formats.map((item) => h(
         'button',
         {
           type: 'button',
           key: item.value,
-          className: `cy-book-format${format === item.value ? ' on' : ''}`,
+          className: `nw-book-format${format === item.value ? ' on' : ''}`,
           'aria-pressed': format === item.value ? 'true' : 'false',
           onClick: () => setFormat(item.value),
         },
-        h('span', { className: 'cy-book-format-name' }, item.label),
-        h('span', { className: 'cy-book-format-hint' }, item.hint),
+        h('span', { className: 'nw-book-format-name' }, item.label),
+        h('span', { className: 'nw-book-format-hint' }, item.hint),
       )),
     ),
     h(
       'div',
-      { className: 'cy-actions' },
+      { className: 'nw-actions' },
       h(
         'label',
-        { className: 'cy-book-skip' },
+        { className: 'nw-book-skip' },
         h('input', {
           type: 'checkbox',
           checked: skipRejected,
@@ -130,7 +130,7 @@ function UpdateCard({ toast }) {
     Card,
     {
       title: '检查更新',
-      extra: h('span', { className: 'cy-card-badge' }, installed),
+      extra: h('span', { className: 'nw-card-badge' }, installed),
     },
     h(KV, {
       rows: [
@@ -140,11 +140,11 @@ function UpdateCard({ toast }) {
       ],
     }),
     state?.error
-      ? h('p', { className: 'cy-update-err' }, state.error)
+      ? h('p', { className: 'nw-update-err' }, state.error)
       : null,
     h(
       'div',
-      { className: 'cy-actions' },
+      { className: 'nw-actions' },
       h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: () => run(false) }, busy ? '查着…' : '查一下'),
       h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: () => run(true) }, '强制刷新（跳过缓存）'),
       state?.hasUpdate

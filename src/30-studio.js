@@ -35,10 +35,10 @@ function TemplatePanel({ projectId, templates, onPick, reload, toast }) {
 
   return h(
     'div',
-    { className: 'cy-tpl-panel' },
+    { className: 'nw-tpl-panel' },
     h(
       'div',
-      { className: 'cy-tpl-head' },
+      { className: 'nw-tpl-head' },
       h('span', null, '指令模板'),
       h(Btn, {
         small: true,
@@ -48,19 +48,19 @@ function TemplatePanel({ projectId, templates, onPick, reload, toast }) {
     ),
     h(
       'div',
-      { className: 'cy-tpl-list' },
+      { className: 'nw-tpl-list' },
       templates.map((item) => h(
         'button',
         {
           type: 'button',
-          className: 'cy-tpl',
+          className: 'nw-tpl',
           key: item.id,
           onClick: () => onPick(item),
           title: item.intent,
         },
-        h('span', { className: 'cy-tpl-name' }, item.name),
-        h('span', { className: 'cy-tpl-intent' }, item.intent || '无意图说明'),
-        item.used ? h('span', { className: 'cy-tpl-used' }, `用过 ${item.used} 次`) : null,
+        h('span', { className: 'nw-tpl-name' }, item.name),
+        h('span', { className: 'nw-tpl-intent' }, item.intent || '无意图说明'),
+        item.used ? h('span', { className: 'nw-tpl-used' }, `用过 ${item.used} 次`) : null,
       )),
       templates.length ? null : h(Empty, null, '还没有模板。'),
     ),
@@ -102,30 +102,30 @@ function ContextAudit({
 
   return h(
     'div',
-    { className: `cy-ctx${over ? ' cy-ctx-over' : ''}` },
+    { className: `nw-ctx${over ? ' nw-ctx-over' : ''}` },
     h(
       'div',
-      { className: 'cy-ctx-head' },
+      { className: 'nw-ctx-head' },
       h('span', null, '上下文包'),
-      h('span', { className: `cy-ctx-total${over ? ' cy-over' : ''}` }, `${used} / ${budget} token`),
+      h('span', { className: `nw-ctx-total${over ? ' nw-over' : ''}` }, `${used} / ${budget} token`),
     ),
     // 【24 条 #11】预算条画出来：绿 / 黄 / 红三档，配百分比，不再只是一个数字。
     h(Bar, { value: used, max: budget, tone }),
     h(
       'div',
-      { className: 'cy-ctx-meter' },
-      h('span', { className: 'cy-hint' }, `${Math.round(ratio * 100)}% 已用`),
-      h('span', { className: `cy-hint${over ? ' cy-over' : ''}` }, over
+      { className: 'nw-ctx-meter' },
+      h('span', { className: 'nw-hint' }, `${Math.round(ratio * 100)}% 已用`),
+      h('span', { className: `nw-hint${over ? ' nw-over' : ''}` }, over
         ? `超了 ${used - budget} token，先砍低相关度的账本条目`
         : `还能塞 ${budget - used} token`),
     ),
     h(
       'div',
-      { className: 'cy-ctx-list' },
+      { className: 'nw-ctx-list' },
       rows.map((row, index) => h(
         'div',
         {
-          className: `cy-ctx-row${off?.[row.id] ? ' cy-ctx-off' : ''}`,
+          className: `nw-ctx-row${off?.[row.id] ? ' nw-ctx-off' : ''}`,
           key: row.id,
           // 【24 条 #10】拖拽换序：拖起一行，落到另一行上就换位置。
           draggable: true,
@@ -137,13 +137,13 @@ function ContextAudit({
             dragFrom.current = null
           },
         },
-        h('span', { className: 'cy-ctx-grip', title: '拖我换顺序' }, '⠿'),
-        h('span', { className: 'cy-ctx-kind' }, row.kind),
-        h('span', { className: 'cy-ctx-label' }, row.label),
-        h('span', { className: 'cy-ctx-token' }, String(row.tokens)),
+        h('span', { className: 'nw-ctx-grip', title: '拖我换顺序' }, '⠿'),
+        h('span', { className: 'nw-ctx-kind' }, row.kind),
+        h('span', { className: 'nw-ctx-label' }, row.label),
+        h('span', { className: 'nw-ctx-token' }, String(row.tokens)),
         h('button', {
           type: 'button',
-          className: `cy-ctx-sw${off?.[row.id] ? '' : ' on'}`,
+          className: `nw-ctx-sw${off?.[row.id] ? '' : ' on'}`,
           title: off?.[row.id] ? '这次不喂它' : '这次喂它',
           // 六行都有这个开关，读屏只念「这次喂它」等于六个同名按钮分不清。
           // 名字里带上这一行的类型和标签，才说得清点的是哪一条。
@@ -153,17 +153,17 @@ function ContextAudit({
         }),
         h('button', {
           type: 'button',
-          className: 'cy-ctx-x',
+          className: 'nw-ctx-x',
           onClick: () => onRemove?.(row.id),
           'aria-label': `移除第 ${index + 1} 条 ${row.kind}「${row.label}」`,
         }, '✕'),
       )),
-      rows.length ? null : h('div', { className: 'cy-hint' }, '上下文包是空的：至少喂一条世界状态和上一章结尾。'),
+      rows.length ? null : h('div', { className: 'nw-hint' }, '上下文包是空的：至少喂一条世界状态和上一章结尾。'),
     ),
     h(
       'div',
-      { className: 'cy-ctx-foot' },
-      h('span', { className: 'cy-hint' }, '共 ' + rows.filter((row) => !off?.[row.id]).length + '/' + rows.length + ' 条在喂'),
+      { className: 'nw-ctx-foot' },
+      h('span', { className: 'nw-hint' }, '共 ' + rows.filter((row) => !off?.[row.id]).length + '/' + rows.length + ' 条在喂'),
       h(Btn, {
         small: true,
         kind: 'ghost',
@@ -173,7 +173,7 @@ function ContextAudit({
         },
       }, '重算'),
     ),
-    over ? h('p', { className: 'cy-warn' }, '超预算：先砍低相关度的账本条目，别砍世界状态。') : null,
+    over ? h('p', { className: 'nw-warn' }, '超预算：先砍低相关度的账本条目，别砍世界状态。') : null,
   )
 }
 
@@ -184,17 +184,11 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
 
   // 三个 useAsync 以前一条 error 分支都没有：后端挂了就静默显示空表单，
   // 作者以为「模板没了 / 队列空了」，实际是请求失败了。
+  // 【别把这行挪回去】错误分支必须排在所有 hook 之后。
+  // 排前面的话：首次渲染 12 个 hook，接口一报错只走 3 个就 return，
+  // hook 数跳变 → React 直接抛错 → 整页白屏，作者以为「生产台打不开」。
   const broken = tpl.error || q.error || led.error
-  if (broken) {
-    return h(
-      'div',
-      { className: 'cy-studio' },
-      h(ErrorBox, {
-        error: broken,
-        onRetry: () => { tpl.reload(); q.reload(); led.reload() },
-      }),
-    )
-  }
+  // 提前算好要用的东西，早退之后再 return 渲染分支。
 
   const lastChapter = chapters.length ? chapters[chapters.length - 1].chapter : 0
   const [form, setForm] = useState({
@@ -276,6 +270,17 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
     setCtx(buildContext())
   }, [buildContext])
 
+  if (broken) {
+    return h(
+      'div',
+      { className: 'nw-studio' },
+      h(ErrorBox, {
+        error: broken,
+        onRetry: () => { tpl.reload(); q.reload(); led.reload() },
+      }),
+    )
+  }
+
   const budget = 32000
   const total = ctx.reduce((sum, row) => sum + (Number(row.tokens) || 0), 0)
 
@@ -342,7 +347,7 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
   const dispatch = async (row) => {
     const intent = String(row.intent || row.templateName || '').trim() || '（这行没写意图，先补一句要写什么）'
     const prompt = [
-      `用 changye_op 写第 ${row.chapter} 回。`,
+      `用 nightwrite_op 写第 ${row.chapter} 回。`,
       `意图：${intent}`,
       '开工前读：chapter.list 看已有稿、ledger.get 拿设定与伏笔、outline.get 看这一回的骨架、templates.list 选节奏模板。',
       '交稿时：chapter.save 写正文（status 交 review），proposal.save 提你建议的改动（不要自己改已验收的稿），problem.save 记你发现但没改的毛病。',
@@ -364,10 +369,10 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
 
   return h(
     'div',
-    { className: 'cy-page cy-studio' },
+    { className: 'nw-page nw-studio' },
     h(
       'div',
-      { className: 'cy-studio-cols' },
+      { className: 'nw-studio-cols' },
       tpl.loading && !tpl.data ? h(Loading, null) : h(TemplatePanel, {
         projectId,
         templates,
@@ -377,13 +382,13 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
       }),
       h(
         'div',
-        { className: 'cy-order' },
+        { className: 'nw-order' },
         h(
           Card,
-          { title: '指令单', extra: h('span', { className: 'cy-card-badge' }, 'AI 领单 · 你验收') },
+          { title: '指令单', extra: h('span', { className: 'nw-card-badge' }, 'AI 领单 · 你验收') },
           h(
             'div',
-            { className: 'cy-order-grid' },
+            { className: 'nw-order-grid' },
             h(Field, { label: '第几回' }, h(Input, {
               type: 'number',
               value: form.chapter,
@@ -420,7 +425,7 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
             toast,
             onPick: (text) => setForm((prev) => ({ ...prev, intent: text })),
           }),
-          form.templateName ? h('p', { className: 'cy-hint' }, `已套模板：${form.templateName}`) : null,
+          form.templateName ? h('p', { className: 'nw-hint' }, `已套模板：${form.templateName}`) : null,
           h(ContextAudit, {
             rows: ctx,
             budget,
@@ -441,11 +446,11 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
           }),
           h(
             'div',
-            { className: 'cy-order-foot' },
-            h('span', { className: 'cy-hint' }, total > budget ? '超预算，建议先减条目' : `约 ${total} token 上下文`),
+            { className: 'nw-order-foot' },
+            h('span', { className: 'nw-hint' }, total > budget ? '超预算，建议先减条目' : `约 ${total} token 上下文`),
             h(
               'div',
-              { className: 'cy-actions' },
+              { className: 'nw-actions' },
               h(Btn, { kind: 'ghost', onClick: () => setCtx(buildContext()) }, '重算上下文'),
               h(Btn, { kind: 'primary', onClick: enqueue, disabled: busy }, busy ? '入队中…' : '加入队列'),
             ),
@@ -454,26 +459,26 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
       ),
       h(
         'div',
-        { className: 'cy-queue' },
+        { className: 'nw-queue' },
         h(
           'div',
-          { className: 'cy-queue-head' },
+          { className: 'nw-queue-head' },
           h('span', null, '队列'),
-          h('span', { className: 'cy-card-badge' }, `${queue.filter((row) => row.status === 'queued').length} 待跑`),
+          h('span', { className: 'nw-card-badge' }, `${queue.filter((row) => row.status === 'queued').length} 待跑`),
         ),
         h(
           'div',
-          { className: 'cy-queue-list' },
+          { className: 'nw-queue-list' },
           queue.length
             ? queue.map((row) => h(
               'div',
-              { className: `cy-q-row cy-q-${row.status}`, key: row.id },
-              h('span', { className: 'cy-q-n' }, `第 ${row.chapter} 回`),
-              h('span', { className: 'cy-q-intent' }, row.intent || row.templateName || '（无意图）'),
+              { className: `nw-q-row nw-q-${row.status}`, key: row.id },
+              h('span', { className: 'nw-q-n' }, `第 ${row.chapter} 回`),
+              h('span', { className: 'nw-q-intent' }, row.intent || row.templateName || '（无意图）'),
               h(Tag, { tone: row.status === 'running' ? 'teal' : row.status === 'done' ? 'green' : 'grey' }, row.status),
               h(
                 'span',
-                { className: 'cy-q-acts' },
+                { className: 'nw-q-acts' },
                 row.status === 'queued'
                   ? h(Btn, { small: true, kind: 'ghost', onClick: () => move(row.id, { status: 'running' }) }, '开跑')
                   : null,
@@ -488,15 +493,15 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
             ))
             : h(Empty, null, '队列是空的。写一张指令单，加进来。'),
         ),
-        h('p', { className: 'cy-hint' }, '队列只记「要写什么」。真正动笔由 agent 读这一行，通过 changye_op 取正文与账本。'),
+        h('p', { className: 'nw-hint' }, '队列只记「要写什么」。真正动笔由 agent 读这一行，通过 nightwrite_op 取正文与账本。'),
         dispatchText
           ? h(
             'div',
-            { className: 'cy-dispatch' },
-            h('div', { className: 'cy-dispatch-head' },
+            { className: 'nw-dispatch' },
+            h('div', { className: 'nw-dispatch-head' },
               h('span', null, '这一回的派单话术'),
               h(Btn, { small: true, kind: 'ghost', onClick: () => setDispatchText('') }, '收起')),
-            h('pre', { className: 'cy-dispatch-body' }, dispatchText),
+            h('pre', { className: 'nw-dispatch-body' }, dispatchText),
           )
           : null,
       ),

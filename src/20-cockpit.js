@@ -79,19 +79,19 @@ function BriefingCard({ projectId, toast }) {
       title: '对齐简报',
       extra: h(
         'div',
-        { className: 'cy-actions' },
-        h('span', { className: 'cy-card-badge' }, '给 AI 看的'),
+        { className: 'nw-actions' },
+        h('span', { className: 'nw-card-badge' }, '给 AI 看的'),
         h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: load }, busy ? '正在汇总…' : open ? '重新生成' : '生成简报'),
       ),
     },
-    h('p', { className: 'cy-hint' }, '一段纯文本：书写到哪、谁在场、欠什么、下一步该写哪一回。粘到对话开头用，比让 AI 自己翻文件准。'),
+    h('p', { className: 'nw-hint' }, '一段纯文本：书写到哪、谁在场、欠什么、下一步该写哪一回。粘到对话开头用，比让 AI 自己翻文件准。'),
     open
       ? h(
         'div',
-        { className: 'cy-brief' },
-        meta ? h('div', { className: 'cy-hint' }, `${meta.chapters} 回 · ${fmtWords(meta.totalWords ?? 0)} · 最近第 ${meta.lastChapter} 回`) : null,
-        h('pre', { className: 'cy-brief-text' }, text),
-        h('div', { className: 'cy-actions' }, h(Btn, { small: true, kind: 'primary', onClick: copy }, '复制全文')),
+        { className: 'nw-brief' },
+        meta ? h('div', { className: 'nw-hint' }, `${meta.chapters} 回 · ${fmtWords(meta.totalWords ?? 0)} · 最近第 ${meta.lastChapter} 回`) : null,
+        h('pre', { className: 'nw-brief-text' }, text),
+        h('div', { className: 'nw-actions' }, h(Btn, { small: true, kind: 'primary', onClick: copy }, '复制全文')),
       )
       : null,
   )
@@ -101,26 +101,26 @@ function DebtRow({ debt, onJump }) {
   const tone = debt.level === 'red' ? 'red' : debt.level === 'orange' ? 'amber' : debt.level === 'yellow' ? 'blue' : 'grey'
   return h(
     'button',
-    { type: 'button', className: 'cy-debt', onClick: () => onJump?.(debt) },
-    h('span', { className: `cy-debt-dot cy-dot-${debt.level}` }),
+    { type: 'button', className: 'nw-debt', onClick: () => onJump?.(debt) },
+    h('span', { className: `nw-debt-dot nw-dot-${debt.level}` }),
     h(
       'span',
-      { className: 'cy-debt-main' },
-      h('span', { className: 'cy-debt-title' }, debt.title),
-      h('span', { className: 'cy-debt-sub' }, debt.sub),
+      { className: 'nw-debt-main' },
+      h('span', { className: 'nw-debt-title' }, debt.title),
+      h('span', { className: 'nw-debt-sub' }, debt.sub),
     ),
     h(Tag, { tone }, debt.level === 'red' ? '必处理' : debt.level === 'orange' ? '该处理' : '待留意'),
-    h('span', { className: 'cy-debt-go' }, '›'),
+    h('span', { className: 'nw-debt-go' }, '›'),
   )
 }
 
 function StatBox({ label, value, unit, hint, tone = 'amber', onClick }) {
   return h(
     'button',
-    { type: 'button', className: `cy-stat cy-stat-${tone}`, onClick },
-    h('span', { className: 'cy-stat-label' }, label),
-    h('span', { className: 'cy-stat-value' }, value, unit ? h('em', null, unit) : null),
-    hint ? h('span', { className: 'cy-stat-hint' }, hint) : null,
+    { type: 'button', className: `nw-stat nw-stat-${tone}`, onClick },
+    h('span', { className: 'nw-stat-label' }, label),
+    h('span', { className: 'nw-stat-value' }, value, unit ? h('em', null, unit) : null),
+    hint ? h('span', { className: 'nw-stat-hint' }, hint) : null,
   )
 }
 
@@ -156,13 +156,13 @@ function ActionCard({ stats, debts, go, toast }) {
 
   return h(
     'div',
-    { className: `cy-action${first ? ' cy-action-warn' : ''}` },
+    { className: `nw-action${first ? ' nw-action-warn' : ''}` },
     h(
       'div',
-      { className: 'cy-action-main' },
-      h('span', { className: 'cy-action-cap' }, '今天干什么'),
-      h('h3', { className: 'cy-action-title' }, title),
-      h('p', { className: 'cy-action-sub' }, sub),
+      { className: 'nw-action-main' },
+      h('span', { className: 'nw-action-cap' }, '今天干什么'),
+      h('h3', { className: 'nw-action-title' }, title),
+      h('p', { className: 'nw-action-sub' }, sub),
     ),
     h(Btn, { kind: 'primary', onClick: action }, label),
     h(Btn, {
@@ -209,17 +209,17 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
 
   return h(
     'div',
-    { className: 'cy-page cy-cockpit' },
+    { className: 'nw-page nw-cockpit' },
     h(
       'div',
-      { className: 'cy-hero' },
+      { className: 'nw-hero' },
       h(
         'div',
-        { className: 'cy-hero-left' },
+        { className: 'nw-hero-left' },
         h('h2', null, data.project?.name || '未命名'),
         h(
           'div',
-          { className: 'cy-hero-tags' },
+          { className: 'nw-hero-tags' },
           data.project?.genre ? h(Tag, { tone: 'amber' }, data.project.genre) : null,
           h(Tag, { tone: red ? 'red' : 'green' }, red ? `${red} 条红账` : '没有红账'),
           h(Tag, { tone: 'grey' }, `质检门槛 ${data.project?.qualityGate ?? 70}`),
@@ -227,7 +227,7 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
       ),
       h(
         'div',
-        { className: 'cy-hero-right' },
+        { className: 'nw-hero-right' },
         h(Btn, { kind: 'primary', onClick: () => go('studio') }, '▶ 一键开工'),
         h(Btn, { kind: 'ghost', onClick: () => go('review') }, '去验收台'),
       ),
@@ -239,7 +239,7 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
     h(ProgressTrack, { progress, volumes, toast }),
     h(
       'div',
-      { className: 'cy-stats' },
+      { className: 'nw-stats' },
       h(StatBox, {
         label: '待验收',
         value: stats.pending ?? 0,
@@ -273,21 +273,21 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
     ),
     h(
       'div',
-      { className: 'cy-cols' },
+      { className: 'nw-cols' },
       h(
         Card,
         {
           title: '欠账清单',
-          extra: h('span', { className: 'cy-card-badge' }, `${debts.length} 条`),
-          className: 'cy-card-debt',
+          extra: h('span', { className: 'nw-card-badge' }, `${debts.length} 条`),
+          className: 'nw-card-debt',
         },
         debts.length
-          ? h('div', { className: 'cy-debt-list' }, debts.map((debt, index) => h(DebtRow, { debt, key: `${debt.kind}-${index}`, onJump: jump })))
+          ? h('div', { className: 'nw-debt-list' }, debts.map((debt, index) => h(DebtRow, { debt, key: `${debt.kind}-${index}`, onJump: jump })))
           : h(Empty, null, '没有欠账。世界状态干净，可以放心往下写。'),
       ),
       h(
         'div',
-        { className: 'cy-col-side' },
+        { className: 'nw-col-side' },
         h(
           Card,
           { title: '今日建议' },
@@ -302,10 +302,10 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
             target: stats.targetWords ?? 2500,
             toast,
           }),
-          h('p', { className: 'cy-suggest' }, data.suggestion || '先建作品，再开工。'),
+          h('p', { className: 'nw-suggest' }, data.suggestion || '先建作品，再开工。'),
           h(
             'div',
-            { className: 'cy-meta-grid' },
+            { className: 'nw-meta-grid' },
             h('span', null, `已采纳 ${stats.accepted ?? 0} 章`),
             h('span', null, `均分 ${stats.avgScore ?? 0}`),
             h('span', null, `总字数 ${fmtWords(stats.totalWords ?? 0)}`),
@@ -320,19 +320,19 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
           (data.recent || []).length
             ? h(
               'div',
-              { className: 'cy-recent' },
+              { className: 'nw-recent' },
               (data.recent || []).map((row) => h(
                 'button',
                 {
                   type: 'button',
-                  className: 'cy-recent-row',
+                  className: 'nw-recent-row',
                   key: row.chapter,
                   onClick: () => go('review', { chapter: row.chapter }),
                 },
-                h('span', { className: 'cy-recent-n' }, `第 ${row.chapter} 回`),
-                h('span', { className: 'cy-recent-title' }, row.title || ''),
+                h('span', { className: 'nw-recent-n' }, `第 ${row.chapter} 回`),
+                h('span', { className: 'nw-recent-title' }, row.title || ''),
                 h(Tag, { tone: STATUS_TONE[row.status] || 'grey' }, STATUS_LABEL[row.status] || row.status),
-                h('span', { className: `cy-recent-score cy-score-${scoreTone(row.score)}` }, row.score || '—'),
+                h('span', { className: `nw-recent-score nw-score-${scoreTone(row.score)}` }, row.score || '—'),
               )),
             )
             : h(Empty, null, '还没写过章节。'),

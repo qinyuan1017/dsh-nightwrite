@@ -2,14 +2,14 @@
 // 本文件由 scripts/gen-types.mjs 从 index.js 自动生成，请勿手动编辑。
 // 改 op 表 → 重新跑 `node scripts/gen-types.mjs`（CI 会校验这个文件没有漂移）。
 //
-// 统计：118 个 op = 59 读 + 59 写；
-// 其中 102 个必须带 projectId，16 个不需要。
+// 统计：119 个 op = 60 读 + 59 写；
+// 其中 102 个必须带 projectId，17 个不需要。
 // 唯一的入参契约来源是 index.js 的 requireOp / needProjectId 运行时校验，
 // 这里只是把那份校验翻译成静态形状，不做额外假设。
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 插件名（宿主装载时用它当 id）。 */
-export const name: 'changye'
+export const name: 'nightwrite'
 /** 服务端依赖的宿主服务。 */
 export const inject: readonly ['tools']
 /** 插件版本。 */
@@ -20,14 +20,14 @@ export const ROUTE: string
 export const TOOL_NAME: string
 
 /** 读操作（不改作品状态版本号）。 */
-export const READ_OPS: readonly ChangyeReadOp[]
+export const READ_OPS: readonly NightwriteReadOp[]
 /** 写操作（成功后由 handleRpc 统一给作品状态版本 +1）。 */
-export const WRITE_OPS: readonly ChangyeWriteOp[]
+export const WRITE_OPS: readonly NightwriteWriteOp[]
 /** 全部 op，等于 READ_OPS.concat(WRITE_OPS)。 */
-export const RPC_OPS: readonly ChangyeOp[]
+export const RPC_OPS: readonly NightwriteOp[]
 
 /** 全部合法 op 的联合类型。 */
-export type ChangyeOp =
+export type NightwriteOp =
   | 'ping'
   | 'project.list'
   | 'project.get'
@@ -87,6 +87,7 @@ export type ChangyeOp =
   | 'usage.scan'
   | 'usage.budget'
   | 'usage.models'
+  | 'subagent.status'
   | 'project.create'
   | 'project.save'
   | 'project.delete'
@@ -148,7 +149,7 @@ export type ChangyeOp =
   | 'run.close'
 
 /** 只读 op：不落盘，不 bump 状态版本。 */
-export type ChangyeReadOp =
+export type NightwriteReadOp =
   | 'ping'
   | 'project.list'
   | 'project.get'
@@ -208,9 +209,10 @@ export type ChangyeReadOp =
   | 'usage.scan'
   | 'usage.budget'
   | 'usage.models'
+  | 'subagent.status'
 
 /** 写 op：落盘，成功后自动 bump 状态版本。 */
-export type ChangyeWriteOp =
+export type NightwriteWriteOp =
   | 'project.create'
   | 'project.save'
   | 'project.delete'
@@ -272,7 +274,7 @@ export type ChangyeWriteOp =
   | 'run.close'
 
 /** 必须带 projectId 的 op（由 needProjectId(payload) 强制，缺了直接 RpcError）。 */
-export type ChangyeOpRequiresProjectId =
+export type NightwriteOpRequiresProjectId =
   | 'project.get'
   | 'overview'
   | 'chapter.list'
@@ -377,7 +379,7 @@ export type ChangyeOpRequiresProjectId =
   | 'run.close'
 
 /** 不需要 projectId 的 op。 */
-export type ChangyeOpWithoutProjectId =
+export type NightwriteOpWithoutProjectId =
   | 'ping'
   | 'project.list'
   | 'role.list'
@@ -390,6 +392,7 @@ export type ChangyeOpWithoutProjectId =
   | 'usage.scan'
   | 'usage.budget'
   | 'usage.models'
+  | 'subagent.status'
   | 'project.create'
   | 'corpus.add'
   | 'corpus.remove'
@@ -402,21 +405,21 @@ export type ChangyeOpWithoutProjectId =
  * 这些字段的校验散在各 lib/*.js 里，所以这里给一个开放索引签名：
  * 具体形状以 op 自己的运行时校验为准，类型层只锁定 projectId。
  */
-export interface ChangyeOpPayload {
-  /** 作品 id；ChangyeOpRequiresProjectId 里的 op 必须给。 */
+export interface NightwriteOpPayload {
+  /** 作品 id；NightwriteOpRequiresProjectId 里的 op 必须给。 */
   projectId?: string
   [key: string]: unknown
 }
 
 /** 按 op 推导 payload：需要 projectId 的 op 拿到必填的 projectId。 */
-export type ChangyeOpPayloadFor<Op extends ChangyeOp> = Op extends ChangyeOpRequiresProjectId
-  ? ChangyeOpPayload & { projectId: string }
-  : ChangyeOpPayload
+export type NightwriteOpPayloadFor<Op extends NightwriteOp> = Op extends NightwriteOpRequiresProjectId
+  ? NightwriteOpPayload & { projectId: string }
+  : NightwriteOpPayload
 
 /** 一次 RPC 调用的信封。 */
-export interface ChangyeRpcBody<Op extends ChangyeOp = ChangyeOp> {
+export interface NightwriteRpcBody<Op extends NightwriteOp = NightwriteOp> {
   op: Op
-  payload?: ChangyeOpPayloadFor<Op>
+  payload?: NightwriteOpPayloadFor<Op>
 }
 
 /** 分派失败时抛出的错误。 */
@@ -427,15 +430,15 @@ export class RpcError extends Error {
 }
 
 /** 宿主工具的通用形状（与常见 agent 工具协议一致）。 */
-export interface ChangyeTool {
+export interface NightwriteTool {
   name: string
   description: string
   parameters: Record<string, unknown>
-  execute(args: { op: ChangyeOp; payload?: ChangyeOpPayload }): Promise<unknown>
+  execute(args: { op: NightwriteOp; payload?: NightwriteOpPayload }): Promise<unknown>
 }
 
-/** 派单工具的入参（changye_dispatch）。 */
-export interface ChangyeDispatchArgs {
+/** 派单工具的入参（nightwrite_dispatch）。 */
+export interface NightwriteDispatchArgs {
   projectId: string
   role: string
   task: string
@@ -448,59 +451,59 @@ export interface ChangyeDispatchArgs {
 }
 
 /** 派单工具：开票 + 投递到对话。 */
-export interface ChangyeDispatchTool extends Omit<ChangyeTool, 'execute'> {
-  execute(args: ChangyeDispatchArgs): Promise<unknown>
+export interface NightwriteDispatchTool extends Omit<NightwriteTool, 'execute'> {
+  execute(args: NightwriteDispatchArgs): Promise<unknown>
 }
 
 /** RPC 入口的选项。 */
-export interface ChangyeRpcOptions {
-  /** 数据根目录；不传则用 CHANGYE_ROOT 或 ~/.dsh/data/dsh-changye。 */
+export interface NightwriteRpcOptions {
+  /** 数据根目录；不传则用 NIGHTWRITE_ROOT 或 ~/.dsh/data/dsh-nightwrite。 */
   root?: string
   /** 写操作留给状态版本的署名（通常是操作人/来源）。 */
   by?: string
 }
 
 /** 插件配置。 */
-export interface ChangyeConfig {
-  /** 数据根目录，等价于设置 CHANGYE_ROOT。 */
+export interface NightwriteConfig {
+  /** 数据根目录，等价于设置 NIGHTWRITE_ROOT。 */
   root?: string
 }
 
 /**
  * 按 op 分派一次请求。
  *
- * @param body   { op, payload } 信封；op 必须是 ChangyeOp 之一。
+ * @param body   { op, payload } 信封；op 必须是 NightwriteOp 之一。
  * @param ctx    宿主上下文（只用到 ctx.get('sessionController')，投递派单时用）。
  * @param options root 覆盖数据目录，by 写进状态版本。
  * @returns op 自己的返回体；形状随 op 变化。
  */
 export function handleRpc(
-  body?: ChangyeRpcBody,
+  body?: NightwriteRpcBody,
   ctx?: unknown,
-  options?: ChangyeRpcOptions
+  options?: NightwriteRpcOptions
 ): Promise<unknown>
 
 /**
- * 造 agent 侧工具对象（changye_op），挂到 ctx.tools.register 上。
+ * 造 agent 侧工具对象（nightwrite_op），挂到 ctx.tools.register 上。
  *
  * @param root 数据根目录（绝对路径）。
  */
-export function createTool(root: string): ChangyeTool
+export function createTool(root: string): NightwriteTool
 
 /**
- * 造派单工具对象（changye_dispatch）。
+ * 造派单工具对象（nightwrite_dispatch）。
  *
  * @param root 数据根目录（绝对路径）。
  */
-export function createDispatchTool(root: string): ChangyeDispatchTool
+export function createDispatchTool(root: string): NightwriteDispatchTool
 
 /**
- * 插件入口：挂 /changye/api 路由，并注册两个工具。
+ * 插件入口：挂 /nightwrite/api 路由，并注册两个工具。
  *
  * @param ctx    Cordis 上下文；缺 ctx.inject 时什么都不做（不会抛）。
  * @param config { root } 可选。
  */
-export function apply(ctx: unknown, config?: ChangyeConfig): void
+export function apply(ctx: unknown, config?: NightwriteConfig): void
 
 /* 生成的入参说明（来自 handleRpcCore 的静态扫描）：
  *
@@ -563,6 +566,7 @@ export function apply(ctx: unknown, config?: ChangyeConfig): void
  * @op usage.scan — read／projectId 不需要；handleRpc 读到的字段：cwd, limit, projectId
  * @op usage.budget — read／projectId 不需要；handleRpc 读到的字段：chapterWords, chapters, contextFactor, model
  * @op usage.models — read／projectId 不需要；handleRpc 读到的字段：—
+ * @op subagent.status — read／projectId 不需要；handleRpc 读到的字段：—
  * @op project.create — write／projectId 不需要；handleRpc 读到的字段：—
  * @op project.save — write／projectId 必填；handleRpc 读到的字段：patch
  * @op project.delete — write／projectId 必填；handleRpc 读到的字段：—

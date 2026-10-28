@@ -37,7 +37,7 @@
       "kind": "method",
       "required": true,
       "needle": "webServer.register",
-      "usedBy": "index.js:1389 (ROUTE = '/changye/api')",
+      "usedBy": "index.js:1389 (ROUTE = '/nightwrite/api')",
       "note": "客户端所有 HTTP 请求走这条路由。"
     },
     {

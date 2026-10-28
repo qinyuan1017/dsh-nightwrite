@@ -16,20 +16,20 @@ function TopBar({
   const overBudget = budget > 0 && spent > budget
   return h(
     'div',
-    { className: 'cy-top' },
+    { className: 'nw-top' },
     h(
       'div',
-      { className: 'cy-brand' },
-      h('span', { className: 'cy-brand-mark' }, '🌙'),
-      h('span', { className: 'cy-brand-name' }, '长夜'),
-      h('span', { className: 'cy-brand-page' }, PAGE_LABEL[page] ?? ''),
+      { className: 'nw-brand' },
+      h('span', { className: 'nw-brand-mark' }, '🌙'),
+      h('span', { className: 'nw-brand-name' }, '长夜'),
+      h('span', { className: 'nw-brand-page' }, PAGE_LABEL[page] ?? ''),
     ),
     // 【24 条 #1】状态灯：一眼看到 AI 到底在不在动。
     // 现在用 MOCK 固定值渲染完整形态（灯泡亮 + 第 5 回 + 1240/2500 字），点它有 toast。
     h(StatusLamp, { toast }),
     h(
       'div',
-      { className: 'cy-top-mid' },
+      { className: 'nw-top-mid' },
       h(Select, {
         value: projectId ?? '',
         onChange: onSwitch,
@@ -37,45 +37,45 @@ function TopBar({
           ? projects.map((row) => ({ value: row.id, label: `${row.name}（${row.chapters} 章）` }))
           : [{ value: '', label: '还没有作品' }],
       }),
-      h('span', { className: 'cy-top-stat' }, `待验收 ${stats.pending ?? 0}`),
-      h('span', { className: 'cy-top-stat' }, `队列 ${stats.queued ?? 0}`),
+      h('span', { className: 'nw-top-stat' }, `待验收 ${stats.pending ?? 0}`),
+      h('span', { className: 'nw-top-stat' }, `队列 ${stats.queued ?? 0}`),
       budget > 0
         ? h(
           'button',
           {
             type: 'button',
-            className: `cy-top-stat cy-top-cost cy-budget${overBudget ? ' cy-budget-over' : ''}`,
+            className: `nw-top-stat nw-top-cost nw-budget${overBudget ? ' nw-budget-over' : ''}`,
             title: `本月已花 ${fmtCost(spent)} / 预算 ${fmtCost(budget)}${overBudget ? '（超了）' : ''}`,
             onClick: () => toast(overBudget
               ? `本月已超预算 ${fmtCost(spent - budget)}，去设置里调预算或收着点`
               : `本月已花 ${fmtCost(spent)}，还剩 ${fmtCost(budget - spent)}`),
           },
           `本月 ${fmtCost(spent)} / ${fmtCost(budget)}`,
-          h('span', { className: 'cy-budget-bar' }, h('span', {
-            className: 'cy-budget-fill',
+          h('span', { className: 'nw-budget-bar' }, h('span', {
+            className: 'nw-budget-fill',
             style: { width: `${usedPct}%` },
           })),
           // 【QA-4】超预算时把「要拦你」写在脸上，而不是等用户排完单才发现。
           overBudget
-            ? h('span', { className: 'cy-budget-stop cy-budget-halt' }, `超 ${fmtCost(spent - budget)} · 排单前会问`)
+            ? h('span', { className: 'nw-budget-stop nw-budget-halt' }, `超 ${fmtCost(spent - budget)} · 排单前会问`)
             : null,
         )
-        : h('span', { className: 'cy-top-stat cy-top-cost' }, fmtCost(stats.totalCost ?? 0)),
+        : h('span', { className: 'nw-top-stat nw-top-cost' }, fmtCost(stats.totalCost ?? 0)),
     ),
     // 三个快动作从底栏搬上来：底栏只留导航，快动作跟「队列/暂停」这些运行态放一起，
     // 一眼就能看到「现在会不会有东西在跑」。
     h(
       'div',
-      { className: 'cy-top-right' },
-      h('span', { className: `cy-top-hint${queueCount ? ' cy-top-hint-on' : ''}` },
+      { className: 'nw-top-right' },
+      h('span', { className: `nw-top-hint${queueCount ? ' nw-top-hint-on' : ''}` },
         queueCount ? `${queueCount} 章在队列里` : '队列空闲'),
       // 【24 条 #3】命令面板入口：Ctrl+K 和这个按钮都开同一个浮层。
-      h(Btn, { kind: 'ghost', small: true, className: 'cy-cmdk-open', onClick: onCommand }, '⌘K 命令'),
+      h(Btn, { kind: 'ghost', small: true, className: 'nw-cmdk-open', onClick: onCommand }, '⌘K 命令'),
       // 【QA-4】暂停时三个快动作描红：按下去会给「先继续」的提示，不是死按钮。
       h(Btn, {
         kind: 'primary',
         small: true,
-        className: paused ? 'cy-btn-halt' : '',
+        className: paused ? 'nw-btn-halt' : '',
         title: paused ? '已暂停，先点「▶ 继续」' : '排一章进队列',
         onClick: () => onQuick?.('one'),
         disabled: busy,
@@ -83,7 +83,7 @@ function TopBar({
       h(Btn, {
         kind: 'ghost',
         small: true,
-        className: paused ? 'cy-btn-halt' : '',
+        className: paused ? 'nw-btn-halt' : '',
         title: paused ? '已暂停，先点「▶ 继续」' : '一次排三章',
         onClick: () => onQuick?.('batch'),
         disabled: busy,
@@ -101,18 +101,18 @@ function TopBar({
 function DockNav({ page, go, queueCount }) {
   return h(
     'nav',
-    { className: 'cy-dock' },
+    { className: 'nw-dock' },
     PAGES.map((item) => h(
       'button',
       {
         type: 'button',
         key: item.id,
-        className: `cy-dock-btn${page === item.id ? ' on' : ''}`,
+        className: `nw-dock-btn${page === item.id ? ' on' : ''}`,
         onClick: () => go(item.id),
       },
-      h('span', { className: 'cy-dock-icon' }, item.icon),
-      h('span', { className: 'cy-dock-label' }, item.label),
-      item.id === 'studio' && queueCount ? h('span', { className: 'cy-dock-badge' }, String(queueCount)) : null,
+      h('span', { className: 'nw-dock-icon' }, item.icon),
+      h('span', { className: 'nw-dock-label' }, item.label),
+      item.id === 'studio' && queueCount ? h('span', { className: 'nw-dock-badge' }, String(queueCount)) : null,
     )),
   )
 }
@@ -122,26 +122,26 @@ function BottomBar({
 }) {
   return h(
     'div',
-    { className: 'cy-bottom' },
+    { className: 'nw-bottom' },
     // 左占位：让中间那颗 dock 真正居中，不会被右侧两个按钮推歪。
-    h('div', { className: 'cy-bottom-pad' }),
+    h('div', { className: 'nw-bottom-pad' }),
     h(DockNav, { page, go, queueCount }),
     // 【24 条 #2】底栏右侧两个常驻小按钮：跳到最新章 / 加一章空壳。
     // 写长篇天天要「翻到最后」，把它放在手边比放进菜单里合理。
     h(
       'div',
-      { className: 'cy-bottom-acts' },
+      { className: 'nw-bottom-acts' },
       h(Btn, {
         small: true,
         kind: 'ghost',
-        className: 'cy-bottom-btn',
+        className: 'nw-bottom-btn',
         onClick: onJumpLatest,
         title: '跳到最后一章（演示）',
       }, '⏭ 最新'),
       h(Btn, {
         small: true,
         kind: 'ghost',
-        className: 'cy-bottom-btn',
+        className: 'nw-bottom-btn',
         onClick: onNewChapter,
         title: '新增一章空壳（演示）',
       }, '＋ 新章'),
@@ -158,7 +158,7 @@ function Workbench(props) {
   const [quickBusy, setQuickBusy] = useState(false)
 
   useEffect(() => {
-    const root = document.querySelector('.cy-shell')
+    const root = document.querySelector('.nw-shell')
     if (root) root.dataset.theme = theme
   }, [theme])
 
@@ -240,7 +240,7 @@ function Workbench(props) {
           toast('这条没记回收章节')
           return
         }
-        writeLS('cy.openChapter', String(chapter))
+        writeLS('nw.openChapter', String(chapter))
         go('review')
         toast(`已跳到验收台 · 第 ${chapter} 回`)
       },
@@ -255,7 +255,7 @@ function Workbench(props) {
 
   return h(
     'div',
-    { className: `cy-shell cy-theme-${theme}`, 'data-page': page },
+    { className: `nw-shell nw-theme-${theme}`, 'data-page': page },
     h(TopBar, {
       projects,
       projectId,
@@ -271,7 +271,7 @@ function Workbench(props) {
       onCommand: () => setCommand?.(true),
       toast,
     }),
-    h('div', { className: 'cy-body' }, content),
+    h('div', { className: 'nw-body' }, content),
     h(BottomBar, {
       page,
       go,
@@ -283,7 +283,7 @@ function Workbench(props) {
           return
         }
         // 以前只 go('review')，落在章列表上，文案却说「已跳到第 N 回」—— 说了没做到。
-        // 把章号写进 cy.openChapter；已经停在验收台时组件不会重挂，
+        // 把章号写进 nw.openChapter；已经停在验收台时组件不会重挂，
         // 得再 bump 一次 refreshKey，那边读键的 effect 才会跑。
         writeLS(LS.openChapter, String(last))
         go('review')
@@ -363,7 +363,7 @@ function Root() {
     }
     setPage(next)
     writeLS(LS.page, next)
-    if (arg?.chapter) writeLS('cy.openChapter', String(arg.chapter))
+    if (arg?.chapter) writeLS('nw.openChapter', String(arg.chapter))
   }, [])
 
   const setTheme = useCallback((next) => {
@@ -422,7 +422,7 @@ function PanelIcon({ size }) {
   return h(
     'span',
     {
-      className: 'cy-panel-glyph',
+      className: 'nw-panel-glyph',
       role: 'img',
       'aria-label': '长夜',
       'aria-hidden': 'true',
@@ -434,7 +434,7 @@ function PanelIcon({ size }) {
 
 // 把中心列切到长夜。宿主 panelRow 的点击自己会走这条路，这里只留给命令面板 / 其它插件调用；
 // layout 服务可能比 slot 注册晚一拍就绪，所以退到 hostCtx.layout 再试一次。
-function openChangye() {
+function openNightwrite() {
   try {
     const layout = hostService('layout') || hostCtx?.layout || null
     if (layout && typeof layout.selectPanel === 'function') {
@@ -442,7 +442,7 @@ function openChangye() {
       return true
     }
   } catch (error) {
-    console.warn('[changye] 打开失败', error)
+    console.warn('[nightwrite] 打开失败', error)
   }
   return false
 }
@@ -455,7 +455,7 @@ function apply(ctx) {
       if (ctx?.slots?.inject) ctx.slots.inject(slot, register)
       else register()
     } catch (error) {
-      console.warn(`[changye] 挂载 ${slot} 失败`, error)
+      console.warn(`[nightwrite] 挂载 ${slot} 失败`, error)
     }
   }
 
@@ -465,15 +465,15 @@ function apply(ctx) {
 
   // 正门：keyed main 槽位。宿主 AppFrame 的 MainPanel 是
   // renderSlot('main', {}, { entryKey: activePanelId ?? 'conversation' })，
-  // 所以 key='changye' 这份就是「选中长夜时中心列该画的内容」。
+  // 所以 key='nightwrite' 这份就是「选中长夜时中心列该画的内容」。
   inject('main', () =>
     ctx.slots.register({ name: 'main', key: PANEL_ID, label: '长夜' }, Root))
 
   // 样式注入走 ctx.effect，插件被卸载 / 热重建时宿主会回调清理函数把这颗 <style> 摘掉。
   // 直接 appendChild 而不注册清理，会让每次改动都往 <head> 里叠一份旧 CSS。
   const style = document.createElement('style')
-  style.dataset.changye = '1'
-  style.textContent = CHANGYE_CSS
+  style.dataset.nightwrite = '1'
+  style.textContent = NIGHTWRITE_CSS
   document.head.appendChild(style)
   if (typeof ctx?.effect === 'function') {
     ctx.effect(() => () => {
@@ -482,6 +482,6 @@ function apply(ctx) {
       } catch {
         /* 已被移除 */
       }
-    }, 'changye: styles')
+    }, 'nightwrite: styles')
   }
 }

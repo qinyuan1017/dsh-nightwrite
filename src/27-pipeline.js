@@ -38,16 +38,16 @@ function RoleCard({ role, onPick }) {
     'button',
     {
       type: 'button',
-      className: `cy-role${role.canDispatch ? ' cy-role-boss' : ''}`,
+      className: `nw-role${role.canDispatch ? ' nw-role-boss' : ''}`,
       onClick: () => onPick?.(role),
       title: role.duty,
     },
-    h('span', { className: 'cy-role-name' }, role.label),
-    h('span', { className: 'cy-role-id' }, role.id.replace(/^changye-/, '')),
-    h('span', { className: 'cy-role-duty' }, role.duty),
+    h('span', { className: 'nw-role-name' }, role.label),
+    h('span', { className: 'nw-role-id' }, role.id.replace(/^nightwrite-/, '')),
+    h('span', { className: 'nw-role-duty' }, role.duty),
     h(
       'span',
-      { className: 'cy-role-foot' },
+      { className: 'nw-role-foot' },
       role.canDispatch ? h(Tag, { tone: 'amber' }, '有权派单') : null,
       h(Tag, { tone: 'grey' }, `${role.skills?.length ?? 0} 个 skill`),
     ),
@@ -97,8 +97,8 @@ function TaskPackBoard({ projectId, toast, refreshKey }) {
     Card,
     {
       title: '任务包',
-      extra: h('span', { className: 'cy-card-badge' }, items.length ? `${items.length} 个` : '还没有'),
-      className: 'cy-taskpack',
+      extra: h('span', { className: 'nw-card-badge' }, items.length ? `${items.length} 个` : '还没有'),
+      className: 'nw-taskpack',
     },
     h(Hint, null, '派单时自动造的那一叠材料。包里有什么、为什么给、哪些故意没给，都在这。'),
     state.loading && !items.length
@@ -106,51 +106,51 @@ function TaskPackBoard({ projectId, toast, refreshKey }) {
       : items.length
         ? h(
           'div',
-          { className: 'cy-tp-list' },
+          { className: 'nw-tp-list' },
           ...items.map((row) => h(
             'div',
-            { key: row.pack, className: 'cy-tp-row' },
+            { key: row.pack, className: 'nw-tp-row' },
             h(
               'button',
               {
                 type: 'button',
-                className: 'cy-tp-head',
+                className: 'nw-tp-head',
                 'aria-expanded': open === row.pack ? 'true' : 'false',
                 onClick: () => openPack(row.pack),
               },
-              h('span', { className: 'cy-tp-role' }, row.roleLabel ?? row.role),
+              h('span', { className: 'nw-tp-role' }, row.roleLabel ?? row.role),
               row.chapter ? h(Tag, { tone: 'grey' }, `第 ${row.chapter} 回`) : null,
-              h('span', { className: 'cy-tp-n' }, `${row.files} 份`),
+              h('span', { className: 'nw-tp-n' }, `${row.files} 份`),
               row.omitted ? h(Tag, { tone: 'amber' }, `少给 ${row.omitted} 项`) : null,
-              h('span', { className: 'cy-tp-at' }, String(row.createdAt ?? '').replace('T', ' ').slice(0, 16)),
+              h('span', { className: 'nw-tp-at' }, String(row.createdAt ?? '').replace('T', ' ').slice(0, 16)),
             ),
             open !== row.pack
               ? null
               : h(
                 'div',
-                { className: 'cy-tp-body' },
+                { className: 'nw-tp-body' },
                 !detail
                   ? h(Loading, { text: '读清单…' })
                   : h(
                     'div',
-                    { className: 'cy-tp-files' },
+                    { className: 'nw-tp-files' },
                     // 先说清楚东西在哪：材料是文件，不是塞进 prompt 的字。
-                    h('p', { className: 'cy-hint' }, `材料放在 ${detail.dir}`),
+                    h('p', { className: 'nw-hint' }, `材料放在 ${detail.dir}`),
                     ...(detail.manifest?.files ?? []).map((file) => h(
                       'div',
-                      { key: file.key ?? file.path, className: 'cy-tp-file' },
-                      h('span', { className: 'cy-tp-file-name' }, String(file.path ?? '').split(/[\\/]/).pop() ?? ''),
-                      h('span', { className: 'cy-tp-file-why' }, String(file.why ?? '')),
-                      h('span', { className: 'cy-tp-file-b' }, `${file.bytes ?? 0} B`),
+                      { key: file.key ?? file.path, className: 'nw-tp-file' },
+                      h('span', { className: 'nw-tp-file-name' }, String(file.path ?? '').split(/[\\/]/).pop() ?? ''),
+                      h('span', { className: 'nw-tp-file-why' }, String(file.why ?? '')),
+                      h('span', { className: 'nw-tp-file-b' }, `${file.bytes ?? 0} B`),
                     )),
                     (detail.manifest?.omitted ?? []).length
                       ? h(
                         'div',
-                        { className: 'cy-tp-omit' },
-                        h('span', { className: 'cy-tp-omit-t' }, '故意没给'),
+                        { className: 'nw-tp-omit' },
+                        h('span', { className: 'nw-tp-omit-t' }, '故意没给'),
                         ...(detail.manifest?.omitted ?? []).map((row) => h(
                           'span',
-                          { key: row.key, className: 'cy-tp-omit-row' },
+                          { key: row.key, className: 'nw-tp-omit-row' },
                           `${row.key}：${String(row.why ?? '')}`,
                         )),
                       )
@@ -158,9 +158,9 @@ function TaskPackBoard({ projectId, toast, refreshKey }) {
                     detail.promptSection
                       ? h(
                         'details',
-                        { className: 'cy-tp-prompt' },
+                        { className: 'nw-tp-prompt' },
                         h('summary', null, '派单里写的「材料在哪」那一段'),
-                        h('pre', { className: 'cy-tp-prompt-body' }, detail.promptSection),
+                        h('pre', { className: 'nw-tp-prompt-body' }, detail.promptSection),
                       )
                       : null,
                   ),
@@ -171,59 +171,72 @@ function TaskPackBoard({ projectId, toast, refreshKey }) {
   )
 }
 
-function DispatchRow({ row, onPreview, onSend, onRevoke, onReport, busy }) {
+function DispatchRow({
+  row, onPreview, onSend, onSpawn, onRevoke, onReport, busy, spawn,
+}) {
   const meta = DISPATCH_STATUS_META[row.status] ?? { label: row.status, tone: 'grey' }
   return h(
     'div',
-    { className: `cy-dp cy-dp-${row.status}` },
+    { className: `nw-dp nw-dp-${row.status}` },
     h(
       'div',
-      { className: 'cy-dp-head' },
-      h('span', { className: 'cy-dp-role' }, row.roleLabel ?? row.role),
+      { className: 'nw-dp-head' },
+      h('span', { className: 'nw-dp-role' }, row.roleLabel ?? row.role),
       h(Tag, { tone: meta.tone }, meta.label),
       row.chapter ? h(Tag, { tone: 'grey' }, `第 ${row.chapter} 回`) : null,
-      h('span', { className: 'cy-dp-id' }, row.id),
+      h('span', { className: 'nw-dp-id' }, row.id),
     ),
-    h('div', { className: 'cy-dp-task' }, row.task),
+    h('div', { className: 'nw-dp-task' }, row.task),
     h(
       'div',
-      { className: 'cy-dp-meta' },
+      { className: 'nw-dp-meta' },
       h('span', null, `开票 ${String(row.createdAt ?? '').replace('T', ' ').slice(0, 16)}`),
       row.status === 'issued' || row.status === 'claimed'
-        ? h('span', { className: 'cy-dp-left' }, dispatchLeft(row))
+        ? h('span', { className: 'nw-dp-left' }, dispatchLeft(row))
         : null,
       row.sessionId ? h('span', null, `已投递到 ${String(row.sessionId).slice(0, 8)}…`) : null,
-      row.lastError ? h('span', { className: 'cy-dp-err' }, `投递失败：${row.lastError}`) : null,
+      // 派子代理成功时才有 childId：它是宿主那边真实跑起来的那个代理。
+      row.childId ? h('span', { className: 'nw-dp-child' }, `子代理 ${String(row.childId).slice(0, 8)}…`) : null,
+      row.lastError ? h('span', { className: 'nw-dp-err' }, `投递失败：${row.lastError}`) : null,
     ),
     // 回执直接摊在票下面，不另开一页 —— 回执天然属于这张单。
     row.report
       ? h(
         'div',
-        { className: 'cy-dp-report' },
-        h('div', { className: 'cy-dp-report-head' }, '回执'),
+        { className: 'nw-dp-report' },
+        h('div', { className: 'nw-dp-report-head' }, '回执'),
         row.report.verdict
-          ? h('div', { className: 'cy-dp-verdict' }, row.report.verdict)
+          ? h('div', { className: 'nw-dp-verdict' }, row.report.verdict)
           : null,
         (row.report.sections ?? []).map((sec, index) => h(
           'div',
-          { className: 'cy-dp-sec', key: index },
-          h('span', { className: 'cy-dp-sec-t' }, sec.title),
-          h('span', { className: 'cy-dp-sec-b' }, sec.body),
+          { className: 'nw-dp-sec', key: index },
+          h('span', { className: 'nw-dp-sec-t' }, sec.title),
+          h('span', { className: 'nw-dp-sec-b' }, sec.body),
         )),
       )
       : null,
     h(
       'div',
-      { className: 'cy-dp-acts' },
+      { className: 'nw-dp-acts' },
       h(Btn, {
         small: true,
         kind: 'ghost',
         onClick: () => onPreview?.(row),
         disabled: busy || row.status === 'revoked' || row.status === 'expired',
       }, '看任务书'),
+      // 派子代理和老路「发到对话」并列：前者是独立上下文 + 人格 + 工具白名单，
+      // 后者是把任务书塞进你当前的对话。想让它别污染你的上下文就派子代理。
       h(Btn, {
         small: true,
         kind: 'primary',
+        onClick: () => onSpawn?.(row),
+        disabled: busy || row.status !== 'issued' || !spawn?.ok,
+        title: spawn?.ok ? '开一个独立上下文的子代理，按岗位手册干活' : (spawn?.reason ?? '宿主不支持派子代理'),
+      }, '派子代理'),
+      h(Btn, {
+        small: true,
+        kind: 'ghost',
         onClick: () => onSend?.(row),
         disabled: busy || row.status !== 'issued',
       }, '发到对话'),
@@ -249,7 +262,11 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
       api('role.list', {}),
       api('dispatch.list', { projectId, limit: 50 }),
       api('report.list', { projectId, limit: 20 }),
-    ]).then(([roles, tickets, reports]) => ({ roles, tickets, reports })),
+      // 顺带问一句宿主能不能派子代理：按钮的亮灭据此决定。
+      api('subagent.status', {}).catch((error) => ({ ok: false, reason: error.message })),
+    ]).then(([roles, tickets, reports, spawn]) => ({
+      roles, tickets, reports, spawn,
+    })),
     [projectId],
     { skip: !projectId },
   )
@@ -264,6 +281,7 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
 
   const reload = state.reload
   const roles = state.data?.roles?.items ?? []
+  const spawn = state.data?.spawn ?? { ok: false, reason: '还没问过宿主' }
   const tickets = state.data?.tickets?.items ?? []
   const reports = state.data?.reports?.items ?? []
 
@@ -307,6 +325,26 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
       setPreview({ id: row.id, prompt: out.prompt })
     } catch (error) {
       toast(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // 派子代理：走同一条 dispatch.send，多一个 spawn:true。
+  // 宿主不支持时服务端会退回「发到对话」并把原因带回来，所以这里不必自己判两次。
+  const doSpawn = async (row) => {
+    setBusy(true)
+    try {
+      const out = await api('dispatch.send', { projectId, id: row.id, spawn: true })
+      if (out?.spawned) {
+        toast(out.personaApplied ? `已派 ${out.role}，人格与工具白名单都生效了` : `已派 ${out.role}，但人格没插进去（回执里能看出它没按手册说话）`)
+      } else {
+        toast(`派不了子代理（${out?.spawnReason ?? '未知原因'}），已退回发到对话`)
+      }
+      reload()
+    } catch (error) {
+      toast(error.message)
+      reload()
     } finally {
       setBusy(false)
     }
@@ -378,7 +416,7 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
 
   return h(
     'div',
-    { className: 'cy-pipe' },
+    { className: 'nw-pipe' },
 
     // ── 左：岗位 ──────────────────────────────────────────
     h(
@@ -386,12 +424,12 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
       {
         title: '谁来干',
         extra: h(Tag, { tone: 'grey' }, `${roles.length} 个岗位`),
-        className: 'cy-pipe-roles',
+        className: 'nw-pipe-roles',
       },
       h(Hint, null, '点一个岗位，右边就填好它。只有总编有权再往下派单，其余十个只能干活或提需求。'),
       state.loading && !roles.length
         ? h(Loading, { text: '读岗位…' })
-        : h('div', { className: 'cy-role-grid' }, roles.map((role) => h(RoleCard, {
+        : h('div', { className: 'nw-role-grid' }, roles.map((role) => h(RoleCard, {
           role,
           key: role.id,
           onPick: (picked) => {
@@ -404,13 +442,13 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
     // ── 右：开票 + 单据 ─────────────────────────────────
     h(
       'div',
-      { className: 'cy-pipe-right' },
+      { className: 'nw-pipe-right' },
       h(
         Card,
         { title: '开一张单', extra: h(Tag, { tone: 'blue' }, '60 分钟内有效') },
         h(
           'div',
-          { className: 'cy-pipe-form' },
+          { className: 'nw-pipe-form' },
           h(Field, { label: '派给谁' }, h(Select, {
             value: pickedRole,
             onChange: setPickedRole,
@@ -433,7 +471,7 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
             })),
           h(
             'div',
-            { className: 'cy-pipe-form-acts' },
+            { className: 'nw-pipe-form-acts' },
             h(Btn, { kind: 'primary', onClick: doIssue, disabled: busy }, '开票'),
             h(Btn, { kind: 'ghost', onClick: doSweep, disabled: busy }, '清理过期票'),
           ),
@@ -449,11 +487,13 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
         state.loading && !tickets.length ? h(Loading, { text: '读单据…' }) : null,
         !state.loading && !tickets.length
           ? h(Empty, { text: '还没有派过单。挑个岗位、写一句要它干什么，开一张试试。' })
-          : h('div', { className: 'cy-dp-list' }, tickets.map((row) => h(DispatchRow, {
+          : h('div', { className: 'nw-dp-list' }, tickets.map((row) => h(DispatchRow, {
             row,
             key: row.id,
             busy,
+            spawn,
             onPreview: doPreview,
+            onSpawn: doSpawn,
             onSend: doSend,
             onRevoke: doRevoke,
             onReport: (target) => {
@@ -466,16 +506,16 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
         ? h(
           Card,
           { title: '收到过的回执', extra: h(Tag, { tone: 'green' }, `${reports.length} 份`) },
-          h('div', { className: 'cy-rep-list' }, reports.map((row) => h(
+          h('div', { className: 'nw-rep-list' }, reports.map((row) => h(
             'div',
-            { className: 'cy-rep', key: row.id },
+            { className: 'nw-rep', key: row.id },
             h(
               'div',
-              { className: 'cy-rep-head' },
-              h('span', { className: 'cy-rep-role' }, row.roleLabel ?? row.role),
-              h('span', { className: 'cy-rep-at' }, String(row.report?.at ?? '').replace('T', ' ').slice(0, 16)),
+              { className: 'nw-rep-head' },
+              h('span', { className: 'nw-rep-role' }, row.roleLabel ?? row.role),
+              h('span', { className: 'nw-rep-at' }, String(row.report?.at ?? '').replace('T', ' ').slice(0, 16)),
             ),
-            h('div', { className: 'cy-rep-verdict' }, row.report?.verdict || '（没写结论）'),
+            h('div', { className: 'nw-rep-verdict' }, row.report?.verdict || '（没写结论）'),
           ))),
         )
         : null,
@@ -493,7 +533,7 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
           onClose: () => setPreview(null),
           footer: h(
             'div',
-            { className: 'cy-pipe-modal-foot' },
+            { className: 'nw-pipe-modal-foot' },
             h(Btn, {
               kind: 'ghost',
               onClick: () => {
@@ -512,7 +552,7 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
           ),
         },
         h(Hint, null, '下面是实际会发出去的字。确认没问题再回单据上点「发到对话」。'),
-        h('pre', { className: 'cy-pipe-prompt' }, preview.prompt),
+        h('pre', { className: 'nw-pipe-prompt' }, preview.prompt),
       )
       : null,
 
@@ -525,7 +565,7 @@ function PipelinePage({ projectId, project, toast, onRefresh }) {
           onClose: () => setReportFor(null),
           footer: h(
             'div',
-            { className: 'cy-pipe-modal-foot' },
+            { className: 'nw-pipe-modal-foot' },
             h(Btn, { kind: 'ghost', onClick: () => setReportFor(null) }, '算了'),
             h(Btn, { kind: 'primary', onClick: doReport, disabled: busy }, '收下'),
           ),

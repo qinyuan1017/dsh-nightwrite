@@ -26,28 +26,28 @@ function LintHit({ hit, onJump, open, onToggleWhy }) {
   // 按钮里套按钮，回车会触发两个动作，读屏也会把它念成一条。
   return h(
     'div',
-    { className: 'cy-lint-item' },
+    { className: 'nw-lint-item' },
     h(
       'div',
-      { className: 'cy-lint-line' },
+      { className: 'nw-lint-line' },
       h(
         'button',
         {
           type: 'button',
-          className: `cy-lint-hit cy-lint-${hit.severity}`,
+          className: `nw-lint-hit nw-lint-${hit.severity}`,
           onClick: () => onJump?.(hit),
           title: `第 ${hit.para + 1} 段 · ${hit.hint}`,
         },
-        h('span', { className: 'cy-lint-n' }, String(hit.para + 1)),
+        h('span', { className: 'nw-lint-n' }, String(hit.para + 1)),
         h(Tag, { tone: LINT_SEVERITY_TONE[hit.severity] ?? 'grey' }, hit.label),
-        h('span', { className: 'cy-lint-quote' }, hit.quote),
-        h('span', { className: 'cy-lint-hint' }, hit.hint),
+        h('span', { className: 'nw-lint-quote' }, hit.quote),
+        h('span', { className: 'nw-lint-hint' }, hit.hint),
       ),
       h(
         'button',
         {
           type: 'button',
-          className: `cy-lint-why-btn${open ? ' on' : ''}`,
+          className: `nw-lint-why-btn${open ? ' on' : ''}`,
           'aria-expanded': open ? 'true' : 'false',
           title: '为什么这算毛病',
           onClick: () => onToggleWhy?.(hit),
@@ -58,9 +58,9 @@ function LintHit({ hit, onJump, open, onToggleWhy }) {
     open && hit.why
       ? h(
         'div',
-        { className: 'cy-lint-why' },
-        h('span', { className: 'cy-lint-why-tag' }, '为什么这算毛病'),
-        h('span', { className: 'cy-lint-why-text' }, hit.why),
+        { className: 'nw-lint-why' },
+        h('span', { className: 'nw-lint-why-tag' }, '为什么这算毛病'),
+        h('span', { className: 'nw-lint-why-text' }, hit.why),
       )
       : null,
   )
@@ -90,8 +90,12 @@ function ChapterHealth({ projectId, chapter, text, toast, onJumpPara }) {
       api('outline.copy', { projectId, chapter, text }).catch((e) => ({ error: e.message })),
       api('text.normalize', { projectId, chapter, text }).catch((e) => ({ error: e.message })),
       api('wordcount.check', { text }).catch((e) => ({ error: e.message })),
-    ]).then(([degenerate, copy, punct, words]) => {
-      setData({ degenerate, copy, punct, words })
+      // 六件事而不是四件：分数是「一句话判决」，保真是「有没有被改坏」。
+      // 这两件要拿正文和现存旧稿比，前面四件只看正文，所以放后面两路。
+      api('aiscore.check', { projectId, chapter, text }).catch((e) => ({ error: e.message })),
+      api('fidelity.check', { projectId, chapter, after: text }).catch((e) => ({ error: e.message })),
+    ]).then(([degenerate, copy, punct, words, score, fidelity]) => {
+      setData({ degenerate, copy, punct, words, score, fidelity })
     }).then(() => setBusy(false))
   }, [projectId, chapter, text])
 
@@ -104,6 +108,8 @@ function ChapterHealth({ projectId, chapter, text, toast, onJumpPara }) {
   const cp = data?.copy
   const pt = data?.punct
   const wc = data?.words
+  const sc = data?.score
+  const fd = data?.fidelity
 
   const rows = !data
     ? []
@@ -153,6 +159,44 @@ function ChapterHealth({ projectId, chapter, text, toast, onJumpPara }) {
           : `口径 ${wc?.metric ?? ''}：去掉 frontmatter 与首行标题后数非空白字符。原文 ${wc?.rawLength ?? 0} 字符，其中 ${wc?.trimmed ?? 0} 个不算正文，${wc?.paragraphs ?? 0} 段。`,
         hits: [],
       },
+      {
+        id: 'score',
+        label: '这一章有多像 AI 写的',
+        verdict: sc?.error
+          ? `算不了：${sc.error}`
+          : (sc?.confident === false
+            ? `${sc?.score ?? 0} 分 · ${sc?.label ?? ''}（样本太短，不敢下结论）`
+            : `${sc?.score ?? 0} 分 · ${sc?.label ?? ''}`),
+        // scoreTone 给的是 good/mid/bad（那是给分数条用的，配 nw-score-* 那套 CSS），
+        // Tag 只认 green/amber/red/grey —— 混着用会渲出一个没有样式的标签。
+        tone: sc?.error
+          ? 'grey'
+          : ((sc?.score ?? 0) <= 30 ? 'green' : ((sc?.score ?? 0) <= 55 ? 'amber' : 'red')),
+        detail: sc?.error
+          ? ''
+          : `${sc?.text ?? ''}${sc?.worst ? `最重的一条是「${sc.worst.label}」${sc.worst.count} 处（每千字 ${sc.worst.density} 次），占 ${sc.worst.points} 分。` : ''}分数线在 30 分，过了服务端会拒存——这不是建议，是闸门。`,
+        hits: (sc?.custom ?? []).length
+          ? sc.custom.map((row) => ({ text: `你自己加的词「${row.phrase}」出现 ${row.count} 次` }))
+          : (sc?.signals ?? [])
+            .filter((row) => Number(row.points) >= 1)
+            .sort((a, b) => Number(b.points) - Number(a.points))
+            .slice(0, 8)
+            .map((row) => ({
+              text: `${row.label}：${row.count} 处 / ${Number(row.points).toFixed(1)} 分（每千字容忍 ${row.tolerance}）`,
+            })),
+      },
+      {
+        id: 'fidelity',
+        label: '有没有把原来的东西改丢',
+        verdict: fd?.error
+          ? `查不了：${fd.error}`
+          : (fd?.level === 'ok' ? '没丢东西' : (fd?.level === 'warn' ? '有点可疑' : '丢了不少')),
+        tone: fd?.error ? 'grey' : (fd?.level === 'ok' ? 'green' : (fd?.level === 'warn' ? 'amber' : 'red')),
+        detail: fd?.error
+          ? ''
+          : `${fd?.text ?? ''} 数字 ${fd?.numbers?.kept ?? 0}/${fd?.numbers?.total ?? 0} 保留，专名 ${fd?.names?.kept ?? 0}/${fd?.names?.total ?? 0}，引语 ${fd?.quotes?.kept ?? 0}/${fd?.quotes?.total ?? 0}。`,
+        hits: (fd?.issues ?? []).map((row) => ({ text: row.text ?? String(row) })),
+      },
     ]
 
   return h(
@@ -161,44 +205,44 @@ function ChapterHealth({ projectId, chapter, text, toast, onJumpPara }) {
       title: '章级体检',
       extra: h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: run }, busy ? '查着…' : data ? '重查' : '查一遍'),
     },
-    h('p', { className: 'cy-hint' }, '四件事各查各的，都只报告不改稿。'),
+    h('p', { className: 'nw-hint' }, '六件事各查各的，都只报告不改稿。'),
     !data
       ? h(Empty, null, '点「查一遍」，四条一起跑。')
       : h(
         'div',
-        { className: 'cy-health' },
+        { className: 'nw-health' },
         ...rows.map((row) => h(
           'div',
-          { key: row.id, className: `cy-health-row cy-health-${row.id}` },
+          { key: row.id, className: `nw-health-row nw-health-${row.id}` },
           h(
             'button',
             {
               type: 'button',
-              className: 'cy-health-head',
+              className: 'nw-health-head',
               'aria-expanded': open === row.id ? 'true' : 'false',
               onClick: () => setOpen((prev) => (prev === row.id ? '' : row.id)),
             },
-            h('span', { className: 'cy-health-label' }, row.label),
+            h('span', { className: 'nw-health-label' }, row.label),
             h(Tag, { tone: row.tone }, row.verdict),
-            h('span', { className: 'cy-health-caret' }, open === row.id ? '▾' : '▸'),
+            h('span', { className: 'nw-health-caret' }, open === row.id ? '▾' : '▸'),
           ),
           open !== row.id
             ? null
             : h(
               'div',
-              { className: 'cy-health-body' },
-              row.detail ? h('p', { className: 'cy-hint' }, row.detail) : null,
+              { className: 'nw-health-body' },
+              row.detail ? h('p', { className: 'nw-hint' }, row.detail) : null,
               row.hits.length
                 ? h(
                   'div',
-                  { className: 'cy-health-hits' },
+                  { className: 'nw-health-hits' },
                   ...row.hits.map((hit, index) => (hit.para !== undefined && onJumpPara
                     ? h(
                       'button',
                       {
                         type: 'button',
                         key: index,
-                        className: 'cy-health-hit',
+                        className: 'nw-health-hit',
                         onClick: () => {
                           onJumpPara(Number(hit.para) || 0)
                           toast?.(hit.text)
@@ -206,9 +250,9 @@ function ChapterHealth({ projectId, chapter, text, toast, onJumpPara }) {
                       },
                       hit.text,
                     )
-                    : h('span', { key: index, className: 'cy-health-hit cy-health-hit-flat' }, hit.text))),
+                    : h('span', { key: index, className: 'nw-health-hit nw-health-hit-flat' }, hit.text))),
                 )
-                : h('p', { className: 'cy-hint' }, '这一项没有具体条目。'),
+                : h('p', { className: 'nw-hint' }, '这一项没有具体条目。'),
             ),
         )),
       ),
@@ -276,12 +320,12 @@ function LintPanel({
     Card,
     {
       title,
-      className: 'cy-lint' + (compact ? ' cy-lint-compact' : ''),
+      className: 'nw-lint' + (compact ? ' nw-lint-compact' : ''),
       extra: busy
-        ? h('span', { className: 'cy-card-badge' }, '算…')
+        ? h('span', { className: 'nw-card-badge' }, '算…')
         : h(
           'span',
-          { className: 'cy-card-badge' },
+          { className: 'nw-card-badge' },
           blocking ? `${blocking} 硬伤` : '无硬伤',
         ),
     },
@@ -289,15 +333,15 @@ function LintPanel({
     // 一句话结论：不要让人从数字自己推断「能不能发」。
     h(
       'div',
-      { className: 'cy-lint-sum' },
+      { className: 'nw-lint-sum' },
       degenerated
-        ? h('span', { className: 'cy-lint-verdict cy-lint-verdict-bad' }, `有 ${degenerated} 处退化——这段不是文，整章重跑，不要逐句改`)
+        ? h('span', { className: 'nw-lint-verdict nw-lint-verdict-bad' }, `有 ${degenerated} 处退化——这段不是文，整章重跑，不要逐句改`)
         : blocking
-        ? h('span', { className: 'cy-lint-verdict cy-lint-verdict-bad' }, `有 ${blocking} 处硬伤，保存会被拦`)
-        : h('span', { className: 'cy-lint-verdict cy-lint-verdict-ok' }, advisory ? `硬伤 0，另有 ${advisory} 处提示` : '干净'),
+        ? h('span', { className: 'nw-lint-verdict nw-lint-verdict-bad' }, `有 ${blocking} 处硬伤，保存会被拦`)
+        : h('span', { className: 'nw-lint-verdict nw-lint-verdict-ok' }, advisory ? `硬伤 0，另有 ${advisory} 处提示` : '干净'),
       h(
         'div',
-        { className: 'cy-seg cy-lint-seg' },
+        { className: 'nw-seg nw-lint-seg' },
         [
           { value: 'all', label: `全部 ${Number(result?.total ?? 0)}` },
           // 退化的计数单独标出来，还要标红：它和硬伤不是一类问题。
@@ -309,7 +353,7 @@ function LintPanel({
           {
             type: 'button',
             key: item.value,
-            className: `cy-seg-btn${only === item.value ? ' on' : ''}`,
+            className: `nw-seg-btn${only === item.value ? ' on' : ''}`,
             'aria-pressed': only === item.value ? 'true' : 'false',
             onClick: () => setOnly(item.value),
           },
@@ -321,7 +365,7 @@ function LintPanel({
     !String(text ?? '').trim()
       ? h(Empty, null, '正文是空的，没得校。')
       : hits.length
-        ? h('div', { className: 'cy-lint-list' }, hits.map((hit, index) => {
+        ? h('div', { className: 'nw-lint-list' }, hits.map((hit, index) => {
           const key = `${hit.id}-${hit.para}-${hit.offset}-${index}`
           return h(LintHit, {
             hit,
@@ -337,20 +381,20 @@ function LintPanel({
             },
           })
         }))
-        : h('p', { className: 'cy-hint' }, busy ? '算着呢…' : '这一档没有命中。'),
+        : h('p', { className: 'nw-hint' }, busy ? '算着呢…' : '这一档没有命中。'),
 
     // 词表与规则说明放折叠里：天天用的人不需要看，第一次用的人需要知道规则从哪来。
     h(
       'details',
-      { className: 'cy-lint-about' },
+      { className: 'nw-lint-about' },
       h('summary', null, '这些规则是哪来的'),
-      h('p', { className: 'cy-hint' },
+      h('p', { className: 'nw-hint' },
         '硬伤档：正文里出现章号/本章/前文这类元叙述、写作术语、系统提示体、「不是…而是…」对偶否定、破折号连用、电报体短句、章末总结体。'),
-      h('p', { className: 'cy-hint' },
+      h('p', { className: 'nw-hint' },
         '提示档：句号碎、长段、微动作口头禅、套路反应、动作清单、抽象总结、陈词密度、比喻密度、推理链、引号强调、排比、过度压缩、连接词过少。'),
-      h('p', { className: 'cy-hint' },
+      h('p', { className: 'nw-hint' },
         '你自己在设置里加的词表（去 AI 味那 12 条）走的是另一套，只在存盘时记命中数，不在这里拦。'),
-      h('p', { className: 'cy-hint' },
+      h('p', { className: 'nw-hint' },
         '每条命中右边有个「为什么」——展开是这条规则的判据，讲的是读者会因此丢掉什么。hint 教你改这句，why 告诉你下次别这么写。'),
     ),
   )
@@ -417,28 +461,28 @@ function LintCalibration({ projectId, toast, onDone }) {
     Card,
     {
       title: '这本书自己的阈值',
-      className: 'cy-lint-cal',
+      className: 'nw-lint-cal',
       extra: h(
         'span',
-        { className: 'cy-card-badge' },
+        { className: 'nw-card-badge' },
         count ? `${count} 条已按本书调整` : '按全局阈值判',
       ),
     },
-    h('p', { className: 'cy-hint cy-lint-cal-lead' },
+    h('p', { className: 'nw-hint nw-lint-cal-lead' },
       count
         ? `这本书已经量过 ${data?.samples ?? 0} 章 /${data?.chars ?? 0} 字，有 ${count} 条规则改用了本书量出来的数值。`
         : '现在用的是全局阈值——那是从别的书校准出来的。量一遍本书已写的正文，能把这把秤调成适合这本的。'),
 
     h(
       'div',
-      { className: 'cy-lint-cal-acts' },
+      { className: 'nw-lint-cal-acts' },
       h(Btn, { kind: 'primary', small: true, onClick: run, disabled: busy },
         busy ? '量着呢…' : (count ? '重新量一遍' : '按这本书量一遍')),
       count ? h(Btn, { kind: 'ghost', small: true, onClick: clear, disabled: busy }, '回到全局阈值') : null,
       overridden.length
         ? h('button', {
           type: 'button',
-          className: 'cy-lint-cal-more',
+          className: 'nw-lint-cal-more',
           'aria-expanded': open ? 'true' : 'false',
           onClick: () => setOpen((v) => !v),
         }, open ? '收起明细 ▲' : `看是哪 ${overridden.length} 条改过 〉`)
@@ -446,11 +490,11 @@ function LintCalibration({ projectId, toast, onDone }) {
     ),
 
     open && overridden.length
-      ? h('div', { className: 'cy-lint-cal-list' }, overridden.map((row) => h(
+      ? h('div', { className: 'nw-lint-cal-list' }, overridden.map((row) => h(
         'div',
-        { className: 'cy-lint-cal-row', key: row.id },
-        h('span', { className: 'cy-lint-cal-name' }, row.label),
-        h('span', { className: 'cy-lint-cal-num' },
+        { className: 'nw-lint-cal-row', key: row.id },
+        h('span', { className: 'nw-lint-cal-name' }, row.label),
+        h('span', { className: 'nw-lint-cal-num' },
           `全局 ${row.threshold?.perKilo ?? '—'}` + `　→　本书 ${row.threshold?.perKilo ?? '—'}`),
       )))
       : null,
@@ -458,11 +502,11 @@ function LintCalibration({ projectId, toast, onDone }) {
     notes.length
       ? h(
         'details',
-        { className: 'cy-lint-about' },
+        { className: 'nw-lint-about' },
         h('summary', null, `量出来的结论（${notes.length} 条）`),
         ...notes.slice(0, 30).map((note, index) => h(
           'p',
-          { className: `cy-hint cy-lint-cal-note cy-lint-cal-${note.level}`, key: `n${index}` },
+          { className: `nw-hint nw-lint-cal-note nw-lint-cal-${note.level}`, key: `n${index}` },
           note.text,
         )),
       )
@@ -488,15 +532,15 @@ function LintBlockModal({ error, onFix, onForce, onClose }) {
       onClose,
       footer: h(
         'div',
-        { className: 'cy-lint-modal-foot' },
+        { className: 'nw-lint-modal-foot' },
         h(Btn, { kind: 'ghost', onClick: onClose }, '先放着'),
         h(Btn, { kind: 'danger', onClick: onForce }, '我知道，强行存'),
         h(Btn, { kind: 'primary', onClick: onFix }, '去改'),
       ),
     },
-    h('p', { className: 'cy-lint-modal-lead' }, error?.message ?? '服务端拒了这次保存。'),
+    h('p', { className: 'nw-lint-modal-lead' }, error?.message ?? '服务端拒了这次保存。'),
     blocking.length
-      ? h('div', { className: 'cy-lint-list' }, blocking.map((hit, index) => h(LintHit, {
+      ? h('div', { className: 'nw-lint-list' }, blocking.map((hit, index) => h(LintHit, {
         hit,
         key: `${hit.id}-${index}`,
         open: whyKey === `modal-${hit.id}-${index}`,
@@ -504,7 +548,7 @@ function LintBlockModal({ error, onFix, onForce, onClose }) {
         onJump: () => onFix?.(hit),
       })))
       : null,
-    h('p', { className: 'cy-hint' },
+    h('p', { className: 'nw-hint' },
       '「强行存」会原样落盘，界面上仍然标红 —— 留给导旧稿、修标点这种确实要绕过的场合。'),
   )
 }

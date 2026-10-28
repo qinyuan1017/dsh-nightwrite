@@ -5,13 +5,13 @@ const ROOT = path.join(process.cwd(), 'skills')
 const REQUIRED = ['## 执行步骤', '## 输入', '## 输出格式', '## 检查清单', '## 禁止事项']
 
 const EXPECTED = [
-  'changye-plan-novel','changye-write-chapter','changye-continuity-pass','changye-de-ai-style',
-  'changye-story-bible','changye-revision-pass','changye-style-distillation','changye-quality-rubric',
-  'changye-chapter-hook','changye-dialogue-voice','changye-foreshadow-ledger','changye-character-state',
-  'changye-context-memory','changye-worldbuilding-bible','changye-beat-sheet','changye-character-arc',
-  'changye-reader-persona','changye-reader-report','changye-drop-off-check','changye-engagement-curve',
-  'changye-comment-simulation','changye-paywall-check','changye-emotional-payoff','changye-reader-question',
-  'changye-reader-panel',
+  'nightwrite-plan-novel','nightwrite-write-chapter','nightwrite-continuity-pass','nightwrite-de-ai-style',
+  'nightwrite-story-bible','nightwrite-revision-pass','nightwrite-style-distillation','nightwrite-quality-rubric',
+  'nightwrite-chapter-hook','nightwrite-dialogue-voice','nightwrite-foreshadow-ledger','nightwrite-character-state',
+  'nightwrite-context-memory','nightwrite-worldbuilding-bible','nightwrite-beat-sheet','nightwrite-character-arc',
+  'nightwrite-reader-persona','nightwrite-reader-report','nightwrite-drop-off-check','nightwrite-engagement-curve',
+  'nightwrite-comment-simulation','nightwrite-paywall-check','nightwrite-emotional-payoff','nightwrite-reader-question',
+  'nightwrite-reader-panel',
 ]
 
 let pass = 0, fail = 0
@@ -59,7 +59,7 @@ for (const skill of EXPECTED) {
   ok(`${skill} 检查清单 ≥6 项`, boxes >= 6, `实际 ${boxes}`)
 
   // 越权边界说明
-  ok(`${skill} 提到 changye_op 或对应数据接口`, /changye_op|ledger\.|chapter\.|outline\.|project\.|aistyle\./.test(text))
+  ok(`${skill} 提到 nightwrite_op 或对应数据接口`, /nightwrite_op|ledger\.|chapter\.|outline\.|project\.|aistyle\./.test(text))
 }
 
 // 交叉边界：每个技能都要声明「不做什么」

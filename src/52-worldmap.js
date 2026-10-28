@@ -113,23 +113,23 @@ function MapView({ projectId, toast }) {
 
   const picker = (value, onChange, placeholder) => h(
     'select',
-    { className: 'cy-map-select', value, onChange: (event) => onChange(event.target.value) },
+    { className: 'nw-map-select', value, onChange: (event) => onChange(event.target.value) },
     h('option', { value: '' }, placeholder),
     ...nodes.map((node) => h('option', { key: node.id, value: node.id }, node.name)),
   )
 
   return h(
     'div',
-    { className: 'cy-map' },
+    { className: 'nw-map' },
     h(
       'div',
-      { className: 'cy-map-bar' },
-      h('span', { className: 'cy-map-hint' }, nodes.length
+      { className: 'nw-map-bar' },
+      h('span', { className: 'nw-map-hint' }, nodes.length
         ? `${nodes.length} 个地点${orphan.length ? ` · ${orphan.length} 个账本里已经没有了（画成灰的）` : ''}`
         : '还没从账本同步过地点'),
       h(
         'div',
-        { className: 'cy-actions' },
+        { className: 'nw-actions' },
         dirty ? h(Tag, { tone: 'amber' }, '有改动没保存') : null,
         h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: sync }, '从账本同步'),
         h(Btn, { small: true, kind: 'primary', disabled: busy || !dirty, onClick: save }, '保存位置'),
@@ -138,11 +138,11 @@ function MapView({ projectId, toast }) {
     nodes.length
       ? h(
         'div',
-        { className: 'cy-map-stage' },
+        { className: 'nw-map-stage' },
         h(
           'svg',
           {
-            className: 'cy-map-svg',
+            className: 'nw-map-svg',
             ref: boxRef,
             viewBox: `0 0 ${canvas.width} ${canvas.height}`,
             onMouseMove: onMove,
@@ -151,7 +151,7 @@ function MapView({ projectId, toast }) {
           },
           h(
             'g',
-            { className: 'cy-map-edges' },
+            { className: 'nw-map-edges' },
             ...edges.map((edge) => {
               const a = byId.get(edge.from)
               const b = byId.get(edge.to)
@@ -160,12 +160,12 @@ function MapView({ projectId, toast }) {
                 'g',
                 { key: `${edge.from}-${edge.to}` },
                 h('line', {
-                  className: `cy-map-edge cy-map-edge-${edge.kind ?? 'road'}`,
+                  className: `nw-map-edge nw-map-edge-${edge.kind ?? 'road'}`,
                   x1: a.x, y1: a.y, x2: b.x, y2: b.y,
                 }),
                 edge.label
                   ? h('text', {
-                    className: 'cy-map-edge-label',
+                    className: 'nw-map-edge-label',
                     x: (a.x + b.x) / 2,
                     y: (a.y + b.y) / 2 - 6,
                     textAnchor: 'middle',
@@ -176,24 +176,24 @@ function MapView({ projectId, toast }) {
           ),
           h(
             'g',
-            { className: 'cy-map-nodes' },
+            { className: 'nw-map-nodes' },
             ...nodes.map((node) => {
               const gone = node.inLedger === false || node.orphan
               return h(
                 'g',
                 {
                   key: node.id,
-                  className: `cy-map-node${gone ? ' cy-map-orphan' : ''}${drag?.id === node.id ? ' dragging' : ''}`,
+                  className: `nw-map-node${gone ? ' nw-map-orphan' : ''}${drag?.id === node.id ? ' dragging' : ''}`,
                   transform: `translate(${node.x},${node.y})`,
                   onMouseDown: (event) => {
                     event.preventDefault()
                     setDrag({ id: node.id })
                   },
                 },
-                h('circle', { className: 'cy-map-dot', r: 9 }),
-                h('text', { className: 'cy-map-name', y: 26, textAnchor: 'middle' }, node.name),
+                h('circle', { className: 'nw-map-dot', r: 9 }),
+                h('text', { className: 'nw-map-name', y: 26, textAnchor: 'middle' }, node.name),
                 node.firstChapter
-                  ? h('text', { className: 'cy-map-ch', y: 40, textAnchor: 'middle' }, `第 ${node.firstChapter} 回`)
+                  ? h('text', { className: 'nw-map-ch', y: 40, textAnchor: 'middle' }, `第 ${node.firstChapter} 回`)
                   : null,
               )
             }),
@@ -203,12 +203,12 @@ function MapView({ projectId, toast }) {
       : h(Empty, null, '账本「地点」这一类还是空的。先在表格视图里加几个地名，再点「从账本同步」。'),
     h(
       'div',
-      { className: 'cy-map-link' },
-      h('span', { className: 'cy-map-link-label' }, '连一条路'),
+      { className: 'nw-map-link' },
+      h('span', { className: 'nw-map-link-label' }, '连一条路'),
       picker(linkFrom, setLinkFrom, '起点'),
       picker(linkTo, setLinkTo, '终点'),
       h('input', {
-        className: 'cy-map-label-input',
+        className: 'nw-map-label-input',
         value: label,
         placeholder: '这条路叫什么（可空）',
         onChange: (event) => setLabel(event.target.value),
@@ -218,16 +218,16 @@ function MapView({ projectId, toast }) {
     edges.length
       ? h(
         'div',
-        { className: 'cy-map-edgelist' },
+        { className: 'nw-map-edgelist' },
         ...edges.map((edge) => h(
           'div',
-          { key: `${edge.from}-${edge.to}`, className: 'cy-map-edgerow' },
-          h('span', { className: 'cy-map-edgetext' }, `${nameOf(edge.from)} → ${nameOf(edge.to)}${edge.label ? `（${edge.label}）` : ''}`),
+          { key: `${edge.from}-${edge.to}`, className: 'nw-map-edgerow' },
+          h('span', { className: 'nw-map-edgetext' }, `${nameOf(edge.from)} → ${nameOf(edge.to)}${edge.label ? `（${edge.label}）` : ''}`),
           h(
             'button',
             {
               type: 'button',
-              className: 'cy-map-edgedel',
+              className: 'nw-map-edgedel',
               onClick: () => {
                 setEdges((list) => list.filter((row) => !(row.from === edge.from && row.to === edge.to)))
                 setDirty(true)

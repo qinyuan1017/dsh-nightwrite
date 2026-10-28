@@ -19,10 +19,14 @@
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import http from 'node:http'
 import net from 'node:net'
 
 import * as store from '../lib/store.js'
+import * as hooks from '../lib/hooks.js'
+import * as usage from '../lib/usage.js'
+import * as lock from '../lib/lock.js'
 import {
   handleRpc, createHandler, guard, createTool, mountRoute, injectBoot,
   createDispatchTool,
@@ -67,21 +71,21 @@ const LEDGER_KINDS = ['characters', 'locations', 'foreshadow', 'events', 'terms'
 
 // ── 开跑 ─────────────────────────────────────────────────────
 
-const root = await mkdtemp(join(tmpdir(), 'changye-be-'))
+const root = await mkdtemp(join(tmpdir(), 'nightwrite-be-'))
 console.log(`临时根目录：${root}\n`)
 
 try {
   // ══ 1. 连通与导出契约 ════════════════════════════════════
   console.log('— 1. 连通与导出契约')
   const ping = await handleRpc({ op: 'ping' }, {}, { root })
-  check('ping 返回 name=changye', ping?.name === 'changye', JSON.stringify(ping))
-  check('ping 带版本与 op 数', ping?.version === '0.1.0' && ping?.ops === 118, JSON.stringify(ping))
+  check('ping 返回 name=nightwrite', ping?.name === 'nightwrite', JSON.stringify(ping))
+  check('ping 带版本与 op 数', ping?.version === '0.1.0' && ping?.ops === 119, JSON.stringify(ping))
   eq('VERSION', VERSION, '0.1.0')
-  eq('ROUTE', ROUTE, '/changye/api')
-  eq('TOOL_NAME', TOOL_NAME, 'changye_op')
-  eq('READ_OPS 59 个', READ_OPS.length, 59)
+  eq('ROUTE', ROUTE, '/nightwrite/api')
+  eq('TOOL_NAME', TOOL_NAME, 'nightwrite_op')
+  eq('READ_OPS 60 个', READ_OPS.length, 60)
   eq('WRITE_OPS 59 个', WRITE_OPS.length, 59)
-  eq('RPC_OPS 合计 118', RPC_OPS.length, 118)
+  eq('RPC_OPS 合计 119', RPC_OPS.length, 119)
   check('READ/WRITE 无交集', READ_OPS.every((op) => !WRITE_OPS.includes(op)))
   // overview / ping 是扁平历史 op（客户端 src/20-cockpit.js 直接 api('overview')），
   // 其余全部按 resource.action 命名。断言「除白名单外都带点号」。
@@ -353,7 +357,7 @@ try {
   eq('GET /ping 200', rPing.status, 200)
   const jPing = await rPing.json()
   check('GET /ping 返回 ok:true', jPing?.ok === true, JSON.stringify(jPing))
-  check('GET /ping value 里有 name', jPing?.value?.name === 'changye', JSON.stringify(jPing?.value))
+  check('GET /ping value 里有 name', jPing?.value?.name === 'nightwrite', JSON.stringify(jPing?.value))
 
   const rList = await fetch(base, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ op: 'project.list' }),
@@ -413,7 +417,7 @@ try {
     const socket = net.connect(port, '127.0.0.1', () => {
       const body = JSON.stringify({ op: 'ping' })
       socket.write(
-        'POST /changye/api HTTP/1.1\r\n'
+        'POST /nightwrite/api HTTP/1.1\r\n'
         + 'Host: evil.example.com\r\n'
         + 'Content-Type: application/json\r\n'
         + `Content-Length: ${Buffer.byteLength(body)}\r\n`
@@ -431,8 +435,8 @@ try {
   await new Promise((resolve) => server.close(resolve))
   console.log('   服务已关闭')
 
-  // ══ 13. changye_op 工具 ══════════════════════════════════
-  console.log('\n— 13. changye_op 工具（agent 侧入口）')
+  // ══ 13. nightwrite_op 工具 ══════════════════════════════════
+  console.log('\n— 13. nightwrite_op 工具（agent 侧入口）')
   const tool = createTool(root)
   eq('工具名对得上', tool.name, TOOL_NAME)
   check('工具有描述且提到长夜', typeof tool.description === 'string' && tool.description.includes('长夜'), String(tool.description).slice(0, 30))
@@ -823,7 +827,7 @@ try {
   const rolesRes = await handleRpc({ op: 'role.list' }, {}, { root })
   check('role.list 给 11 个岗位', rolesRes.items.length === 11, String(rolesRes.items.length))
   check('role.list 每项带 label/duty/gate', rolesRes.items.every((r) => r.label && r.duty && r.gate))
-  check('只有总编能派单', rolesRes.items.filter((r) => r.canDispatch).map((r) => r.id).join() === 'changye-coordinator')
+  check('只有总编能派单', rolesRes.items.filter((r) => r.canDispatch).map((r) => r.id).join() === 'nightwrite-coordinator')
   check('role.list 不带文件路径', rolesRes.items.every((r) => !('path' in r) && !('file' in r)))
 
   const dpEmpty = await handleRpc({ op: 'dispatch.list', payload: { projectId: pid } }, {}, { root })
@@ -831,9 +835,9 @@ try {
 
   await expectThrow('派单缺 role 被拒', () => handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, task: '写第三章' } }, {}, { root }), /岗位|invalid-role|没有这个岗位/i)
   await expectThrow('派单写错 role 被拒', () => handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, role: 'nobody', task: 'x' } }, {}, { root }), /没有这个岗位/i)
-  await expectThrow('派单缺 task 被拒', () => handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, role: 'changye-story-architect' } }, {}, { root }), /task|做什么/i)
+  await expectThrow('派单缺 task 被拒', () => handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, role: 'nightwrite-story-architect' } }, {}, { root }), /task|做什么/i)
 
-  const dp1 = await handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, role: 'changye-story-architect', task: '排第三回细纲', chapter: 3, materials: '前两回正文见章节列表' } }, {}, { root })
+  const dp1 = await handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, role: 'nightwrite-story-architect', task: '排第三回细纲', chapter: 3, materials: '前两回正文见章节列表' } }, {}, { root })
   check('派单回票据 id', /^dp_[0-9a-f]{12}$/.test(String(dp1?.id ?? '')), String(dp1?.id))
   eq('派单初始状态 issued', dp1.status, 'issued')
   eq('派单带岗位中文名', dp1.roleLabel, '故事架构师')
@@ -842,7 +846,7 @@ try {
 
   const dpList = await handleRpc({ op: 'dispatch.list', payload: { projectId: pid } }, {}, { root })
   eq('派单列表 1 条', dpList.items.length, 1)
-  const dpListRole = await handleRpc({ op: 'dispatch.list', payload: { projectId: pid, role: 'changye-coordinator' } }, {}, { root })
+  const dpListRole = await handleRpc({ op: 'dispatch.list', payload: { projectId: pid, role: 'nightwrite-coordinator' } }, {}, { root })
   eq('按岗过滤能滤空', dpListRole.items.length, 0)
 
   const dpGot = await handleRpc({ op: 'dispatch.get', payload: { projectId: pid, id: dp1.id } }, {}, { root })
@@ -851,13 +855,13 @@ try {
 
   const dry = await handleRpc({ op: 'dispatch.send', payload: { projectId: pid, id: dp1.id, dryRun: true } }, {}, { root })
   check('dryRun 回任务书', typeof dry?.prompt === 'string' && dry.prompt.length > 200, String(dry?.prompt?.length))
-  check('任务书给手册绝对路径', /agents[\\/]changye-story-architect\.md/.test(dry.prompt), dry.prompt.slice(0, 200))
+  check('任务书给手册绝对路径', /agents[\\/]nightwrite-story-architect\.md/.test(dry.prompt), dry.prompt.slice(0, 200))
   check('任务书先讲边界', dry.prompt.indexOf('## 边界') < dry.prompt.indexOf('## 本单要你做的事'))
   check('任务书带票据号', dry.prompt.includes(dp1.id))
-  check('任务书给 skill 清单', dry.prompt.includes('changye-plan-novel'))
+  check('任务书给 skill 清单', dry.prompt.includes('nightwrite-plan-novel'))
   check('任务书列回执四段', ['### 结论', '### 依据', '### 要别人做的事', '### 风险'].every((x) => dry.prompt.includes(x)))
   check('非总编的任务书不授权派单', !/允许你调用 subagent/.test(dry.prompt))
-  const co = await handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, role: 'changye-coordinator', task: '决定第三回能不能发' } }, {}, { root })
+  const co = await handleRpc({ op: 'dispatch.issue', payload: { projectId: pid, role: 'nightwrite-coordinator', task: '决定第三回能不能发' } }, {}, { root })
   const coDry = await handleRpc({ op: 'dispatch.send', payload: { projectId: pid, id: co.id, dryRun: true } }, {}, { root })
   check('总编任务书才给派单权', /允许你调用 subagent/.test(coDry.prompt))
   eq('dryRun 不改票状态', coDry.ticket.status, 'issued')
@@ -875,7 +879,7 @@ try {
     '### 依据',
     '细纲第 12 行「他离开了」没有留下未解问题。',
     '### 要别人做的事',
-    '交给 changye-chapter-writer：等钩子补齐再动笔。',
+    '交给 nightwrite-chapter-writer：等钩子补齐再动笔。',
     '### 风险',
     '照现在写，章末会掉人。',
   ].join('\n')
@@ -1085,16 +1089,16 @@ try {
   await handleRpc({ op: 'corpus.remove', payload: { id: oneId } }, {}, { root })
   eq('删掉一本', (await handleRpc({ op: 'corpus.list' }, {}, { root })).totals.books, 2)
 
-  // ══ 19. changye_dispatch 工具 ══════════════════════════
-  console.log('\n— 19. changye_dispatch 工具')
+  // ══ 19. nightwrite_dispatch 工具 ══════════════════════════
+  console.log('\n— 19. nightwrite_dispatch 工具')
   const dispatchTool = createDispatchTool(root)
-  eq('工具名', dispatchTool.name, 'changye_dispatch')
+  eq('工具名', dispatchTool.name, 'nightwrite_dispatch')
   check('工具描述列了 11 个岗位', roleCatalog().every((r) => dispatchTool.description.includes(r.id)))
   check('工具必填 projectId/role/task', ['projectId', 'role', 'task'].every((k) => dispatchTool.parameters[k].required === true))
-  const toolTicket = await dispatchTool.execute({ projectId: pid, role: 'changye-consistency-checker', task: '查第三十一回设定冲突', chapter: 31, send: false })
+  const toolTicket = await dispatchTool.execute({ projectId: pid, role: 'nightwrite-consistency-checker', task: '查第三十一回设定冲突', chapter: 31, send: false })
   check('工具 send:false 只开票', toolTicket.sent === false && /^dp_/.test(toolTicket.ticket.id))
-  check('工具也回任务书', String(toolTicket.prompt).includes('changye-consistency-checker.md'))
-  const toolDry = await dispatchTool.execute({ projectId: pid, role: 'changye-reader-proxy', task: '看第三十一回追读', dryRun: true })
+  check('工具也回任务书', String(toolTicket.prompt).includes('nightwrite-consistency-checker.md'))
+  const toolDry = await dispatchTool.execute({ projectId: pid, role: 'nightwrite-reader-proxy', task: '看第三十一回追读', dryRun: true })
   check('工具 dryRun 走投递层', toolDry.dryRun === true && toolDry.prompt.length > 200)
 
   // ══ 20. 拆书管道（analyze.*） ════════════════════════════
@@ -1323,7 +1327,7 @@ try {
   // ⑤ 任务包带手册（只给路径，不嵌正文）
   const packRes = await handleRpc({
     op: 'taskpack.build',
-    payload: { projectId: pid, role: 'changye-chapter-writer', chapter: 1, task: '写第一回' },
+    payload: { projectId: pid, role: 'nightwrite-chapter-writer', chapter: 1, task: '写第一回' },
   }, {}, { root })
   const skillFile = packRes.manifest.files.find((f) => f.key === 'skills')
   check('任务包含 skills 材料', !!skillFile, JSON.stringify(packRes.manifest.files.map((f) => f.key)))
@@ -1351,8 +1355,8 @@ try {
       check(`${fmt} content-type 正确`, String(res.headers.get('content-type') ?? '').includes(mime), String(res.headers.get('content-type')))
       const buf = Buffer.from(await res.arrayBuffer())
       check(`${fmt} 有内容`, buf.length > 50, String(buf.length))
-      check(`${fmt} 带章节数头`, Number(res.headers.get('x-changye-chapters')) >= 1, String(res.headers.get('x-changye-chapters')))
-      check(`${fmt} 带字数头`, Number(res.headers.get('x-changye-words')) > 0, String(res.headers.get('x-changye-words')))
+      check(`${fmt} 带章节数头`, Number(res.headers.get('x-nightwrite-chapters')) >= 1, String(res.headers.get('x-nightwrite-chapters')))
+      check(`${fmt} 带字数头`, Number(res.headers.get('x-nightwrite-words')) > 0, String(res.headers.get('x-nightwrite-words')))
     }
     const epubRes = await fetch(`${bookBase}?projectId=${pid}&format=epub`)
     const epubBuf = Buffer.from(await epubRes.arrayBuffer())
@@ -1389,13 +1393,13 @@ try {
   // ══ 16. injectBoot / mountRoute ══════════════════════════
   console.log('\n— 16. 启动注入与路由挂载')
   const html = '<html><head><title>t</title></head><body></body></html>'
-  const injected = injectBoot(html, { apiUrl: '/changye/api' })
+  const injected = injectBoot(html, { apiUrl: '/nightwrite/api' })
   check('injectBoot 插进 </head> 前',
-    injected.includes('__CHANGYE_BOOT__') && injected.indexOf('__CHANGYE_BOOT__') < injected.indexOf('</head>'))
+    injected.includes('__NIGHTWRITE_BOOT__') && injected.indexOf('__NIGHTWRITE_BOOT__') < injected.indexOf('</head>'))
   eq('injectBoot 幂等（跑两遍一模一样）', injectBoot(injected), injected)
-  check('没有 </head> 也能插', injectBoot('<div>x</div>').includes('__CHANGYE_BOOT__'))
+  check('没有 </head> 也能插', injectBoot('<div>x</div>').includes('__NIGHTWRITE_BOOT__'))
   check('注入内容转义 < > &', !injectBoot(html, { apiUrl: '</script><x>' }).includes('</script><x>'))
-  check('boot 里有 apiUrl', injectBoot(html, { apiUrl: '/changye/api' }).includes('/changye/api'))
+  check('boot 里有 apiUrl', injectBoot(html, { apiUrl: '/nightwrite/api' }).includes('/nightwrite/api'))
 
   let mounted = null
   let tapped = false
@@ -1414,7 +1418,7 @@ try {
   }
   mountRoute(fakeCtx)
   eq('mountRoute 注册 prefix 路由', mounted?.kind, 'prefix')
-  eq('挂载路径是 /changye/api', mounted?.path, ROUTE)
+  eq('挂载路径是 /nightwrite/api', mounted?.path, ROUTE)
   eq('路由带 handler 函数', typeof mounted?.handler, 'function')
   check('mountRoute 也挂了 tapIndex（注入 boot）', tapped)
   check('mountRoute 对空 ctx 不炸', (() => { try { mountRoute(null); return true } catch { return false } })())
@@ -1430,6 +1434,426 @@ try {
   check('退化组只有一组', groups.filter((g) => g.id === 'degenerate').length === 1)
   check('四组都有中文名', groups.every((g) => typeof g.label === 'string' && g.label.length > 0))
 }
+
+  // ══ 30. 补差距：评分 / 保真 / 段落地址 / 成本 / 钩子 / 岗位白名单 ══
+  console.log('\n— 30. 补差距的六件事')
+  {
+    const pid2 = (await handleRpc({ op: 'project.create', payload: { name: '补差距' } }, {}, { root })).id
+    const clean = '他推开门，风灌进来，桌上的纸动了动。屋里没人。\n\n他把伞靠在门边，抖了抖袖子上的水。'
+    const dirty = '空气仿佛凝固了。他眼底闪过一丝慌乱，嘴角勾起。\n\n他心中一震，不由得深吸一口气。'
+    await handleRpc({ op: 'chapter.save', payload: { projectId: pid2, chapter: 1, text: clean } }, {}, { root })
+
+    // ── 评分 ──
+    const scClean = await handleRpc({ op: 'aiscore.check', payload: { projectId: pid2, text: clean } }, {}, { root })
+    check('评分 · 干净段落低分', scClean.score <= 30, scClean.score)
+    check('评分 · 干净段落 pass', scClean.pass === true, JSON.stringify({ s: scClean.score, w: scClean.worst && scClean.worst.id }))
+    check('评分 · 短文本标不自信', scClean.confident === false, scClean.chars)
+    check('评分 · 六个信号都在', scClean.signals.length === 6, scClean.signals.length)
+    check('评分 · 分数落在 0–100', scClean.score >= 0 && scClean.score <= 100)
+    const scDirty = await handleRpc({ op: 'aiscore.check', payload: { projectId: pid2, text: dirty.repeat(6) } }, {}, { root })
+    check('评分 · 套话堆叠分更高', scDirty.score > scClean.score, scDirty.score + ' vs ' + scClean.score)
+    check('评分 · 有 worst 信号', scDirty.worst !== null, JSON.stringify(scDirty.worst && scDirty.worst.id))
+    check('评分 · worst 有点数', scDirty.worst && scDirty.worst.points > 0, JSON.stringify(scDirty.worst && scDirty.worst.points))
+    check('评分 · 有分档文案', typeof scDirty.text === 'string' && scDirty.text.length > 0, scDirty.text)
+    check('评分 · 词表统计回得来', typeof scDirty.lexicon.total === 'number' && scDirty.lexicon.total > 0, JSON.stringify(scDirty.lexicon))
+    const scByChapter = await handleRpc({ op: 'aiscore.check', payload: { projectId: pid2, chapter: 1 } }, {}, { root })
+    eq('评分 · 给章号也能算', scByChapter.score, scClean.score)
+    await expectThrow('评分 · 没正文要报错', () => handleRpc({ op: 'aiscore.check', payload: { projectId: pid2 } }, {}, { root }), /正文/)
+
+    // ── 保真 ──
+    const origin = '三年前他借了三百两银子，签了二十张契。\n\n“我不会走。”他说。'
+    await handleRpc({ op: 'chapter.save', payload: { projectId: pid2, chapter: 5, text: origin } }, {}, { root })
+    const fidOk = await handleRpc({ op: 'fidelity.check', payload: { projectId: pid2, chapter: 5, after: origin } }, {}, { root })
+    eq('保真 · 原样复制判 ok', fidOk.level, 'ok')
+    eq('保真 · 数字全在', fidOk.numbers.kept, fidOk.numbers.total)
+    eq('保真 · 引语全在', fidOk.quotes.kept, fidOk.quotes.total)
+    const fidBad = await handleRpc({ op: 'fidelity.check', payload: { projectId: pid2, chapter: 5, after: '他借了银子，签了契。\n\n“我不会走。”他说。' } }, {}, { root })
+    eq('保真 · 数字丢光判 block', fidBad.level, 'block')
+    check('保真 · 报了丢哪些数字', fidBad.numbers.lost.length > 0, JSON.stringify(fidBad.numbers.lost.map((x) => x.raw)))
+    check('保真 · block 时有话说', typeof fidBad.text === 'string' && fidBad.text.length > 0, fidBad.text)
+    const fidQuote = await handleRpc({ op: 'fidelity.check', payload: { projectId: pid2, chapter: 5, after: '三年前他借了三百两银子，签了二十张契。\n\n他一句话没说。' } }, {}, { root })
+    eq('保真 · 引语丢了 ratio 掉下来', fidQuote.quotes.ratio, 0)
+    await expectThrow('保真 · 没 after 要报错', () => handleRpc({ op: 'fidelity.check', payload: { projectId: pid2, chapter: 5 } }, {}, { root }), /after/)
+
+    // ── 段落地址 ──
+    const idx = await handleRpc({ op: 'anchor.index', payload: { projectId: pid2, chapter: 5 } }, {}, { root })
+    eq('地址 · 段数对得上', idx.total, idx.paras.length)
+    check('地址 · pid 形如 c0005p00', /^c0005p00$/.test(idx.paras[0].pid), idx.paras[0].pid)
+    check('地址 · 每段带 hash 与 head', idx.paras.every((x) => /^[0-9a-f]{12}$/.test(x.hash) && x.head.length > 0))
+    check('地址 · 章哈希是 12 位 hex', /^[0-9a-f]{12}$/.test(idx.chapterHash), idx.chapterHash)
+    await expectThrow('地址 · 没章号要报错', () => handleRpc({ op: 'anchor.index', payload: { projectId: pid2 } }, {}, { root }), /chapter/)
+
+    // 同句两处：只改提案指向的那一段
+    await handleRpc({ op: 'chapter.save', payload: { projectId: pid2, chapter: 6, text: '他抬头看天。\n\n风很大。\n\n他抬头看天。' } }, {}, { root })
+    const saved = await handleRpc({ op: 'proposal.save', payload: { projectId: pid2, proposal: { id: 'pr_anc', chapter: 6, diffs: [{ before: '他抬头看天。', after: '他低头看地。' }] } } }, {}, { root })
+    check('地址 · 保存时挂了 anchor', Boolean(saved.proposal.diffs[0].anchor && saved.proposal.diffs[0].anchor.pid), JSON.stringify(saved.proposal.diffs[0].anchor))
+    const acc = await handleRpc({ op: 'proposal.decide', payload: { projectId: pid2, id: 'pr_anc', action: 'accept' } }, {}, { root })
+    eq('地址 · 采纳改了 1 条', acc.applied, 1)
+    const after6 = String((await handleRpc({ op: 'chapter.get', payload: { projectId: pid2, chapter: 6 } }, {}, { root })).text).trim()
+    check('地址 · 只改第一段', after6.startsWith('他低头看地。'), after6)
+    check('地址 · 第三段原样', after6.endsWith('他抬头看天。'), after6)
+
+    // 失效提案：正文换了 → 标 outdated，正文一字不动
+    await handleRpc({ op: 'proposal.save', payload: { projectId: pid2, proposal: { id: 'pr_stale', chapter: 6, diffs: [{ before: '风很大。', after: '风很小。' }] } } }, {}, { root })
+    await handleRpc({ op: 'chapter.save', payload: { projectId: pid2, chapter: 6, text: '完全换掉了。\n\n没有那段了。' } }, {}, { root })
+    const stale = await handleRpc({ op: 'proposal.decide', payload: { projectId: pid2, id: 'pr_stale', action: 'accept' } }, {}, { root })
+    eq('地址 · 失效提案 applied=0', stale.applied, 0)
+    eq('地址 · 失效提案标 outdated', stale.proposal.status, 'outdated')
+    eq('地址 · outdated 在状态白名单里', store.PROPOSAL_STATUS.includes('outdated'), true)
+    const afterStale = String((await handleRpc({ op: 'chapter.get', payload: { projectId: pid2, chapter: 6 } }, {}, { root })).text)
+    check('地址 · 失效时正文没动', afterStale.includes('没有那段了'), afterStale)
+
+    // 列表要能看出「哪条已经对不上」
+    await handleRpc({ op: 'proposal.save', payload: { projectId: pid2, proposal: { id: 'pr_live', chapter: 6, diffs: [{ before: '完全换掉了。', after: '全换了。' }] } } }, {}, { root })
+    const fresh = await handleRpc({ op: 'proposal.list', payload: { projectId: pid2 } }, {}, { root })
+    const freshRow = fresh.items.find((x) => x.id === 'pr_live')
+    eq('地址 · 新鲜提案 staleCount=0', freshRow.staleCount, 0)
+    await handleRpc({ op: 'chapter.save', payload: { projectId: pid2, chapter: 6, text: '又换了。\n\n这段全不一样。' } }, {}, { root })
+    const stale2 = await handleRpc({ op: 'proposal.list', payload: { projectId: pid2 } }, {}, { root })
+    const staleRow = stale2.items.find((x) => x.id === 'pr_live')
+    check('地址 · 正文变了 staleCount 涨起来', staleRow.staleCount >= 1, JSON.stringify(staleRow.staleCount))
+    check('地址 · 带提示文案', typeof staleRow.hint === 'string' && staleRow.hint.length > 0, staleRow.hint)
+
+    // ── 成本 ──
+    const bud = await handleRpc({ op: 'usage.budget', payload: { chapters: 100, chapterWords: 3000 } }, {}, { root })
+    eq('成本 · 总字数 = 章数×每章', bud.totalWords, 300000)
+    check('成本 · 估出正数', bud.cost > 0 && bud.inputTokens > 0 && bud.outputTokens > 0, JSON.stringify(bud.cost))
+    const mods = await handleRpc({ op: 'usage.models', payload: {} }, {}, { root })
+    check('成本 · 价目表有默认档', Boolean(mods.prices.default), JSON.stringify(mods.models))
+    check('成本 · 每 token 字符数给出来', typeof mods.charsPerToken === 'number' && mods.charsPerToken > 0, mods.charsPerToken)
+    const scan = await handleRpc({ op: 'usage.scan', payload: { projectId: pid2 } }, {}, { root })
+    check('成本 · 扫描不炸且带说明', typeof scan.note === 'string', scan.note)
+    check('成本 · 会话目录编码可解', (() => { const enc = usage.encodeCwd('C:\\a\\b'); return enc.startsWith('--') && enc.endsWith('--') && enc.includes('-a-b-') })())
+
+    // ── 岗位工具白名单 ──
+    const cats = await handleRpc({ op: 'role.list', payload: {} }, {}, { root })
+    check('岗位 · 每个都带 tools', cats.items.every((r) => Array.isArray(r.tools) && r.tools.length > 0), JSON.stringify(cats.items.map((r) => r.id)))
+    check('岗位 · 每个都带 toolSet', cats.items.every((r) => typeof r.toolSet === 'string' && r.toolSet.length > 0), JSON.stringify(cats.items.map((r) => r.toolSet)))
+    const checker = cats.items.find((r) => r.id === 'nightwrite-consistency-checker')
+    check('岗位 · 审校只读（无 write/edit）', !checker.tools.includes('write') && !checker.tools.includes('edit'), checker.tools.join(','))
+    const writer = cats.items.find((r) => r.id === 'nightwrite-chapter-writer')
+    check('岗位 · 写手能写', writer.tools.includes('write') && writer.tools.includes('edit'), writer.tools.join(','))
+    const coord = cats.items.find((r) => r.id === 'nightwrite-coordinator')
+    check('岗位 · 只有总编能派单', coord.tools.includes('nightwrite_dispatch') && !writer.tools.includes('nightwrite_dispatch'))
+    check('岗位 · 只有总编能起子 agent', coord.tools.includes('subagent') && cats.items.filter((r) => r.tools.includes('subagent')).length === 1, cats.items.filter((r) => r.tools.includes('subagent')).map((r) => r.id).join(','))
+    check('岗位 · 所有岗位都能调 nightwrite_op', cats.items.every((r) => r.tools.includes('nightwrite_op')))
+    check('岗位 · 只有总编 canDispatch', cats.items.filter((r) => r.canDispatch === true).length === 1, cats.items.filter((r) => r.canDispatch).map((r) => r.id).join(','))
+
+    // ── 宿主钩子 ──
+    eq('钩子 · 默认策略是 warn', hooks.projectWritePolicy({}).level, 'warn')
+    eq('钩子 · 缺项目时按 warn', hooks.projectWritePolicy(null).level, 'warn')
+    check('钩子 · 策略项齐全', ['off', 'warn', 'enforce'].includes(hooks.projectWritePolicy({ writePolicy: { level: 'enforce' } }).level))
+    const absCh6 = join(await store.projectDir(root, pid2), 'chapters', '0006.txt')
+    const info6 = await hooks.locateProject(root, absCh6)
+    check('钩子 · 认得项目里的正文路径', Boolean(info6 && info6.guarded) && info6.projectId === pid2, JSON.stringify(info6 && { id: info6.projectId, rel: info6.rel }))
+    eq('钩子 · 认得出这是章节文件', hooks.chapterOf(info6.rel), 6)
+    eq('钩子 · 认不出项目外路径', await hooks.locateProject(root, join(root, 'nope.txt')), null)
+    eq('钩子 · warn 不拦', hooks.guardDecision(info6, { level: 'warn', allowChapter: false }), null)
+    eq('钩子 · off 不拦', hooks.guardDecision(info6, { level: 'off', allowChapter: false }), null)
+    check('钩子 · enforce 拦正文', typeof hooks.guardDecision(info6, { level: 'enforce', allowChapter: false }) === 'string')
+    eq('钩子 · enforce 放行正文时不管', hooks.guardDecision(info6, { level: 'enforce', allowChapter: true }), null)
+    eq('钩子 · view 不算改文件', hooks.mutationPath('str_replace_editor', { command: 'view', path: 'x' }), '')
+    eq('钩子 · read 不算改文件', hooks.mutationPath('read', { path: 'x' }), '')
+    eq('钩子 · edit 算改文件', hooks.mutationPath('edit', { path: 'y' }), 'y')
+    eq('钩子 · write 认 file_path 别名', hooks.mutationPath('write', { file_path: 'z' }), 'z')
+    const msg = hooks.noticeMessage('正文提示', '摘要')
+    check('钩子 · 提醒消息形状对', msg.role === 'user' && msg.source.form === 'notice' && msg.content[0].text === '正文提示' && typeof msg.id === 'string', JSON.stringify(Object.keys(msg)))
+    eq('钩子 · 提醒排在下游前面', hooks.prependContext('a', ['b']).join(','), 'a,b')
+    eq('钩子 · 下游没有 contexts 时也成数组', hooks.prependContext('a', undefined).join(','), 'a')
+    const fakeOn = []
+    const fakeCtx = { on: (name, fn) => fakeOn.push({ name, fn }) }
+    const reg = hooks.registerWriteGuard(fakeCtx, { root })
+    check('钩子 · 两个事件都挂上', reg.pre === true && reg.post === true && fakeOn.length === 2, JSON.stringify(reg))
+    eq('钩子 · 无 ctx 不炸', JSON.stringify(hooks.registerWriteGuard(null, { root })), '{"pre":false,"post":false}')
+    const pre = fakeOn.find((x) => x.name === 'tools/pre-execute').fn
+    const allowed = await pre({ name: 'write', arguments: { path: join(root, 'far.txt') }, agent: { session: { header: { cwd: root } } } }, async () => ({ kind: 'allow' }))
+    eq('钩子 · 项目外的写放行', allowed.kind, 'allow')
+    const notFile = await pre({ name: 'read', arguments: { path: absCh6 } }, async () => ({ kind: 'allow' }))
+    eq('钩子 · 读文件不问策略', notFile.kind, 'allow')
+    const post = fakeOn.find((x) => x.name === 'tools/post-execute').fn
+    const posted = await post({ name: 'write', arguments: { path: absCh6 }, agent: { session: { header: { cwd: root } } } }, { isError: false }, async () => ({ kind: 'accept' }))
+    check('钩子 · 改完追一条提醒', posted.kind === 'accept' && Array.isArray(posted.additionalContexts) && posted.additionalContexts.length === 1, JSON.stringify(posted.kind))
+    check('钩子 · 提醒里点了 chapter.save', posted.additionalContexts[0].content[0].text.includes('chapter.save'))
+    check('钩子 · 提醒里带 AI 味评分', /AI 味评分/.test(posted.additionalContexts[0].content[0].text))
+    const blockedDown = await post({ name: 'write', arguments: { path: join(root, 'far.txt') } }, { isError: false }, async () => ({ kind: 'block', feedback: 'x' }))
+    eq('钩子 · 下游 block 原样透传', blockedDown.kind, 'block')
+    const errDown = await post({ name: 'write', arguments: { path: absCh6 } }, { isError: true }, async () => ({ kind: 'accept' }))
+    check('钩子 · 工具报错时不多嘴', errDown.additionalContexts === undefined, JSON.stringify(Object.keys(errDown)))
+
+    // ── 串行锁 ──
+    const order = []
+    await Promise.all([1, 2, 3, 4, 5].map((n) => lock.serializeBy('/x/y', async () => {
+      order.push('a' + n)
+      await new Promise((r) => setTimeout(r, 4))
+      order.push('b' + n)
+    })))
+    eq('锁 · 同一 key 严格串行', order.join(','), 'a1,b1,a2,b2,a3,b3,a4,b4,a5,b5')
+    check('锁 · 统计能查', typeof lock.lockStats().active === 'number', JSON.stringify(lock.lockStats()))
+
+    // ── 并发写提案不丢（第 9 条） ──
+    await Promise.all(Array.from({ length: 20 }, (_, i) => handleRpc({ op: 'proposal.save', payload: { projectId: pid2, proposal: { id: 'pr_c' + i, chapter: 5, diffs: [{ before: '三年前', after: '四年前' }] } } }, {}, { root })))
+    const many = await handleRpc({ op: 'proposal.list', payload: { projectId: pid2 } }, {}, { root })
+    eq('锁 · 20 个并发提案一个不少', many.items.filter((x) => /^pr_c\d+$/.test(x.id)).length, 20)
+
+    // ── library.json 只有一把锁 ──
+    // 建作品是「读 library.json → push 一条 → 写回去」。不串行的话
+    // 十个并发建完只剩一条，看着像「点了没反应」。
+    const made = await Promise.all(Array.from({ length: 10 }, (_, i) => handleRpc({ op: 'project.create', payload: { name: '并发' + i } }, {}, { root })))
+    const libAfter = JSON.parse(await readFile(join(root, 'library.json'), 'utf8'))
+    eq('锁 · 10 个并发建作品一条不少', libAfter.projects.filter((p) => /^并发\d+$/.test(p.name)).length, 10)
+    eq('锁 · 建作品回的是不同 id', new Set(made.map((r) => r.id)).size, 10)
+
+    // 并发改名：saveProject 要同时写 project.json 和 library.json 两处。
+    await Promise.all(Array.from({ length: 8 }, (_, i) => store.saveProject(root, pid2, { logline: '第' + i + '版' })))
+    const libNames = JSON.parse(await readFile(join(root, 'library.json'), 'utf8'))
+    check('锁 · 并发改名后 library 里这作品还在', libNames.projects.some((p) => p.id === pid2))
+    const back = await store.getProject(root, pid2)
+    check('锁 · 并发改名后 project.json 可读且是最后写入之一', /^第[0-7]版$/.test(back.meta.logline), back.meta.logline)
+
+    // ── state.json 的版本号 ──
+    // bumpState 是「读 → 加一 → 写」。不串行时十个并发最后都是 1。
+    const { dir: stateDir } = await store.getProject(root, pid2)
+    const before = (await store.readState(stateDir)).revision
+    await Promise.all(Array.from({ length: 10 }, (_, i) => store.bumpState(stateDir, { touched: { op: 'test' + i } })))
+    eq('锁 · 10 次并发 bump 版本走满 10 格', (await store.readState(stateDir)).revision, before + 10)
+
+    // ── 章节树 ──
+    // 同一章并发存 6 次：rev 是「每存一次 +1」，串行才对得上；
+    // 不串行时几次会读到同一个 rev，最终 rev 小于 6。
+    await Promise.all(Array.from({ length: 6 }, (_, i) => store.saveChapter(root, pid2, 9, '第 ' + i + ' 次的正文\n', {}, {})))
+    const ch9 = await store.getChapter(root, pid2, 9)
+    eq('锁 · 同章并发 6 次存盘 rev 走满 6 格', ch9.meta.rev, 6)
+
+    // 存盘与重排同时发生：重排会把 0009 搬成 0010，两个动作必须排队。
+    const raced = await Promise.allSettled([
+      store.saveChapter(root, pid2, 9, '重排期间写入\n', {}, {}),
+      store.moveChapter(root, pid2, 9, 12),
+    ])
+    check('锁 · 存盘与重排并发不抛', raced.every((r) => r.status === 'fulfilled'), JSON.stringify(raced.map((r) => r.status)))
+    const nums = (await store.listChapters(root, pid2)).map((r) => r.chapter)
+    check('锁 · 重排后章号不重复也不丢', new Set(nums).size === nums.length && nums.includes(12), JSON.stringify(nums))
+
+    // ── 索引类（拆书 / 扫榜）──
+    // 这两处写的是 index.json：读整个数组、插一条、写回去。
+    const scanRows = [{ rank: 1, book: '甲', genre: '仙侠', heat: 100 }, { rank: 2, book: '乙', genre: '仙侠', heat: 90 }]
+    await Promise.all(Array.from({ length: 5 }, (_, i) => handleRpc({ op: 'scan.save', payload: { projectId: pid2, platform: 'p' + i, rows: scanRows } }, {}, { root })))
+    const scans = await handleRpc({ op: 'scan.list', payload: { projectId: pid2 } }, {}, { root })
+    eq('锁 · 5 个并发扫榜索引一条不少', scans.items.length, 5)
+
+    // 拆书的 id 是内容哈希：同一本书拆十次只该留一份，这是对的。
+    // 所以要测「索引不丢」，得让四本书真的不一样。
+    const bookOf = (k) => Array.from({ length: 3 }, (_, i) => '第' + (i + 1) + '章 标题' + k + String.fromCharCode(10, 10) + '第' + k + '本的正文若干字。').join(String.fromCharCode(10, 10))
+    await Promise.all(Array.from({ length: 4 }, (_, i) => handleRpc({ op: 'analyze.start', payload: { projectId: pid2, text: bookOf(i), title: '拆' + i } }, {}, { root })))
+    const analyses = await handleRpc({ op: 'analyze.list', payload: { projectId: pid2 } }, {}, { root })
+    eq('锁 · 4 个并发拆书索引一条不少', analyses.items.length, 4)
+    // 同一本书再拆一次：索引里那条被原位替换，不该变成 5 条。
+    await handleRpc({ op: 'analyze.start', payload: { projectId: pid2, text: bookOf(0), title: '拆0重跑' } }, {}, { root })
+    eq('锁 · 同一本书重拆不新增条目', (await handleRpc({ op: 'analyze.list', payload: { projectId: pid2 } }, {}, { root })).items.length, 4)
+  }
+
+  // ══ 31. 真派子代理（第 2 条：subagents 注入 + 人格 + 工具白名单） ══
+  {
+    const spawn = await import('../lib/spawn.js')
+    const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+    const rolesMod = await import('../lib/roles.js')
+
+    // ── 手册正文：剥 frontmatter，改文件后按 mtime 重新读 ──
+    const p1 = spawn.personaOf(repoRoot, 'nightwrite-consistency-checker')
+    check('派单 · 手册能读出来', p1.ok === true && p1.text.length > 300, `${p1.ok} ${p1.text.length}`)
+    check('派单 · frontmatter 被剥掉', !p1.text.startsWith('---') && !/\nname:\s/.test(p1.text.slice(0, 200)), JSON.stringify(p1.text.slice(0, 20)))
+    check('派单 · 手册第一句是「你是」', p1.text.startsWith('你是'), JSON.stringify(p1.text.slice(0, 10)))
+    eq('派单 · 不存在的岗位没手册', spawn.personaOf(repoRoot, 'nope').ok, false)
+    eq('派单 · stripFrontmatter 无 frontmatter 原样返回', spawn.stripFrontmatter('# 标题\n\n正文'), '# 标题\n\n正文')
+    eq('派单 · stripFrontmatter 剥掉开头那段', spawn.stripFrontmatter('---\nname: x\n---\n\n# 标题'), '# 标题')
+
+    // ── 子代理工具白名单：要摘掉「再派一层」 ──
+    const childCoord = spawn.childTools('nightwrite-coordinator')
+    check('派单 · 子代理拿不到 subagent', !childCoord.includes('subagent'), childCoord.join(','))
+    check('派单 · 子代理拿不到 nightwrite_dispatch', !childCoord.includes('nightwrite_dispatch'), childCoord.join(','))
+    check('派单 · 子代理仍能读写', childCoord.includes('read') && childCoord.includes('write'), childCoord.join(','))
+    const childChecker = spawn.childTools('nightwrite-consistency-checker')
+    check('派单 · 审校派下去仍然只读', !childChecker.includes('write') && !childChecker.includes('edit'), childChecker.join(','))
+    check('派单 · 顶层总编才有 subagent', rolesMod.roleTools('nightwrite-coordinator').includes('subagent'))
+    eq('派单 · 未知岗位白名单为空', spawn.childTools('nope').length, 0)
+
+    // ── spawnStatus / canSpawn ──
+    eq('派单 · 空 ctx 没有服务', spawn.spawnStatus({}).service, false)
+    const noProvider = { subagents: { startActivation: async () => ({}), getProvider: () => undefined } }
+    const st2 = spawn.spawnStatus(noProvider)
+    check('派单 · 有服务没 provider 要报清楚', st2.service === true && st2.provider === false && st2.reason.includes('spawn'), st2.reason)
+    const noParent = spawn.canSpawn({ subagents: { startActivation: async () => ({}), getProvider: () => ({}) } }, undefined)
+    check('派单 · 没有父代理就派不了', noParent.ok === false && noParent.reason.includes('父代理'), noParent.reason)
+    let threw = null
+    await spawn.spawnRole({}, { role: 'nightwrite-editor', prompt: 'x' }).catch((e) => { threw = e })
+    check('派单 · 服务不全时抛 spawn-unavailable', threw?.code === 'spawn-unavailable', threw?.code ?? String(threw))
+    threw = null
+    await spawn.spawnRole(noProvider, { role: 'nope', prompt: 'x', parent: { id: 'p' } }).catch((e) => { threw = e })
+    eq('派单 · 岗位非法优先报 invalid-role', threw?.code, 'invalid-role')
+
+    // ── configureRoleAgent：人格段 + 工具收窄 ──
+    const calls = []
+    const fakeAgent = {
+      id: 'a1',
+      ctx: {
+        get: (name) => (name === 'systemPrompt'
+          ? { getSectionOrder: () => 7, section: (arg) => calls.push({ kind: 'persona', arg }) }
+          : name === 'tools'
+            ? { restrict: (arg) => calls.push({ kind: 'tools', arg }) }
+            : undefined),
+      },
+    }
+    const applied = spawn.configureRoleAgent(fakeAgent, { role: 'nightwrite-consistency-checker', persona: '你是审校。' })
+    check('派单 · 人格与工具都按上', applied.persona === true && applied.tools === true, JSON.stringify(applied))
+    eq('派单 · 先插人格再收窄工具', calls.map((x) => x.kind).join(','), 'persona,tools')
+    eq('派单 · 人格段位置取自宿主', calls[0].arg.order, 7)
+    eq('派单 · 人格段文本原样', calls[0].arg.text, '你是审校。')
+    check('派单 · 工具白名单是子代理版', !calls[1].arg.allow.includes('subagent'), calls[1].arg.allow.join(','))
+    const bare = spawn.configureRoleAgent({ id: 'a2', ctx: { get: () => undefined } }, { role: 'nightwrite-editor', persona: 'x' })
+    check('派单 · 宿主没服务时如实报失败', bare.persona === false && bare.tools === false && bare.reason.includes('systemPrompt'), bare.reason)
+
+    // ── spawnRole 端到端：假宿主按 agent/created 创建子代理 ──
+    const listeners = []
+    const made = []
+    const fakeService = {
+      getProvider: () => ({ name: 'spawn' }),
+      async startActivation(spec) {
+        made.push(spec)
+        // 宿主真实行为：先创建子代理并 await agent/created 监听器，再返回。
+        const child = {
+          id: spec.childId,
+          ctx: {
+            get: (name) => (name === 'systemPrompt'
+              ? { getSectionOrder: () => 7, section: () => {} }
+              : name === 'tools' ? { restrict: () => {} } : undefined),
+          },
+        }
+        const created = { id: 'evt', agent: child }
+        for (const one of listeners) one.fn(created)
+        return { childId: spec.childId, messageId: 'm1', result: Promise.resolve({ output: [{ type: 'text', text: '审校结论：无冲突。' }], stopReason: 'end' }), dispose: async () => { made.push('disposed') } }
+      },
+    }
+    const parent = {
+      id: 'parent-1',
+      session: { header: { cwd: repoRoot } },
+      ctx: { on: (name, fn) => { listeners.push({ name, fn }); return () => {} } },
+    }
+    const fakeCtx = { subagents: fakeService }
+    const run = await spawn.spawnRole(fakeCtx, {
+      parent,
+      role: 'nightwrite-consistency-checker',
+      repoRoot,
+      label: '审校 · 第 6 章',
+      prompt: '查第 6 章的设定冲突',
+    })
+    eq('派单 · 真的调了 startActivation', made.filter((x) => typeof x === 'object').length, 1)
+    const spec = made[0]
+    eq('派单 · provider 是 spawn', spec.provider, 'spawn')
+    eq('派单 · maxDepth 锁死 1', spec.request.maxDepth, 1)
+    eq('派单 · 父代理原样交过去', spec.request.parent, parent)
+    eq('派单 · prompt 是 content block', JSON.stringify(spec.request.prompt), '[{"type":"text","text":"查第 6 章的设定冲突"}]')
+    eq('派单 · delivery 用 caller（不往父对话塞通知）', spec.delivery, 'caller')
+    check('派单 · 人格确实按上了', run.personaApplied.persona === true && run.personaApplied.tools === true, JSON.stringify(run.personaApplied))
+    eq('派单 · 返回 childId 与宿主一致', run.childId, spec.childId)
+    const out = await run.result
+    check('派单 · 子代理结果拿得到', out.output[0].text.includes('审校结论'), JSON.stringify(out.output))
+    eq('派单 · 宿主没在发布前建子代理时要退回', typeof run.dispose, 'function')
+    eq('派单 · 监听器已注销', listeners.length, 1)
+
+    // 没按上人格 → 拒绝裸跑并 dispose
+    made.length = 0
+    const deafService = { getProvider: () => ({ name: 'spawn' }), async startActivation(spec) { made.push(spec); return { childId: spec.childId, result: Promise.resolve({ output: [], stopReason: 'end' }), dispose: async () => { made.push('disposed') } } } }
+    let fail = null
+    await spawn.spawnRole({ subagents: deafService }, { parent, role: 'nightwrite-editor', repoRoot, prompt: 'x' }).catch((e) => { fail = e })
+    eq('派单 · 没按上人格就报 spawn-not-configured', fail?.code, 'spawn-not-configured')
+    check('派单 · 报错前先 dispose 掉裸跑的子代理', made.includes('disposed'), made.map((x) => (typeof x === 'object' ? 'spec' : x)).join(','))
+
+    // ── subagent.status op ──
+    const cat = await handleRpc({ op: 'subagent.status', payload: {} }, {}, { root })
+    check('派单 · subagent.status 报得出来', typeof cat.service === 'boolean' && Array.isArray(cat.roles), JSON.stringify(Object.keys(cat)))
+    eq('派单 · subagent.status 列出 11 个岗位', cat.roles.length, 11)
+    check('派单 · 每个岗位带工具清单', cat.roles.every((r) => Array.isArray(r.tools) && r.tools.length > 0))
+  }
+
+  // ══ 32. 配置 schema（第 9 条：宿主能画出设置表单，填了真生效） ══
+  {
+    const cfg = await import('../lib/config.js')
+    const aiscore = await import('../lib/aiscore.js')
+
+    // ── 宿主读的形状 ──
+    check('配置 · index.js 真的导出了 Config', typeof cfg.Config === 'object' && cfg.Config !== null)
+    eq('配置 · 类型声明是 object', cfg.Config.type, 'object')
+    check('配置 · 每个字段都有说明（设置页要显示给人看）',
+      Object.values(cfg.Config.dict).every((f) => typeof f?.meta?.description === 'string' && f.meta.description.length > 8),
+      JSON.stringify(Object.entries(cfg.Config.dict).filter(([, f]) => !(f?.meta?.description?.length > 8)).map(([k]) => k)))
+    // dict 是给设置页直接投影的字段树，refs 是给 toJSON 按 uid 解引用的节点表；
+    // 两份内容必须一致，否则「画出来的行」和「宿主校验的节点」会对不上。
+    eq('配置 · dict 与 refs 的字段说明逐条一致',
+      Object.entries(cfg.Config.dict).filter(([key, f]) => {
+        const ref = Object.values(cfg.Config.refs).find((r) => r?.meta?.description === f?.meta?.description)
+        return !ref || ref.type !== f.type || String(ref.meta.default) !== String(f.meta.default)
+      }).map(([k]) => k), [])
+    check('配置 · 校验入口是 standard-schema', typeof cfg.Config['~standard']?.validate === 'function')
+    eq('配置 · 走 standard-schema 拿回归一化后的值', cfg.Config['~standard'].validate({ scorePassMax: 55 }).value.scorePassMax, 55)
+
+    // ── 归一是「坏一项不影响别项」 ──
+    const bad = cfg.normalizeConfig({ scorePassMax: 300, historyKeep: 'x', dispatchTtlMin: 60, aiStyleBlock: 'no', writePolicy: 'ENFORCE', root: '  /tmp/x  ' })
+    eq('配置 · 超范围退回默认', bad.value.scorePassMax, 30)
+    eq('配置 · 非数字退回默认', bad.value.historyKeep, 20)
+    eq('配置 · 正常项照收', bad.value.dispatchTtlMin, 60)
+    eq('配置 · 只有明确 false 才关硬拦', bad.value.aiStyleBlock, true)
+    eq('配置 · 大小写不算数，退回默认', bad.value.writePolicy, 'warn')
+    eq('配置 · 字符串两边空白去掉', bad.value.root, '/tmp/x')
+    eq('配置 · 坏了几项就报几条（aiStyleBlock 填 "no" 静默当默认，属于设计）', bad.warnings.length, 3)
+    check('配置 · warning 说的是人话', bad.warnings.every((w) => /已用默认/.test(w)), JSON.stringify(bad.warnings))
+
+    // ── 三项从配置真的流到用它的地方 ──
+    const pid3 = (await handleRpc({ op: 'project.create', payload: { name: '配置生效' } }, {}, { root })).id
+    cfg.setRuntimeConfig({ scorePassMax: 45, historyKeep: 3, maxBodyBytes: 256 * 1024 })
+
+    eq('配置 · 运行时槽拿到新值', cfg.getRuntimeConfig().scorePassMax, 45)
+    eq('配置 · AI 味放行线跟着配置走', aiscore.scoreText('他说：“走吧。”'.repeat(60)).passMax, 45)
+    const big = '风从窗缝里挤进来。'.repeat(20000) // 180000 字
+    await handleRpc({ op: 'chapter.save', payload: { projectId: pid3, chapter: 1, text: big, force: true } }, {}, { root })
+    const bigSaved = await handleRpc({ op: 'chapter.get', payload: { projectId: pid3, chapter: 1 } }, {}, { root })
+    eq('配置 · 18 万字的章存得下', String(bigSaved.text ?? '').length, 180000)
+    const kept = await handleRpc({ op: 'chapter.history', payload: { projectId: pid3, chapter: 1 } }, {}, { root })
+    eq('配置 · 章节历史上限跟着配置走', kept.keep, 3)
+
+    // 超了要拒，且报的数字跟着配置变（不是写死的 8MB）
+    const tooBig = await new Promise((resolve) => {
+      const srv = http.createServer(createHandler(root))
+      srv.listen(0, '127.0.0.1', async () => {
+        const port = srv.address().port
+        const res = await fetch(`http://127.0.0.1:${port}/nightwrite/api`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ op: 'ping', pad: 'y'.repeat(300 * 1024) }),
+        })
+        resolve({ status: res.status, body: await res.json() })
+        srv.close()
+      })
+    })
+    eq('配置 · 超过上限回 413', tooBig.status, 413)
+    check('配置 · 提示里的数字是配置值', /256KB/.test(tooBig.body.error.message), tooBig.body.error.message)
+
+    // aiStyleBlock: false 之后硬拦整段跳过
+    // degenerate-repeat-punct 是 blocking 档，最稳的一颗子弹
+    const dirtyLine = '他走了。。。。'
+    cfg.setRuntimeConfig({ aiStyleBlock: false })
+    const passed = await handleRpc({ op: 'chapter.save', payload: { projectId: pid3, chapter: 2, text: dirtyLine } }, {}, { root }).catch((e) => e)
+    eq('配置 · 关掉硬拦后脏稿能落盘', passed?.chapter, 2)
+    cfg.setRuntimeConfig({})
+    const blocked = await handleRpc({ op: 'chapter.save', payload: { projectId: pid3, chapter: 3, text: dirtyLine } }, {}, { root }).catch((e) => e)
+    eq('配置 · 打开硬拦后同一句话被拒', blocked?.code, 'style-blocking')
+
+    // ── 界面切写策略走 patch，不重启 ──
+    // setRuntimeConfig 是整体替换（apply 时用），所以先摆一个已知状态再 patch。
+    cfg.setRuntimeConfig({ scorePassMax: 45, historyKeep: 3 })
+    cfg.patchRuntimeConfig({ scorePassMax: 12 })
+    eq('配置 · patch 只改一项', cfg.getRuntimeConfig().scorePassMax, 12)
+    eq('配置 · patch 不动别的项', cfg.getRuntimeConfig().historyKeep, 3)
+    cfg.setRuntimeConfig({})
+  }
 
   // ══ 收官 ═════════════════════════════════════════════════
   console.log(`\n${'─'.repeat(52)}`)

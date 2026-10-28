@@ -1,11 +1,11 @@
-# 长夜 · dsh-changye
+# 长夜 · dsh-nightwrite
 
 AI 主写、人类当导演的 DSH 小说工作台插件。
 
-- 侧栏「插件」排里一个 🌙 图标，点开进中心列（`main` 槽位，`key='changye'`）
-- 数据落在 `~/.dsh/data/dsh-changye`（可用环境变量 `CHANGYE_ROOT` 覆盖）
-- 全部读写走同源 RPC：`POST /changye/api`，body `{ op, payload }`
-- 同时注册一个工具 `changye_op`，让 agent 直接读写同一份数据
+- 侧栏「插件」排里一个 🌙 图标，点开进中心列（`main` 槽位，`key='nightwrite'`）
+- 数据落在 `~/.dsh/data/dsh-nightwrite`（可用环境变量 `NIGHTWRITE_ROOT` 覆盖）
+- 全部读写走同源 RPC：`POST /nightwrite/api`，body `{ op, payload }`
+- 同时注册一个工具 `nightwrite_op`，让 agent 直接读写同一份数据
 
 ## 八个页面
 
@@ -35,7 +35,7 @@ AI 主写、人类当导演的 DSH 小说工作台插件。
 ## 目录
 
 ```
-index.js          服务端：112 个 RPC op、webServer 路由、tapIndex 注入 boot、changye_op / changye_dispatch
+index.js          服务端：119 个 RPC op、webServer 路由、tapIndex 注入 boot、nightwrite_op / nightwrite_dispatch
 lib/store.js      数据层：library.json / chapters/0001.txt / ledger.json / templates.json /
                   queue.json / outline.json / proposals.json / problems.json
 lib/client.js     客户端 bundle（由 build.mjs 从 src/ 拼出，勿手改）
@@ -51,17 +51,21 @@ src/52-worldmap.js 世界地图（第四视图，拖坐标 + 连线）
 src/60-scout.js   侦察
 src/70-settings.js 设置（含成书导出 / 检查更新 / 语料池）
 src/74-book.js    成书导出（TXT/MD/EPUB/DOCX）+ 检查更新
-src/85-css.js     全部样式（CHANGYE_CSS）
+src/85-css.js     全部样式（NIGHTWRITE_CSS）
 src/90-shell.js   顶栏 / 底栏 / 导航 / Root / apply
 build.mjs         拼接 src/*.js → lib/client.js，并补 factory 的 return
 test/smoke.mjs    迷你 React 渲染器冒烟（323 项）
-test/backend.mjs  真实后端端到端（554 项）
-test/check24.mjs  24 条界面增补的落点核对（38 处标记，覆盖 24/24）
+test/backend.mjs  真实后端端到端（709 项）
+test/check24.mjs  24 条界面增补的落点核对（36 处标记，覆盖 24/24）
 test/wordcount-parity.mjs 客户端 countChars 与服务端 countWords 逐例比对（11 项）
 test/skills-check.mjs 25 份 SKILL.md 的结构校验（377 项）
+test/hooks.mjs     React hook 顺序静态检查（46 项：先 return 后调 hook 会白屏，冒烟测不出来。
+                   自写扫描器认 if 块里的早退 + 调 eslint 的 rules-of-hooks 兜底，两套判据互相补漏）
+test/css-cover.mjs  界面上出现的每个 nw- 类在 CSS 里都有定义
+test/qa.mjs       全库自检（越界路径 / 未闭合标签 / 死代码）
 agents/           11 个岗位 Markdown（coordinator 独占 subagent 派单权）
 skills/           25 份 SKILL.md，每个技能一个目录
-changye-skills-all.md  25 份 SKILL.md 的合并本（便于整份复制/通读）
+nightwrite-skills-all.md  25 份 SKILL.md 的合并本（便于整份复制/通读）
 ```
 
 ## 开发
@@ -69,48 +73,64 @@ changye-skills-all.md  25 份 SKILL.md 的合并本（便于整份复制/通读�
 ```bash
 node build.mjs                                      # 重建 lib/client.js
 node --check index.js lib/store.js src/*.js         # 语法
-node test/backend.mjs                               # 554 项
+node test/backend.mjs                               # 709 项
 node test/smoke.mjs                                 # 323 项
 node test/check24.mjs                               # 24 条落点
 node test/wordcount-parity.mjs                      # 字数口径一致
+node test/hooks.mjs                                 # hook 顺序（防白屏）
+node test/css-cover.mjs                             # 类名都有样式
 ```
 
 改完源码后要同步到已装副本（`file:` 依赖不跟随源码热更新）：
 
 ```bash
-INST=~/.dsh/profiles/desktop/node_modules/dsh-changye
-node build.mjs && cp index.js package.json cordis.patch.yml build.mjs "$INST/" && cp lib/*.js "$INST/lib/"
+INST=~/.dsh/profiles/desktop/node_modules/dsh-nightwrite
+node build.mjs
+cp -f index.js package.json cordis.patch.yml build.mjs README.md LICENSE "$INST/"
+for f in lib/*.js; do cp -f "$f" "$INST/lib/$(basename "$f")"; done
+for f in src/*.js; do cp -f "$f" "$INST/$f"; done
+for f in test/*.mjs; do cp -f "$f" "$INST/$f"; done
+rm -rf "$INST/skills" && cp -R skills "$INST/skills"     # 71 份 reference 在里面
+cp -R types locale .github "$INST/" 2>/dev/null
 ```
 
-## RPC op（112：读 53 / 写 59）
+同步完用 md5 对一遍，别信 `cp` 的退出码（多文件一次拷遇到硬链接会报
+`same file` 并整体失败，看起来像成功）：
 
-读 53：
-`ping` `project.list` `project.get` `overview` `chapter.list` `chapter.get`
-`chapter.history` `chapter.version` `chapter.trash` `chapter.aistyle`
+```bash
+for f in index.js lib/client.js lib/store.js skills/nightwrite-write-chapter/SKILL.md; do
+  a=$(md5sum "$f" | cut -d' ' -f1); b=$(md5sum "$INST/$f" 2>/dev/null | cut -d' ' -f1)
+  [ "$a" = "$b" ] && echo "OK $f" || echo "DIFF $f"
+done
+```
+
+## RPC op（119：读 60 / 写 59）
+
+读 60：
+`ping` `project.list` `project.get` `overview` `chapter.list`
+`chapter.get` `chapter.history` `chapter.version` `chapter.trash` `chapter.aistyle`
 `aistyle.get` `ledger.get` `templates.list` `queue.list` `outline.get`
 `outline.intent` `proposal.list` `proposal.preview` `problem.list` `search`
 `role.list` `dispatch.list` `dispatch.get` `report.list` `lint.rules`
-`lint.check` `lint.degenerate` `text.normalize` `outline.copy`
-`wordcount.check` `lint.calibration` `feedback.get` `corpus.list`
-`corpus.thresholds` `analyze.list` `analyze.get` `import.preview`
-`import.dir` `scan.list` `scan.get` `outline.slice` `taskpack.list`
-`taskpack.get` `ledger.audit` `state.get` `run.list` `run.get`
-`run.current` `map.get` `update.check` `coldread.list` `opinion.list`
-`briefing.get`
+`lint.check` `lint.degenerate` `text.normalize` `outline.copy` `wordcount.check`
+`lint.calibration` `feedback.get` `corpus.list` `corpus.thresholds` `analyze.list`
+`analyze.get` `import.preview` `import.dir` `scan.list` `scan.get`
+`outline.slice` `taskpack.list` `taskpack.get` `ledger.audit` `state.get`
+`run.list` `run.get` `run.current` `map.get` `update.check`
+`coldread.list` `opinion.list` `briefing.get` `aiscore.check` `fidelity.check`
+`anchor.index` `usage.scan` `usage.budget` `usage.models` `subagent.status`
 
 写 59：
-`project.create` `project.save` `project.delete` `chapter.save`
-`chapter.delete` `chapter.restore` `chapter.recover` `chapter.purge`
-`chapter.move` `chapter.insert` `aistyle.save` `lint.calibrate`
-`lint.calibrate.save` `feedback.learn` `corpus.add` `corpus.remove`
-`corpus.apply` `ledger.upsert` `ledger.remove` `ledger.save`
+`project.create` `project.save` `project.delete` `chapter.save` `chapter.delete`
+`chapter.restore` `chapter.recover` `chapter.purge` `chapter.move` `chapter.insert`
+`aistyle.save` `lint.calibrate` `lint.calibrate.save` `feedback.learn` `corpus.add`
+`corpus.remove` `corpus.apply` `ledger.upsert` `ledger.remove` `ledger.save`
 `template.save` `template.remove` `queue.add` `queue.update` `queue.remove`
 `review.action` `outline.save` `outline.generate` `map.sync` `map.save`
-`map.explain` `coldread.prepare` `opinion.save` `opinion.bulk`
-`opinion.decide` `opinion.remove` `opinion.collect` `coldread.submit`
-`proposal.save` `proposal.decide` `proposal.remove` `problem.save`
-`problem.resolve` `problem.remove` `dispatch.issue` `dispatch.send`
-`dispatch.revoke` `dispatch.sweep` `report.submit` `analyze.start`
+`map.explain` `coldread.prepare` `opinion.save` `opinion.bulk` `opinion.decide`
+`opinion.remove` `opinion.collect` `coldread.submit` `proposal.save` `proposal.decide`
+`proposal.remove` `problem.save` `problem.resolve` `problem.remove` `dispatch.issue`
+`dispatch.send` `dispatch.revoke` `dispatch.sweep` `report.submit` `analyze.start`
 `analyze.remove` `import.run` `scan.save` `scan.fetch` `taskpack.build`
 `run.open` `run.claim` `run.review` `run.close`
 
@@ -136,9 +156,9 @@ node build.mjs && cp index.js package.json cordis.patch.yml build.mjs "$INST/" &
 1. 流水线页选岗位、写任务、挂材料 → `dispatch.issue` 开票（落盘 `dispatches.json`，60 分钟有效）
 2. `dispatch.send` 把任务书投进对话（走宿主 `sessionController.prompt`），票记下 sessionId
 3. agent 干完用 `report.submit` 交回执，按 `### 结论 / 依据 / 要别人做的事 / 风险` 切段
-4. 只有 `changye-coordinator` 的 tools 里有 `subagent` —— 派单权集中在总编一个人手里
+4. 只有 `nightwrite-coordinator` 的 tools 里有 `subagent` —— 派单权集中在总编一个人手里
 
-`changye_dispatch` 工具让主对话里的 agent 自己开票：`send:false` 只开票不投递，方便先看任务书长什么样。
+`nightwrite_dispatch` 工具让主对话里的 agent 自己开票：`send:false` 只开票不投递，方便先看任务书长什么样。
 
 ## 文风校验（28 条规则）
 
@@ -243,9 +263,29 @@ node build.mjs && cp index.js package.json cordis.patch.yml build.mjs "$INST/" &
 1. **意见池不自动改稿。** 它记的是别人的话，改不改是作者的事。做成「一键采纳并重写」会让人分不清「AI 的意见」和「已经改好了」——一旦混起来，作者就没法再信任自己看到的正文。
 2. **地图不是第四种「看法」。** 只有「地点」这一类有坐标可言，人物和伏笔没有。所以它挂在世界库的视图切换里，但只在地点类目下出现。
 
+## 配置项（宿主设置页里能改，改完真生效）
+
+`index.js` 导出 `Config`，宿主据此画出设置表单。**每一项都接在真正用它的地方**——不是「有个输入框但没人读」。
+
+| 项 | 默认 | 接在哪 |
+|---|---|---|
+| `root` | 空（`~/.dsh/data/dsh-nightwrite`） | `apply()` 里一次定死，所有落盘路径的根 |
+| `scorePassMax` | 30 | `lib/aiscore.js` 的放行线；超过这个分 `chapter.save` 拒写 |
+| `historyKeep` | 20 | `lib/store.js` 的 `historyKeep()`，每章保留多少个历史版本 |
+| `dispatchTtlMin` | 60 | `lib/dispatch.js` 的票据有效期，过期后 agent 交不回执 |
+| `maxBodyBytes` | 8MB | `index.js` 的 `maxBody()`，请求体上限（413 提示里的数字跟着变） |
+| `aiStyleBlock` | true | `chapter.save` 是否硬拦 AI 味超标的正文；关掉只是不拦，分数照算 |
+| `writePolicy` | warn | 模型用**原生写工具**改正文时的默认策略：off 不管 / warn 放行但提醒 / enforce 直接拒绝 |
+
+三个刻意的取舍：
+
+1. **坏一项不影响别项。** 作者手填常常差一点（`scorePassMax: 300`、`writePolicy: ENFORCE`）。归一化把坏项退回默认并留一条 warning，而不是让插件带着 NaN 跑。超范围直接退回默认而不夹到边界——warning 说「已用默认 30」，实际就该是 30。
+2. **`aiStyleBlock` 只有明确的 `false` 才算关。** 手填 `"no"` / `0` / 空串都当没填。「关掉硬拦」是个会让脏稿直接落盘的决定，不该由一次手误达成。
+3. **`root` 改了不会搬数据。** 它决定「以后往哪写」，不负责迁移老作品；已有作品还用原来的目录。
+
 ## 安全边界
 
 - 所有落盘路径都先过 `projectDir()` 的越界检查，拒绝 `..` 与绝对路径注入
-- 请求体上限 8MB，超限先 `drain` 再回 413（否则客户端拿到 ECONNRESET 而非错误码）
+- 请求体上限默认 8MB（配置项 `maxBodyBytes` 可改），超限先 `drain` 再回 413（否则客户端拿到 ECONNRESET 而非错误码）
 - 非 JSON content-type → 415；坏 JSON → 400；未知 op → 400 并列出可用 op
 - boot 注入做 `< > & U+2028 U+2029` 转义，插件字符串无法逃出 script 元素

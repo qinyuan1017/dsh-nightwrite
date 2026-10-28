@@ -75,35 +75,35 @@ function LedgerTable({
   const grid = `grid-template-columns:${cols.map((col) => col.width).join(' ')} 84px`
   return h(
     'div',
-    { className: 'cy-table' },
+    { className: 'nw-table' },
     h(
       'div',
-      { className: 'cy-table-head', style: { gridTemplateColumns: grid } },
+      { className: 'nw-table-head', style: { gridTemplateColumns: grid } },
       cols.map((col) => h('span', { key: col.key }, col.label)),
       h('span', null, '操作'),
     ),
     rows.length
       ? rows.map((row) => h(
         'div',
-        { className: 'cy-table-row', style: { gridTemplateColumns: grid }, key: row.id },
+        { className: 'nw-table-row', style: { gridTemplateColumns: grid }, key: row.id },
         cols.map((col, index) => h(
           // 【24 条 #18】账本每格可点开看出处。不信账本的人不敢用账本。
           'button',
           {
             type: 'button',
             key: col.key,
-            className: `cy-td-cell${index === 0 ? ' cy-td-strong' : ''}`,
+            className: `nw-td-cell${index === 0 ? ' nw-td-strong' : ''}`,
             title: '点开看这一格是从哪回哪句话来的',
             onClick: () => onSource?.({ kind, key: col.key, label: col.label, value: row[col.key], row }),
           },
-          h('span', { className: 'cy-td-value' }, String(row[col.key] ?? '—')),
-          h('span', { className: 'cy-td-pin' }, '⤴'),
+          h('span', { className: 'nw-td-value' }, String(row[col.key] ?? '—')),
+          h('span', { className: 'nw-td-pin' }, '⤴'),
         )),
         h(
           'span',
-          { className: 'cy-td-acts' },
-          h('button', { type: 'button', className: 'cy-link', onClick: () => onEdit(row) }, '改'),
-          h('button', { type: 'button', className: 'cy-link cy-link-danger', onClick: () => onDelete(row) }, '删'),
+          { className: 'nw-td-acts' },
+          h('button', { type: 'button', className: 'nw-link', onClick: () => onEdit(row) }, '改'),
+          h('button', { type: 'button', className: 'nw-link nw-link-danger', onClick: () => onDelete(row) }, '删'),
         ),
       ))
       : h(Empty, null, '这一类还没有条目。'),
@@ -148,15 +148,15 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
 
   return h(
     'div',
-    { className: 'cy-graph' },
+    { className: 'nw-graph' },
     h(
       'div',
-      { className: 'cy-graph-bar' },
+      { className: 'nw-graph-bar' },
       h(
         'button',
         {
           type: 'button',
-          className: `cy-seg-btn${onlyRecent ? ' on' : ''}`,
+          className: `nw-seg-btn${onlyRecent ? ' on' : ''}`,
               'aria-pressed': onlyRecent ? 'true' : 'false',
           onClick: () => {
             setOnlyRecent(!onlyRecent)
@@ -175,13 +175,13 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
           all.slice(0, 12).map((row) => ({ value: String(row.name), label: String(row.name) })),
         ),
       }),
-      h('span', { className: 'cy-hint' }, `画 ${chars.length} / ${all.length} 个`),
+      h('span', { className: 'nw-hint' }, `画 ${chars.length} / ${all.length} 个`),
     ),
     chars.length === 0
       ? h(Empty, null, '这个筛选下没有人出场。放宽一点再看。')
       : h(
         'svg',
-        { viewBox: `0 0 ${W} ${H}`, className: 'cy-graph-svg' },
+        { viewBox: `0 0 ${W} ${H}`, className: 'nw-graph-svg' },
         nodes.slice(1).map((node, index) => h('line', {
           key: `line-${index}`,
           x1: nodes[0].x,
@@ -197,7 +197,7 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
           { key: node.row.id ?? index, onClick: () => onPick?.(node.row), style: { cursor: 'pointer' } },
           h('circle', {
             cx: node.x,
-            cy: node.y,
+            nw: node.y,
             r: node.r,
             fill: index === 0 ? 'rgba(217,160,84,.18)' : 'rgba(127,135,146,.14)',
             stroke: index === 0 ? '#d9a054' : toneOf(node.row.role ?? node.row.state),
@@ -207,17 +207,17 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
             x: node.x,
             y: node.y + 4,
             textAnchor: 'middle',
-            className: 'cy-graph-text',
+            className: 'nw-graph-text',
           }, String(node.row.name ?? '').slice(0, 5)),
           h('text', {
             x: node.x,
             y: node.y + node.r + 14,
             textAnchor: 'middle',
-            className: 'cy-graph-sub',
+            className: 'nw-graph-sub',
           }, String(node.row.role ?? '').slice(0, 8)),
         )),
       ),
-    h('p', { className: 'cy-hint' }, '中心是主角，连线颜色按「定位」自动上色（敌红 / 盟绿 / 亲琥珀）。点节点可改。'),
+    h('p', { className: 'nw-hint' }, '中心是主角，连线颜色按「定位」自动上色（敌红 / 盟绿 / 亲琥珀）。点节点可改。'),
   )
 }
 
@@ -233,41 +233,41 @@ function TimelineView({ ledger, chapters, toast, onJump }) {
   const max = Math.max(...events.map((row) => Number(row.chapter) || 1), current)
   return h(
     'div',
-    { className: 'cy-timeline' },
+    { className: 'nw-timeline' },
     overdue.length
       ? h(
         'div',
-        { className: 'cy-tl-overdue' },
-        h('span', { className: 'cy-tl-overdue-title' }, `⚠ ${overdue.length} 条伏笔逾期`),
+        { className: 'nw-tl-overdue' },
+        h('span', { className: 'nw-tl-overdue-title' }, `⚠ ${overdue.length} 条伏笔逾期`),
         overdue.map((row) => h(
           'button',
           {
             type: 'button',
             key: row.id ?? row.name,
-            className: 'cy-tl-overdue-row',
+            className: 'nw-tl-overdue-row',
             onClick: () => {
               toast?.(`「${row.name}」本该在第 ${row.plan} 回收，现在写到第 ${current} 回还没收`)
               onJump?.(row.plan)
             },
           },
-          h('span', { className: 'cy-tl-overdue-name' }, row.name ?? '(未命名伏笔)'),
-          h('span', { className: 'cy-tl-overdue-sub' }, `计划第 ${row.plan} 回 · 已逾期 ${current - row.plan} 回`),
+          h('span', { className: 'nw-tl-overdue-name' }, row.name ?? '(未命名伏笔)'),
+          h('span', { className: 'nw-tl-overdue-sub' }, `计划第 ${row.plan} 回 · 已逾期 ${current - row.plan} 回`),
         )),
       )
-      : h('div', { className: 'cy-tl-ok' }, '✓ 没有逾期伏笔'),
-    h('div', { className: 'cy-tl-rail' }),
+      : h('div', { className: 'nw-tl-ok' }, '✓ 没有逾期伏笔'),
+    h('div', { className: 'nw-tl-rail' }),
     events.map((row, index) => h(
       'div',
-      { className: 'cy-tl-row', key: row.id ?? index },
-      h('span', { className: 'cy-tl-dot' }),
-      h('span', { className: 'cy-tl-n' }, `第 ${row.chapter ?? '?'} 回`),
+      { className: 'nw-tl-row', key: row.id ?? index },
+      h('span', { className: 'nw-tl-dot' }),
+      h('span', { className: 'nw-tl-n' }, `第 ${row.chapter ?? '?'} 回`),
       h(
         'span',
-        { className: 'cy-tl-body' },
-        h('span', { className: 'cy-tl-title' }, row.name ?? '(未命名事件)'),
-        h('span', { className: 'cy-tl-sub' }, [row.actors, row.kind].filter(Boolean).join(' · ')),
+        { className: 'nw-tl-body' },
+        h('span', { className: 'nw-tl-title' }, row.name ?? '(未命名事件)'),
+        h('span', { className: 'nw-tl-sub' }, [row.actors, row.kind].filter(Boolean).join(' · ')),
       ),
-      h('span', { className: 'cy-tl-bar' }, h('i', {
+      h('span', { className: 'nw-tl-bar' }, h('i', {
         style: { width: `${Math.min(100, ((Number(row.chapter) || 1) / max) * 100)}%` },
       })),
     )),
@@ -318,14 +318,14 @@ function WorldPage({
 
   return h(
     'div',
-    { className: 'cy-page cy-world' },
+    { className: 'nw-page nw-world' },
     h(
       'div',
-      { className: 'cy-ws-banner' },
-      h('span', { className: 'cy-ws-label' }, '世界状态'),
+      { className: 'nw-ws-banner' },
+      h('span', { className: 'nw-ws-label' }, '世界状态'),
       h(
         'span',
-        { className: 'cy-ws-text' },
+        { className: 'nw-ws-text' },
         ws?.text
           ? String(ws.text)
           : '还没有世界状态快照。它是防漂移的锚：每采纳一章，长夜把「到现在为止世界是什么样」压成一段话存这里。',
@@ -334,33 +334,33 @@ function WorldPage({
     ),
     h(
       'div',
-      { className: 'cy-world-body' },
+      { className: 'nw-world-body' },
       h(
         'div',
-        { className: 'cy-world-nav' },
+        { className: 'nw-world-nav' },
         LEDGER_TABS.map((tab) => h(
           'button',
           {
             type: 'button',
             key: tab.value,
-            className: `cy-world-nav-btn${kind === tab.value ? ' on' : ''}`,
+            className: `nw-world-nav-btn${kind === tab.value ? ' on' : ''}`,
             onClick: () => setKind(tab.value),
           },
-          h('span', { className: 'cy-world-nav-icon' }, tab.icon),
+          h('span', { className: 'nw-world-nav-icon' }, tab.icon),
           h('span', null, tab.label),
-          h('span', { className: 'cy-world-nav-n' }, String((ledger[tab.value] ?? []).length)),
+          h('span', { className: 'nw-world-nav-n' }, String((ledger[tab.value] ?? []).length)),
         )),
-        h('div', { className: 'cy-world-nav-foot' }, `共 ${totalItems} 条`),
+        h('div', { className: 'nw-world-nav-foot' }, `共 ${totalItems} 条`),
       ),
       h(
         'div',
-        { className: 'cy-world-main' },
+        { className: 'nw-world-main' },
         h(
           'div',
-          { className: 'cy-world-bar' },
+          { className: 'nw-world-bar' },
           h(
             'div',
-            { className: 'cy-seg' },
+            { className: 'nw-seg' },
             [
               { value: 'table', label: '表格' },
               { value: 'graph', label: '关系图' },
@@ -373,7 +373,7 @@ function WorldPage({
               {
                 type: 'button',
                 key: item.value,
-                className: `cy-seg-btn${view === item.value ? ' on' : ''}`,
+                className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
               'aria-pressed': view === item.value ? 'true' : 'false',
                 onClick: () => setView(item.value),
               },
@@ -382,7 +382,7 @@ function WorldPage({
           ),
           h(
             'div',
-            { className: 'cy-actions' },
+            { className: 'nw-actions' },
             h(Btn, { small: true, kind: 'ghost', onClick: led.reload }, '刷新'),
             h(Btn, { small: true, kind: 'primary', onClick: () => setEdit({}) }, '＋ 新增'),
           ),

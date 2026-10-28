@@ -2,9 +2,9 @@
  * 长夜 · 服务端（Cordis 插件）
  *
  * 只做三件事：
- *   1. 把 /changye/api 挂到宿主 webServer（prefix 路由）
+ *   1. 把 /nightwrite/api 挂到宿主 webServer（prefix 路由）
  *   2. 每个请求交由 handleRpc 按 op 分派到 lib/store.js
- *   3. 注册一个工具 changye_op，让 agent 也能读写同一份数据
+ *   3. 注册一个工具 nightwrite_op，让 agent 也能读写同一份数据
  *
  * 不做鉴权逻辑：交给宿主的 connection.requestRejection，回退到回环兜底。
  */
@@ -36,17 +36,33 @@ import * as aiscore from './lib/aiscore.js'
 import * as fidelity from './lib/fidelity.js'
 import * as anchors from './lib/anchors.js'
 import * as usage from './lib/usage.js'
+import * as spawn from './lib/spawn.js'
+import * as configLib from './lib/config.js'
 
 // agents/ 与本文件同目录；派单任务书里要给它绝对路径，模型才不会猜。
 const REPO_ROOT = path.dirname(fileURLToPath(import.meta.url))
 
-export const name = 'changye'
+export const name = 'nightwrite'
 export const inject = ['tools', 'subagents']
 export const VERSION = '0.1.0'
-export const ROUTE = '/changye/api'
-export const TOOL_NAME = 'changye_op'
+export const ROUTE = '/nightwrite/api'
+export const TOOL_NAME = 'nightwrite_op'
 
-const MAX_BODY = 8 * 1024 * 1024
+/**
+ * 单次请求体上限。
+ *
+ * 为什么是函数不是常量：`maxBodyBytes` 是配置项。常量在这里的意思是
+ * 「改配置不生效」——设置页填了 32MB，服务端还按 8MB 拒，作者只会觉得配置坏了。
+ */
+function maxBody() {
+  const n = Number(configLib.getRuntimeConfig().maxBodyBytes)
+  return Number.isFinite(n) && n > 0 ? n : 8 * 1024 * 1024
+}
+
+/** 8MB 这类数字给人看的样子：整 MB 就写 8MB，零头才写 KB。 */
+function mbText(bytes) {
+  return bytes % (1024 * 1024) === 0 ? `${bytes / 1024 / 1024}MB` : `${Math.round(bytes / 1024)}KB`
+}
 
 export class RpcError extends Error {
   constructor(message, code = 'invalid', details = null) {
@@ -123,6 +139,7 @@ export const READ_OPS = [
   'usage.scan',
   'usage.budget',
   'usage.models',
+  'subagent.status',
 ]
 
 export const WRITE_OPS = [
@@ -214,7 +231,7 @@ function needProjectId(payload = {}) {
  * 为什么不自己拼 HTTP 请求：宿主的 sessionController 是唯一的投递口，
  * 绕过它就得自己处理排队、鉴权、子代理路由，全是坑。
  */
-async function sendDispatch(dir, payload = {}, ctx = {}) {
+async function sendDispatch(dir, payload = {}, ctx = {}, options = {}) {
   const id = String(payload.id ?? '').trim()
   if (!id) invalid('缺少派单票据 id')
   const ticket = await dispatch.getDispatch(dir, id)
@@ -266,7 +283,86 @@ async function sendDispatch(dir, payload = {}, ctx = {}) {
     invalid('宿主里没有可用会话（现有会话都是子代理会话），且无法新建；可以把任务书复制出去手工发')
   }
 
-  const requestId = globalThis.crypto?.randomUUID?.() ?? `cy-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  // ── 真派子代理（第 2 条）────────────────────────────────
+  // 优先走宿主原生 subagent：子代理有独立上下文、有人格、有工具白名单，
+  // 不和作者的对话混在一起。宿主不支持或手里没有活着的父代理时，退回写会话。
+  if (payload.spawn) {
+    const ready = spawn.canSpawn(ctx, options.parent)
+    if (!ready.ok) {
+      if (payload.spawn === 'only') invalid(`不能派子代理：${ready.reason}`)
+      // 退回会话投递，但把原因带回去，免得界面以为「派了」其实只是发了个消息。
+      const fallbackReason = ready.reason
+      const sent = await sendToSession(dir, id, payload, ctx, ticket, prompt, handoff)
+      return { ...sent, spawned: false, spawnReason: fallbackReason }
+    }
+    try {
+      const run = await spawn.spawnRole(ctx, {
+        parent: options.parent,
+        role: ticket.role,
+        repoRoot: REPO_ROOT,
+        label: `${ticket.role} · ${ticket.id}`,
+        prompt,
+        cwd: options.cwd ?? options.parent?.session?.header?.cwd,
+      })
+      await dispatch.markDelivered(dir, id, run.childId)
+      const output = await run.result.catch((error) => ({
+        stopReason: 'error',
+        diagnostic: String(error?.message ?? error),
+      }))
+      await run.dispose()
+      const text = Array.isArray(output?.output)
+        ? output.output.map((block) => (block?.type === 'text' ? block.text : '')).join('\n').trim()
+        : ''
+      let settled = null
+      if (text) {
+        try {
+          settled = await dispatch.submitReport(dir, id, { report: text })
+        } catch {
+          // 回执格式不合规不该让派单算失败：票已经 delivered，正文能看就行。
+        }
+      }
+      return {
+        sent: true,
+        spawned: true,
+        childId: run.childId,
+        role: run.role,
+        allow: run.allow,
+        personaOk: run.personaOk,
+        personaApplied: run.personaApplied,
+        stopReason: output?.stopReason ?? '',
+        diagnostic: output?.diagnostic ?? '',
+        report: text,
+        ticket: settled ?? await dispatch.getDispatch(dir, id),
+        prompt,
+      }
+    } catch (error) {
+      const message = `派子代理失败：${error?.message ?? error}`
+      if (payload.spawn === 'only') {
+        await dispatch.markDeliveryFailed(dir, id, message)
+        throw new RpcError(message, error?.code ?? 'spawn-failed')
+      }
+      const sent = await sendToSession(dir, id, payload, ctx, ticket, prompt)
+      return { ...sent, spawned: false, spawnReason: message }
+    }
+  }
+
+  // handoff 把「会话投递需要的东西」打包交出去。
+  // 不这么做的话 sendToSession 拿不到 controller —— 它是另一个函数的局部变量，
+  // 靠作用域巧合能编译、但一跑就 ReferenceError。见文件末尾那段注释。
+  const handoff = { controller, sessionId, candidates, createSession }
+  return sendToSession(dir, id, payload, ctx, ticket, prompt, handoff)
+}
+
+/**
+ * 老路：把任务书写进某个已有对话。
+ *
+ * 留着不是念旧——派子代理要宿主支持 spawn provider，
+ * 而且必须从工具里发起（RPC 路由手里没有 Agent）。
+ * 命令行、脚本、旧宿主都得有条能干活的退路。
+ */
+async function sendToSession(dir, id, payload, ctx, ticket, prompt, handoff) {
+  const { controller, sessionId, candidates, createSession } = handoff
+  const requestId = globalThis.crypto?.randomUUID?.() ?? `nw-${Date.now()}-${Math.random().toString(16).slice(2)}`
   const deliver = (target) => controller.prompt({
     requestId,
     sessionId: target,
@@ -281,7 +377,7 @@ async function sendDispatch(dir, payload = {}, ctx = {}) {
     try {
       await deliver(target)
       const marked = await dispatch.markDelivered(dir, id, target)
-      return { sent: true, sessionId: target, created, prompt, ticket: marked }
+      return { sent: true, sessionId: target, created: false, prompt, ticket: marked }
     } catch (error) {
       failures.push(`${target}：${error?.message ?? error}`)
     }
@@ -378,7 +474,10 @@ async function handleRpcCore(op, payload, ctx, options, root) {
       // 硬拦：正文里出现元叙述、对偶否定这类「写出来就是错」的东西，不给存。
       // 只拦 blocking 一档；advisory 一律放行，让人自己决定改不改。
       // 想强行存（导旧稿、修标点）传 force: true。
-      if (payload.force !== true && payload.lint !== false) {
+      // `aiStyleBlock: false` 是「我就是要存，别拦」的总开关；它和 payload.force
+      // 的区别是前者按作者习惯长期生效，后者是这一次。两者任一都放行。
+      const styleBlocked = configLib.getRuntimeConfig().aiStyleBlock !== false
+      if (styleBlocked && payload.force !== true && payload.lint !== false) {
         const blocking = lint.checkBlocking(payload.text, {
           whitelist: Array.isArray(payload.whitelist) ? payload.whitelist : [],
         })
@@ -872,6 +971,12 @@ async function handleRpcCore(op, payload, ctx, options, root) {
       return { prices: usage.DEFAULT_PRICES, charsPerToken: usage.CHARS_PER_TOKEN, models: Object.keys(usage.DEFAULT_PRICES) }
     }
 
+    // 派单能力自检：宿主支不支持 spawn、哪个岗位派下去它有什么工具。
+    // 界面拿这个决定「派给某某」按钮是亮的还是灰的，别让作者点了才报错。
+    case 'subagent.status': {
+      return spawn.spawnCatalog(ctx, options.parent)
+    }
+
     // 冷读回执：交回来的是一段结论 + 一堆「第几回哪里不好」。
     // 顺手把 items 灌进意见池，作者不用再从回执里手工抄一遍。
     case 'coldread.submit': {
@@ -884,7 +989,7 @@ async function handleRpcCore(op, payload, ctx, options, root) {
       if (items.length) {
         pooled = await opinions.bulkAdd(root, projectId, {
           source: 'coldread',
-          role: 'changye-reader-proxy',
+          role: 'nightwrite-reader-proxy',
           createdBy: 'coldread',
           items,
         })
@@ -894,7 +999,7 @@ async function handleRpcCore(op, payload, ctx, options, root) {
         chapter: Number(items[0]?.chapter ?? payload.chapter ?? 0) || 0,
         para: 0,
         source: 'coldread',
-        role: 'changye-reader-proxy',
+        role: 'nightwrite-reader-proxy',
         kind: 'note',
         status: 'open',
         severity: 'note',
@@ -1013,7 +1118,7 @@ async function handleRpcCore(op, payload, ctx, options, root) {
     case 'dispatch.send': {
       const projectId = needProjectId(payload)
       const dir = await store.projectDir(root, projectId)
-      return sendDispatch(dir, payload, ctx)
+      return sendDispatch(dir, payload, ctx, options)
     }
 
     case 'dispatch.revoke': {
@@ -1297,7 +1402,7 @@ async function readBody(req) {
   let size = 0
   for await (const chunk of req) {
     size += chunk.length
-    if (size > MAX_BODY) throw new BodyTooLarge('请求体超过 8MB')
+    if (size > maxBody()) throw new BodyTooLarge(`请求体超过 ${mbText(maxBody())}`)
     chunks.push(chunk)
   }
   if (!chunks.length) return {}
@@ -1351,11 +1456,11 @@ export function createHandler(ctx = {}, options = {}) {
       }
       return
     }
-    // GET /changye/api/export?projectId=... 直接回一个 zip 字节流。
+    // GET /nightwrite/api/export?projectId=... 直接回一个 zip 字节流。
     // 不走 POST + base64：几十 MB 的 base64 塞进 JSON 再让浏览器二次解码，
     // 峰值内存翻三倍，而且 <a download> 拿 blob 更方便。
     if (req.method === 'GET' && url.pathname.replace(/\/+$/, '').endsWith('/book')) {
-      // GET /changye/api/book?projectId=...&format=epub 直接回成书字节。
+      // GET /nightwrite/api/book?projectId=...&format=epub 直接回成书字节。
       // 与 /export 的区别：/export 是「把整个项目目录打包带走」（备份/迁移），
       // /book 是「把正文排成一本书」（给人读）。两者不共用一条路由，
       // 因为前者要目录结构，后者要的是干净的章节顺序与元信息。
@@ -1391,10 +1496,10 @@ export function createHandler(ctx = {}, options = {}) {
           'content-length': String(rendered.buffer.length),
           'content-disposition': `attachment; filename="${encodeURIComponent(rendered.filename)}"; filename*=UTF-8''${encodeURIComponent(rendered.filename)}`,
           'cache-control': 'no-store',
-          'x-changye-chapters': String(book.chapters.length),
-          'x-changye-words': String(book.words),
-          'x-changye-skipped': String(rows.length - chapters.length),
-          'x-changye-format': format,
+          'x-nightwrite-chapters': String(book.chapters.length),
+          'x-nightwrite-words': String(book.words),
+          'x-nightwrite-skipped': String(rows.length - chapters.length),
+          'x-nightwrite-format': format,
         })
         res.end(rendered.buffer)
       } catch (error) {
@@ -1417,8 +1522,8 @@ export function createHandler(ctx = {}, options = {}) {
           'content-length': String(buffer.length),
           'content-disposition': `attachment; filename="${encodeURIComponent(name)}"`,
           'cache-control': 'no-store',
-          'x-changye-files': String(count),
-          'x-changye-dir': encodeURIComponent(dir),
+          'x-nightwrite-files': String(count),
+          'x-nightwrite-dir': encodeURIComponent(dir),
         })
         res.end(buffer)
       } catch (error) {
@@ -1439,10 +1544,10 @@ export function createHandler(ctx = {}, options = {}) {
     // 不能直接 req.destroy()——客户端还有几 MB 在上传，服务端一销毁 socket，
     // 客户端拿到的是 ECONNRESET 而不是那个 413，等于错误码丢了。
     const declared = Number(req.headers?.['content-length'] ?? 0)
-    if (Number.isFinite(declared) && declared > MAX_BODY) {
+    if (Number.isFinite(declared) && declared > maxBody()) {
       await drain(req)
       res.setHeader('connection', 'close')
-      sendJson(res, 413, { ok: false, error: { code: 'invalid', message: `请求体超过 ${MAX_BODY / 1024 / 1024}MB` } })
+      sendJson(res, 413, { ok: false, error: { code: 'invalid', message: `请求体超过 ${mbText(maxBody())}` } })
       return
     }
     try {
@@ -1471,12 +1576,12 @@ function safeSerialize(value) {
   }[char]))
 }
 
-/** 把 window.__CHANGYE_BOOT__ 插到 </head> 前（幂等） */
+/** 把 window.__NIGHTWRITE_BOOT__ 插到 </head> 前（幂等） */
 export function injectBoot(html, options = {}) {
   const source = String(html ?? '')
-  if (source.includes('window.__CHANGYE_BOOT__')) return source
+  if (source.includes('window.__NIGHTWRITE_BOOT__')) return source
   const boot = { apiUrl: String(options.apiUrl ?? ROUTE), name, version: VERSION }
-  const tag = `<script>window.__CHANGYE_BOOT__=${safeSerialize(boot)}</script>`
+  const tag = `<script>window.__NIGHTWRITE_BOOT__=${safeSerialize(boot)}</script>`
   if (/<\/head\s*>/i.test(source)) return source.replace(/<\/head\s*>/i, `${tag}</head>`)
   return `${tag}${source}`
 }
@@ -1523,7 +1628,7 @@ export function mountRoute(ctx) {
             /* 已清理 */
           }
         }
-      }, 'changye: route')
+      }, 'nightwrite: route')
     }
   })
 }
@@ -1554,7 +1659,7 @@ const TOOL_DESCRIPTION = [
   '  dispatch.send 把任务书投递到对话，对话里的模型会自己读手册；',
   '  dispatch.list 看票的状态（issued / claimed / submitted / expired / revoked）；',
   '· report.submit 交回执（### 结论 / 依据 / 要别人做的事 / 风险 四段），report.list 看历史回执；',
-  '  只有总编（changye-coordinator）有派单权，其余岗位需要配合时把需求写进回执。',
+  '  只有总编（nightwrite-coordinator）有派单权，其余岗位需要配合时把需求写进回执。',
   '',
   '文风校验（比作者自己的词表更硬的一层）：',
   '· lint.rules 看规则表（blocking 硬拦 / advisory 提示，各带 review 归类）；',
@@ -1582,7 +1687,7 @@ const TOOL_DESCRIPTION = [
   '别从第一章开始重读，也别凭印象猜进度。',
 ].join('\n')
 
-export function createTool(root) {
+export function createTool(root, pluginCtx = null) {
   return {
     name: TOOL_NAME,
     description: TOOL_DESCRIPTION,
@@ -1590,8 +1695,14 @@ export function createTool(root) {
       op: { type: 'string', required: true, description: `操作名，取值：${RPC_OPS.join(', ')}` },
       payload: { type: 'object', description: '操作参数（projectId 必填，除 project.list / project.create / ping）' },
     },
-    async execute(args = {}) {
-      const value = await handleRpc({ op: args.op, payload: args.payload ?? {} }, {}, { root })
+    async execute(args = {}, exec = undefined) {
+      // exec.agent 是「当前这个活着的父代理」。派子代理必须拿到它：
+      // 宿主 startActivation 会校验 parent 就是 agents 注册表里那个实例。
+      const value = await handleRpc(
+        { op: args.op, payload: args.payload ?? {} },
+        pluginCtx ?? {},
+        { root, parent: exec?.agent },
+      )
       return value
     },
   }
@@ -1611,9 +1722,9 @@ const DISPATCH_TOOL_DESCRIPTION = [
   '返回里带 sessionId 时说明已经进了某个对话；send:false 时不投递，只开票留档。',
 ].join('\n')
 
-export function createDispatchTool(root) {
+export function createDispatchTool(root, pluginCtx = null) {
   return {
-    name: 'changye_dispatch',
+    name: 'nightwrite_dispatch',
     description: DISPATCH_TOOL_DESCRIPTION,
     parameters: {
       projectId: { type: 'string', required: true, description: '作品 id（project.list 可取）' },
@@ -1621,46 +1732,93 @@ export function createDispatchTool(root) {
       task: { type: 'string', required: true, description: '要它做什么（一句话到一段话，写清交付物）' },
       chapter: { type: 'number', description: '章号，做某一章的事时填' },
       materials: { type: 'string', description: '附带给它的材料：正文片段、账本条目、审校意见等' },
+      extra: { type: 'object', description: '任务包额外材料（键值对，落盘到 pack 目录）' },
+      pack: { type: 'boolean', description: 'false = 不落材料包，材料直接写进任务书（不推荐，长书会撑爆）' },
       dryRun: { type: 'boolean', description: 'true = 只生成任务书不投递，用来预览' },
       send: { type: 'boolean', description: 'false = 只开票不投递（留档，之后可在界面点发送）' },
       sessionId: { type: 'string', description: '投递到哪个对话；不填则自动挑最近的普通会话' },
       workspaceId: { type: 'string', description: '没有可用会话时新建会话需要的工作区 id' },
+      spawn: {
+        type: 'string',
+        description: '\'auto\' 或 true = 优先派独立子代理（推荐）；\'only\' = 派不了就报错，不退回会话；不填 = 老路写会话',
+      },
     },
-    async execute(args = {}) {
+    async execute(args = {}, exec = undefined) {
       const projectId = needProjectId(args)
       const dir = await store.projectDir(root, projectId)
+      // pack 默认开：材料落盘、prompt 只给清单。这是派单能撑住长书的唯一原因。
+      let materials = args.materials
+      let packInfo = null
+      if (args.pack !== false) {
+        const built = await taskpack.buildTaskPack(root, projectId, {
+          role: args.role,
+          chapter: args.chapter,
+          task: args.task,
+          extra: args.extra,
+        })
+        packInfo = { pack: built.pack, dir: built.dir }
+        const section = taskpack.packPromptSection(built)
+        materials = materials ? `${materials}\n\n${section}` : section
+      }
       const ticket = await dispatch.issueDispatch(dir, {
         role: args.role,
         task: args.task,
-        materials: args.materials,
+        materials,
+        pack: packInfo?.pack ?? '',
+        packDir: packInfo?.dir ?? '',
         chapter: args.chapter,
       })
       if (args.send === false) {
         return { ticket, sent: false, prompt: dispatch.buildDispatchPrompt(ticket, { repoRoot: REPO_ROOT }) }
       }
-      return sendDispatch(dir, { id: ticket.id, dryRun: args.dryRun, sessionId: args.sessionId, workspaceId: args.workspaceId }, {})
+      return sendDispatch(
+        dir,
+        {
+          id: ticket.id,
+          dryRun: args.dryRun,
+          sessionId: args.sessionId,
+          workspaceId: args.workspaceId,
+          spawn: args.spawn,
+        },
+        pluginCtx ?? {},
+        { parent: exec?.agent, cwd: exec?.agent?.session?.header?.cwd },
+      )
     },
   }
 }
 
+/**
+ * 配置 schema。
+ *
+ * 宿主只在**插件入口**找 `export const Config`，所以真正定义在 lib/config.js、
+ * 这里原样转发——不是两套 schema，是一套挂两个位置。
+ * 宿主拿它画设置表单、校验用户填的值；`apply()` 拿到的就是校验后的对象。
+ */
+export const Config = configLib.Config
+
 export function apply(ctx, config = {}) {
   mountRoute(ctx)
-  const root = String(config.root ?? '').trim() || store.defaultRoot()
+  // 先归一化再落槽：作者手填的东西常常差一点（30 写成 300、on 写成 yes），
+  // 归一化会把坏项退回默认并留一条 warning，而不是让插件带着 NaN 跑。
+  const { value, warnings } = configLib.normalizeConfig(config)
+  configLib.setRuntimeConfig(value, warnings)
+  for (const line of warnings) console.warn(`[nightwrite] 配置：${line}`)
+  const root = String(value.root ?? '').trim() || store.defaultRoot()
   // 原生写工具绕不过 RPC 的那一层，靠钩子补：pre 按项目策略拦，post 追提醒与分数。
   const guard = hooks.registerWriteGuard(ctx, { root })
   if (guard.pre || guard.post) {
-    console.log(`[changye] 写入守卫已挂载 pre=${guard.pre} post=${guard.post}`)
+    console.log(`[nightwrite] 写入守卫已挂载 pre=${guard.pre} post=${guard.post}`)
   }
   if (ctx && typeof ctx.tools?.register === 'function') {
     try {
-      ctx.tools.register(createTool(root))
+      ctx.tools.register(createTool(root, ctx))
     } catch (error) {
-      console.warn('[changye] 工具注册失败', error)
+      console.warn('[nightwrite] 工具注册失败', error)
     }
     try {
-      ctx.tools.register(createDispatchTool(root))
+      ctx.tools.register(createDispatchTool(root, ctx))
     } catch (error) {
-      console.warn('[changye] 派单工具注册失败', error)
+      console.warn('[nightwrite] 派单工具注册失败', error)
     }
   }
 }
