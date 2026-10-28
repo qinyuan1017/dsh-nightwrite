@@ -7,6 +7,17 @@ AI 主写、人类当导演的 DSH 小说工作台插件。
 - 全部读写走同源 RPC：`POST /nightwrite/api`，body `{ op, payload }`
 - 同时注册一个工具 `nightwrite_op`，让 agent 直接读写同一份数据
 
+## 安装
+
+```bash
+dsh plugin --profile desktop add dsh-nightwrite       # 从 npm
+# 或者从本仓库直接装（开发态）：
+dsh plugin --profile desktop add file:C:/path/to/dsh-nightwrite
+```
+
+`lib/client.js` 是入库产物（宿主装载时不跑构建），clone 下来直接就能用；
+改完 `src/*.js` 记得 `node build.mjs` 再提交，CI 会拿 `git diff --exit-code lib/client.js` 卡这一步。
+
 ## 八个页面
 
 | 页 | key | 干什么 |
