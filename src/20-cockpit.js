@@ -11,6 +11,25 @@
  * [{index,title,from,to,chapters:[{chapter,status}]}]。这里做一次转换，
  * 顺便把「已采纳」的章算成 done —— 进度条的分母是规划章数，分子是写完的。
  */
+/**
+ * 最近 14 天的空柱子。
+ *
+ * 服务端没给 dailyWords 时用它兜住版式：14 根灰柱，一根都不高。
+ * 以前这里回落到 MOCK 演示曲线（10-27 那天 1240 字），空项目看着像天天在写。
+ */
+function emptyDays(count = 14) {
+  const out = []
+  const now = new Date()
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const d = new Date(now.getTime() - i * 86400000)
+    out.push({
+      d: `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      w: 0,
+    })
+  }
+  return out
+}
+
 function outlineVolumes(outline, writtenChapters) {
   const volumes = Array.isArray(outline?.volumes) ? outline.volumes : []
   if (!volumes.length) {
@@ -151,7 +170,7 @@ function ActionCard({ stats, debts, go, toast }) {
     title = '今天没有欠账，可以往下写'
     sub = '世界状态干净、队列空着，适合推主线或补伏笔。'
     label = '排一单 →'
-    action = () => go('studio')
+    action = () => go('dispatch')
   }
 
   return h(
@@ -173,13 +192,15 @@ function ActionCard({ stats, debts, go, toast }) {
   )
 }
 
-function CockpitPage({ projectId, project, go, toast, refreshKey }) {
+function CockpitPage({
+  projectId, project, go, toast, refreshKey, bare,
+}) {
   const ov = useAsync(() => api('overview', { projectId }), [projectId, refreshKey], { skip: !projectId })
   // 大纲只为了给进度条分段（哪几章属于哪一卷）。读一份本地 json，不贵。
   const ol = useAsync(() => api('outline.get', { projectId }), [projectId, refreshKey], { skip: !projectId })
 
   if (!projectId) {
-    return h(Empty, null, '还没有作品，去「设置 → 作品数据」新建一部。')
+    return h(Empty, null, '还没有作品。点左上角那个 ＋ 建一本。')
   }
   if (ov.loading && !ov.data) return h(Loading, null)
   if (ov.error) return h(ErrorBox, { error: ov.error, onRetry: ov.reload })
@@ -207,9 +228,13 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
     else toast('这条欠账还没有直达入口')
   }
 
-  return h(
-    'div',
-    { className: 'nw-page nw-cockpit' },
+  // bare：被「今天」页内嵌时用。以前驾驶舱自己是一页，现在它前半段归今天页，
+  // 再套一层 .nw-page 会出现两道 max-width 和两道 gap，版心对不齐。
+  const shell = (children) => (bare
+    ? h(Fragment, null, children)
+    : h('div', { className: 'nw-page nw-cockpit' }, children))
+
+  return shell([
     h(
       'div',
       { className: 'nw-hero' },
@@ -228,7 +253,7 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
       h(
         'div',
         { className: 'nw-hero-right' },
-        h(Btn, { kind: 'primary', onClick: () => go('studio') }, '▶ 一键开工'),
+        h(Btn, { kind: 'primary', onClick: () => go('dispatch') }, '▶ 一键开工'),
         h(Btn, { kind: 'ghost', onClick: () => go('review') }, '去验收台'),
       ),
     ),
@@ -254,7 +279,7 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
         unit: '章',
         hint: (stats.running ?? 0) ? `${stats.running} 章在跑` : '空闲',
         tone: (stats.queued ?? 0) ? 'teal' : 'green',
-        onClick: () => go('studio'),
+        onClick: () => go('dispatch'),
       }),
       h(StatBox, {
         label: '欠账',
@@ -268,7 +293,7 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
         value: fmtWords(stats.writeToday ?? 0),
         hint: `目标 ${fmtWords(stats.targetWords ?? 2500)}`,
         tone: 'blue',
-        onClick: () => go('studio'),
+        onClick: () => go('dispatch'),
       }),
     ),
     h(
@@ -292,13 +317,13 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
           Card,
           { title: '今日建议' },
           // 【24 条 #5】两周柱状图住在「今日建议」卡顶部：趋势比单日数字更能说明问题。
-          // 服务端 overview 现在按每章 updatedAt 的本地日期分桶回 stats.dailyWords
-          // （见 lib/store.js dailyWordsFor）。有真数据就用真数据，没有才退回演示曲线 ——
-          // 界面先长出来是对的，但一直用假曲线会让人以为自己在断更。
+          // 服务端 overview 按每章 updatedAt 的本地日期分桶回 stats.dailyWords
+          // （见 lib/store.js dailyWordsFor，14 条、没写字的日子补 0）。
+          // 拿不到就画一排空柱子 —— 以前退回演示曲线，作者会以为自己一直在写。
           h(DayBars, {
             days: Array.isArray(stats.dailyWords) && stats.dailyWords.length
               ? stats.dailyWords.map((row) => ({ d: String(row.day ?? '').slice(5), w: Number(row.words) || 0 }))
-              : MOCK.days,
+              : emptyDays(14),
             target: stats.targetWords ?? 2500,
             toast,
           }),
@@ -342,5 +367,5 @@ function CockpitPage({ projectId, project, go, toast, refreshKey }) {
         h(BriefingCard, { projectId, toast }),
       ),
     ),
-  )
+  ])
 }

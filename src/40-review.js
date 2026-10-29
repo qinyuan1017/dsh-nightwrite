@@ -49,7 +49,7 @@ function ReviewList({ chapters, gate, onOpen, selected }) {
           row.violations ? h(Tag, { tone: 'red' }, `违规 ${row.violations}`) : null,
         ),
       ))
-      : h(Empty, null, '还没有章节。去生产台排一单。'),
+      : h(Empty, null, '还没有章节。去派单页排一单。'),
   )
 }
 
@@ -136,7 +136,7 @@ function ReviewDetail({
     writeLS('nw.openPara', '')
     const at = Number(raw)
     if (!Number.isFinite(at) || at < 0) return
-    const bodyNow = String(ch.data?.text ?? '').trim() ? String(ch.data.text) : MOCK.reviewText.join('\n')
+    const bodyNow = String(ch.data?.text ?? '')
     const list = bodyNow.split(/\n+/).map((row) => row.trim()).filter(Boolean)
     if (at >= list.length) return
     setMode('doc')
@@ -171,8 +171,9 @@ function ReviewDetail({
     reader: null, logic: null, aiStyle: null, rhythm: null,
   }
 
-  // 正文为空时用演示段落：彩带、点亮、段视图都得有东西可看（界面先长出来）。
-  const body = String(text || '').trim() ? text : MOCK.reviewText.join('\n')
+  // 正文为空就是空。以前这里塞 12 段演示文字，彩带和段视图看着很热闹，
+  // 但作者会以为自己写了一章；空章就该老实说「还没有正文」。
+  const body = String(text || '')
   const paras = String(body).split(/\n+/).map((row) => row.trim()).filter(Boolean)
 
   const save = async (opts = {}) => {
@@ -553,7 +554,7 @@ function ReviewDetail({
           : h(
             'div',
             { className: 'nw-para-list' },
-            paras.map((item, index) => h(
+            paras.length ? paras.map((item, index) => h(
               // 段落本身就是按钮：以前是 <p onClick>，Tab 走不到、回车按不动，
               // 键盘用户完全用不了「点段落定位」这条主路径。
               'button',
@@ -568,7 +569,8 @@ function ReviewDetail({
               },
               h('span', { className: 'nw-para-n' }, String(index + 1)),
               item,
-            )),
+            )) : h('p', { className: 'nw-hint nw-para-empty' },
+              '这一章还没有正文。切到「编辑」写，或者在正文页摊开读写。'),
           ),
         h(
           'div',
@@ -735,6 +737,120 @@ function ReviewDetail({
   )
 }
 
+/**
+ * 【P4】历史版本 · 独立一屏
+ *
+ * 以前「历史版本」只是验收详情右栏最下面的一张卡：必须先点开某一章，
+ * 再往下滚过评分、问题清单、违规清单，才看得到「这一章改过几版」。
+ *
+ * 可它是另一类动作 —— 前面那些是「这一稿好不好」，回滚是「把稿子退回去」。
+ * 混在一起的结果：作者想找回昨天删掉的那一段，得先经过一整套审稿界面。
+ *
+ * 所以给它自己一屏：挑一章 → 看它改过哪些版 → 点开任意一版读原文 → 不满意就退回去。
+ */
+function VersionsPanel({ projectId, chapters, toast, onOpenChapter }) {
+  const list = Array.isArray(chapters) ? chapters : []
+  const [chapter, setChapter] = useState(() => (list.length ? Number(list[0].chapter) : 0))
+  const [pick, setPick] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  // 章列表里可能还没有这一章（刚删过），落到第一张上，别让 select 空着。
+  const current = list.some((row) => Number(row.chapter) === Number(chapter))
+    ? Number(chapter)
+    : (list.length ? Number(list[0].chapter) : 0)
+
+  const hist = useAsync(
+    () => api('chapter.history', { projectId, chapter: current }),
+    [projectId, current],
+    { skip: !projectId || !current },
+  )
+  const one = useAsync(
+    () => api('chapter.version', { projectId, chapter: current, name: pick }),
+    [projectId, current, pick],
+    { skip: !projectId || !current || !pick },
+  )
+
+  if (!list.length) {
+    return h(Empty, null, '还没有章节。等第一章写出来，这里才会开始留底。')
+  }
+
+  const versions = hist.data?.versions ?? []
+  const keep = hist.data?.keep ?? 20
+
+  const restore = async (name) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await api('chapter.restore', { projectId, chapter: current, name })
+      hist.reload()
+      setPick('')
+      toast(`第 ${current} 回已退回 ${name}`)
+    } catch (error) {
+      toast(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return h(
+    'div',
+    { className: 'nw-vers' },
+    h(
+      'div',
+      { className: 'nw-vers-bar' },
+      h(Select, {
+        value: String(current),
+        onChange: (v) => { setChapter(Number(v) || 0); setPick('') },
+        options: list.map((row) => ({
+          value: String(row.chapter),
+          label: `第 ${row.chapter} 回 · ${fmtWords(Number(row.words) || 0)} 字`,
+        })),
+      }),
+      h(Btn, { small: true, kind: 'ghost', onClick: () => onOpenChapter?.(current) }, '去验收这一回'),
+      h('span', { className: 'nw-hint' }, `每次覆盖前自动留底，保留最近 ${keep} 版。`),
+    ),
+    hist.loading && !hist.data
+      ? h(Loading, null)
+      : hist.error
+        ? h(ErrorBox, { error: hist.error, onRetry: hist.reload })
+        : versions.length
+          ? h(
+            'div',
+            { className: 'nw-vers-list' },
+            versions.map((row) => h(
+              'div',
+              { className: `nw-vers-row${pick === row.name ? ' on' : ''}`, key: row.name },
+              h('button', {
+                type: 'button',
+                className: 'nw-vers-main',
+                onClick: () => setPick(pick === row.name ? '' : row.name),
+              },
+              h('span', { className: 'nw-vers-at' }, String(row.at ?? '').replace('T', ' ').slice(0, 16)),
+              h('span', { className: 'nw-vers-w' }, `${fmtWords(Number(row.words) || 0)} 字`),
+              h('span', { className: 'nw-vers-name' }, row.name)),
+              h(Btn, {
+                small: true,
+                kind: 'ghost',
+                disabled: busy,
+                onClick: () => restore(row.name),
+              }, '回到这一版'),
+            )),
+          )
+          : h(Empty, null, '这一回还没改过。第一次覆盖正文之后才会开始留底。'),
+    pick
+      ? h(
+        Card,
+        { title: `${pick} 的原文`, extra: h('span', { className: 'nw-card-badge' }, `${fmtWords(Number(one.data?.words) || 0)} 字`) },
+        one.loading && !one.data
+          ? h(Loading, null)
+          : one.error
+            ? h(ErrorBox, { error: one.error, onRetry: one.reload })
+            : h('pre', { className: 'nw-vers-text' }, String(one.data?.text ?? '')),
+      )
+      : null,
+  )
+}
+
 function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey }) {
   const [tab, setTab] = useState('chapters')
   // 别的页（问题单 / 逾期伏笔）想直接开某一章，就写这个键再切页；这里读一次就清掉。
@@ -743,6 +859,22 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
     return raw ? Number(raw) || null : null
   })
   const [filter, setFilter] = useState('review')
+  // 逐章验收里的三视图。老键 nw.rvview 记着上次看的那个，
+  // 因为「我今天在清问题单」这件事不该每次切页都忘。
+  const [view, setViewState] = useState(() => {
+    const raw = readLS('nw.rvview', 'list')
+    return ['list', 'proposals', 'problems'].includes(raw) ? raw : 'list'
+  })
+  const setView = (next) => {
+    setViewState(next)
+    writeLS('nw.rvview', next)
+  }
+  // 读者视角的两个视图也记住上次看的那个，理由同上。
+  const [readerView, setReaderViewState] = useState(() => (readLS('nw.rvreader', 'coldread') === 'opinions' ? 'opinions' : 'coldread'))
+  const setReaderView = (next) => {
+    setReaderViewState(next)
+    writeLS('nw.rvreader', next)
+  }
   const gate = Number(project?.qualityGate ?? 70)
 
   useEffect(() => {
@@ -771,17 +903,30 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
     { value: 'all', label: '全部' },
   ]
 
-  // 三个抽屉：逐章拍板 / 拍板 AI 的改动建议 / 管理攒下来的毛病。
-  // 提案与问题是从 LNW 搬回来的一级功能，但放在验收台上比单开两个页更顺：
-  // 它们都只在「稿子交上来之后」有用。
+  // 【P4】五个抽屉收成三个。
+  //
+  // 原来：逐章验收 / 提案 / 问题单 / 冷读 / 意见池 —— 五颗等宽的钉子。
+  // 但这五样不是一个维度的东西：前三个是「对稿子做什么」，后两个是「别人怎么读」。
+  // 平铺成五个之后，作者每次都要先读五个词才找得到「提案」。
+  //
+  // 现在按动词分：
+  //   逐章验收  —— 一章一章拍板（AI 的改动建议和攒下来的毛病都在这页里，用下面那排小开关切）
+  //   读者视角  —— 冷读 + 意见池（都是「站在读者那边看」）
+  //   历史版本  —— 同一章的旧稿，用来回滚
+  //
+  // 提案 / 问题单没有消失，它们变成「逐章验收」里的两个视图；冷读 / 意见池合成「读者视角」。
   const TABS = [
     { value: 'chapters', label: '逐章验收', icon: '📄' },
-    { value: 'proposals', label: '提案', icon: '✎' },
-    { value: 'problems', label: '问题单', icon: '⚑' },
-    // 冷读和意见池都只在「稿子交上来之后」有用，和拍板是同一时刻的事，
-    // 单开一页会变成「想起来才去翻一眼」。
-    { value: 'coldread', label: '冷读', icon: '🧊' },
-    { value: 'opinions', label: '意见池', icon: '💬' },
+    { value: 'reader', label: '读者视角', icon: '👀' },
+    { value: 'versions', label: '历史版本', icon: '🕘' },
+  ]
+
+  // 「逐章验收」里的第二排：稿子本身 / AI 的改动建议 / 攒下来的毛病。
+  // 这三样共用一套筛选（待验收 / 已采纳 / 低分 / 全部），所以不该各占一个一级 tab。
+  const VIEWS = [
+    { value: 'list', label: '稿子' },
+    { value: 'proposals', label: '提案' },
+    { value: 'problems', label: '问题单' },
   ]
 
   const head = h(
@@ -808,7 +953,26 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
           `${item.icon} ${item.label}`,
         )),
       ),
-      tab === 'chapters'
+      tab === 'chapters' && !open
+        ? h(
+          'div',
+          { className: 'nw-seg' },
+          VIEWS.map((item) => h(
+            'button',
+            {
+              type: 'button',
+              key: item.value,
+              className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
+              'aria-pressed': view === item.value ? 'true' : 'false',
+              onClick: () => setView(item.value),
+            },
+            item.label,
+          )),
+        )
+        : null,
+      // 筛子只对「稿子」这一视图有意义 —— 提案和问题单自带状态分档，
+      // 再来一排「待验收 / 已采纳 / 低分 / 全部」只会让人以为筛错了。
+      tab === 'chapters' && !open && view === 'list'
         ? h(
           'div',
           { className: 'nw-seg' },
@@ -831,32 +995,63 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
         )
         : null,
     ),
-    h('span', { className: 'nw-hint' }, tab === 'chapters'
+    h('span', { className: 'nw-hint' }, tab === 'chapters' && !open
       ? `质检门槛 ${gate} 分 · 共 ${chapters.length} 章 · ${pending} 章等你拍板`
       : `质检门槛 ${gate} 分`),
   )
 
-  const body = tab === 'coldread'
-    ? h(ColdReadPanel, {
-      projectId,
-      chapters,
-      toast,
-      onOpenChapter: (chapter) => { setTab('chapters'); setOpenState(chapter) },
-    })
-    : tab === 'opinions'
-      ? h(OpinionBoard, {
+  // 读者视角：冷读和意见池共用一屏，顶上一个小开关。
+  // 两个都是「站在读者那边看」，从前分两个一级 tab，等于让作者自己记住
+  // 「这条意见是在哪一页看到的」。
+  const readerBody = h(
+    'div',
+    { className: 'nw-reader' },
+    h(
+      'div',
+      { className: 'nw-seg' },
+      [{ value: 'coldread', label: '冷读' }, { value: 'opinions', label: '意见池' }].map((item) => h(
+        'button',
+        {
+          type: 'button',
+          key: item.value,
+          className: `nw-seg-btn${readerView === item.value ? ' on' : ''}`,
+          'aria-pressed': readerView === item.value ? 'true' : 'false',
+          onClick: () => setReaderView(item.value),
+        },
+        item.label,
+      )),
+    ),
+    readerView === 'coldread'
+      ? h(ColdReadPanel, {
+        projectId,
+        chapters,
+        toast,
+        onOpenChapter: (chapter) => { setTab('chapters'); setView('list'); setOpenState(chapter) },
+      })
+      : h(OpinionBoard, {
         projectId,
         toast,
         refreshKey,
-        onOpenChapter: (chapter) => { setTab('chapters'); setOpenState(chapter) },
+        onOpenChapter: (chapter) => { setTab('chapters'); setView('list'); setOpenState(chapter) },
+      }),
+  )
+
+  const body = tab === 'reader'
+    ? readerBody
+    : tab === 'versions'
+      ? h(VersionsPanel, {
+        projectId,
+        chapters,
+        toast,
+        onOpenChapter: (chapter) => { setTab('chapters'); setView('list'); setOpenState(chapter) },
       })
-      : tab === 'proposals'
+      : tab === 'chapters' && view === 'proposals'
     ? h(ProposalBoard, { projectId, gate, toast, onRefresh, refreshKey })
-    : tab === 'problems'
+    : tab === 'chapters' && view === 'problems'
       ? h(ProblemBoard, {
         projectId, gate, toast, onRefresh, refreshKey,
         onOpenChapter: (chapter) => {
-          setTab('chapters')
+          setView('list')
           setOpenState(chapter)
         },
       })

@@ -221,6 +221,76 @@ function WritePolicyCard({ projectId, project, toast, onRefresh }) {
  * 它永远扫不出来，因为它只认通用那二十来条。
  * 现在两件事都能做：加你自己的口头禅、停用你不认的条目。
  */
+/**
+ * 【P5】写作原则条：这本书的一句话铁律。
+ *
+ * LNW 顶栏下面钉着一条 `⚡ ATTENTION IS ALL YOU NEED —— 怎么吸引读者怎么来…`。
+ * 它有用：模型每一轮都看得见，于是不会写着写着滑回「交代背景」。
+ * 它的问题是写死的 —— 你写的是慢热群像，它还在催你三章一个大转折。
+ *
+ * 长夜把它做成每本书一份、可改、并且真的往下传：
+ *   · 存在 project.settings.writePrinciple
+ *   · 顶栏下面一条可折叠的黄条常显当前生效的那句
+ *   · 派单时自动插到工作单的第一行（见 src/30-studio.js 的 dispatch）
+ *
+ * 空着就不显示、也不注入 —— 不写原则本身也是一种选择。
+ */
+const PRINCIPLE_DEFAULT = '怎么吸引读者怎么来：每段都要给一个新信息或一次情绪变化；不总结、不铺垫、不解释。'
+
+function WritePrincipleCard({ projectId, project, toast, onRefresh }) {
+  const saved = String(project?.settings?.writePrinciple ?? '')
+  const [text, setText] = useState(saved)
+  const [busy, setBusy] = useState(false)
+
+  // 切作品的时候要把输入框换成新书那一句，否则会把上一本的原则存到这一本。
+  useEffect(() => {
+    setText(String(project?.settings?.writePrinciple ?? ''))
+  }, [projectId, saved])
+
+  const save = async (next) => {
+    if (!projectId) {
+      toast('先选一个作品')
+      return
+    }
+    setBusy(true)
+    try {
+      await api('project.save', {
+        projectId,
+        patch: { settings: { writePrinciple: String(next ?? '').trim() } },
+      })
+      onRefresh?.()
+      toast(next ? '写作原则已保存，下次派单会自动带上' : '写作原则已清空，派单不再注入')
+    } catch (error) {
+      toast(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return h(
+    Card,
+    {
+      title: '写作原则',
+      extra: h(Tag, { tone: saved ? 'amber' : 'grey' }, saved ? '生效中' : '没设'),
+    },
+    h(Hint, null, '一句话说清这本书的铁律。它会显示在顶栏下方，并且自动插到每张工作单的第一行 —— 让模型每一轮都看得见，而不是只在开书那天说过一次。'),
+    h(Field, { label: '这一本的原则' }, h(TextArea, {
+      value: text,
+      rows: 3,
+      onChange: setText,
+      placeholder: PRINCIPLE_DEFAULT,
+    })),
+    h(
+      'div',
+      { className: 'nw-actions' },
+      h(Btn, { small: true, kind: 'primary', onClick: () => save(text), disabled: busy }, busy ? '保存中…' : '保存'),
+      h(Btn, { small: true, kind: 'ghost', onClick: () => { setText(PRINCIPLE_DEFAULT); save(PRINCIPLE_DEFAULT) }, disabled: busy }, '用推荐那句'),
+      saved ? h(Btn, { small: true, kind: 'ghost', onClick: () => { setText(''); save('') }, disabled: busy }, '清空') : null,
+      h('span', { className: 'nw-hint' }, '留空 = 不注入，界面也不显示这条。'),
+    ),
+  )
+}
+
 function AiLexiconCard({ projectId, toast }) {
   const res = useAsync(() => api('aistyle.get', { projectId }), [projectId], { skip: !projectId })
   const [phrase, setPhrase] = useState('')
@@ -462,11 +532,9 @@ function CorpusCard({ toast }) {
 }
 
 function SettingsPage({
-  projectId, project, projects, chapters, onSwitch, toast, onRefresh, theme, setTheme,
+  projectId, project, projects, chapters, onSwitch, onNewProject, toast, onRefresh, theme, setTheme,
 }) {
   const [draft, setDraft] = useState(null)
-  const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ name: '', genre: '', logline: '', targetWords: 2500, qualityGate: 70, monthlyBudget: 600 })
   const [confirm, setConfirm] = useState('')
   const [exporting, setExporting] = useState(false)
   const chaptersCount = Array.isArray(chapters) ? chapters.length : 0
@@ -498,22 +566,6 @@ function SettingsPage({
     }
   }
 
-  const create = async () => {
-    if (!String(form.name).trim()) {
-      toast('先起个书名')
-      return
-    }
-    try {
-      const res = await api('project.create', form)
-      setCreating(false)
-      onRefresh?.()
-      onSwitch?.(res.id)
-      toast(`已建《${res.name}》`)
-    } catch (error) {
-      toast(error.message)
-    }
-  }
-
   const remove = async () => {
     if (!projectId) return
     if (confirm !== (project?.name ?? '')) {
@@ -535,7 +587,10 @@ function SettingsPage({
     { className: 'nw-page nw-settings' },
     h(
       Card,
-      { title: '作品数据', extra: h(Btn, { small: true, kind: 'primary', onClick: () => setCreating(true) }, '＋ 新建作品') },
+      // 【P0】这里原来挂一个「新建作品」弹窗（5 个字段），和建书首屏、大纲页
+      // 三处都在写同一份东西。建书收敛成屏内三步向导之后，弹窗删掉，按钮改成
+      // 跳回那一屏 —— 入口从三个变成一个，少一套会跟别处对不上的表单。
+      { title: '作品数据', extra: h(Btn, { small: true, kind: 'primary', onClick: () => onNewProject?.() }, '＋ 新建作品') },
       h(
         'div',
         { className: 'nw-proj-list' },
@@ -782,6 +837,10 @@ function SettingsPage({
     h(CorpusCard, { toast }),
     // 【gap 第 7 条】花了多少钱：不是估算，读会话日志。
     h(CostCard, { projectId, toast }),
+    // 【P5】写作原则：这本书的铁律，派单时自动插到工作单第一行。
+    h(WritePrincipleCard, {
+      projectId, project, toast, onRefresh,
+    }),
     // 【gap 第 1 条】原生写工具守卫的挡位与目录：守卫在服务端，
     // 但「拦不拦」是作者的决定，得给个开关。
     h(WritePolicyCard, {
@@ -816,30 +875,5 @@ function SettingsPage({
       ),
       h(Hint, null, '主题记在 localStorage，只影响长夜这一层，不动宿主界面。'),
     ),
-    creating
-      ? h(
-        Modal,
-        {
-          title: '新建作品',
-          onClose: () => setCreating(false),
-          footer: h(
-            Fragment,
-            null,
-            h(Btn, { kind: 'ghost', small: true, onClick: () => setCreating(false) }, '取消'),
-            h(Btn, { kind: 'primary', small: true, onClick: create }, '创建'),
-          ),
-        },
-        h(Field, { label: '书名' }, h(Input, { value: form.name, onChange: (v) => setForm({ ...form, name: v }) })),
-        h(Field, { label: '题材' }, h(Input, { value: form.genre, onChange: (v) => setForm({ ...form, genre: v }) })),
-        h(Field, { label: '一句话卖点' }, h(TextArea, { value: form.logline, rows: 2, onChange: (v) => setForm({ ...form, logline: v }) })),
-        h('div', { className: 'nw-form-grid' },
-          h(Field, { label: '每章目标字数' }, h(Input, {
-            type: 'number', value: form.targetWords, onChange: (v) => setForm({ ...form, targetWords: Number(v) || 0 }),
-          })),
-          h(Field, { label: '质检门槛' }, h(Input, {
-            type: 'number', value: form.qualityGate, onChange: (v) => setForm({ ...form, qualityGate: Number(v) || 0 }),
-          }))),
-      )
-      : null,
   )
 }

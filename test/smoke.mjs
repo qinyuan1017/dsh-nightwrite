@@ -191,7 +191,15 @@ const LEDGER = {
 }
 const OVERVIEW = {
   project: PROJECT,
-  stats: { chapters: 3, totalWords: 7100, totalCost: 1.2, avgScore: 71, accepted: 2, pending: 1, queued: 2, running: 0, writeToday: 2600, targetWords: 2500, streak: 3 },
+  stats: {
+    chapters: 3, totalWords: 7100, totalCost: 1.2, avgScore: 71, accepted: 2, pending: 1, queued: 2, running: 0, writeToday: 2600, targetWords: 2500, streak: 3,
+    // 两周柱状图走真数据（lib/store.js dailyWordsFor 的口径：14 条、没写字的日子补 0）。
+    // 这里给 12 天有字、2 天断更，跟以前写死的演示曲线形状一致，但来源真的了。
+    dailyWords: [2600, 1800, 0, 3100, 2500, 900, 2700, 0, 2200, 3300, 2500, 1200, 2800, 1240].map((words, i) => ({
+      day: `2026-10-${String(14 + i).padStart(2, '0')}`,
+      words,
+    })),
+  },
   debts: [
     { level: 'red', kind: 'foreshadow', title: '伏笔过期 · 玉玺下落', sub: '第 1 回埋 · 计划第 2 回收', target: { page: 'world', kind: 'foreshadow', id: 'f1' } },
     { level: 'red', kind: 'violation', title: '违规章 · 第 3 回', sub: '命中 1 条硬规则', target: { page: 'review', chapter: 3 } },
@@ -335,9 +343,56 @@ const DISPATCHES = [
   },
 ]
 
+// 停靠点：一轮写到第 3 回、上限 3 章、已交 1 章等确认 ——
+// 正是「该停下等人看」的那一刻，界面上「还能写 2 章」和「等确认」都得看得见。
+const RUN = {
+  id: 'rn_0123456789ab',
+  kind: 'continue',
+  chapter: 3,
+  currentChapter: 3,
+  maxChapters: 3,
+  status: 'open',
+  by: '',
+  note: '顶着连更 3 章',
+  createdAt: '2026-10-28T01:00:00.000Z',
+  updatedAt: '2026-10-28T02:00:00.000Z',
+  chapters: [{ chapter: 2, at: '2026-10-28T01:30:00.000Z', words: 2100, note: '', reviewed: true, verdict: 'ok' }],
+  expired: false,
+  canAdvance: true,
+  remaining: 2,
+}
+const RUN_VERDICT = { level: 'green', text: '可以写，这一轮还能写 2 章' }
+const RUN_CLOSED = {
+  ...RUN,
+  id: 'rn_ba9876543210',
+  status: 'closed',
+  currentChapter: 2,
+  chapters: [{ chapter: 1, at: '2026-10-26T01:00:00.000Z', words: 2400, note: '', reviewed: true, verdict: 'ok' }],
+  closedAt: '2026-10-26T05:00:00.000Z',
+  closeNote: '这一轮收尾',
+}
+
 function mockValue(op, payload) {
   switch (op) {
     case 'ping': return { name: 'nightwrite', version: '0.1.0', ops: 70 }
+
+    // ── 停靠点（run.*）：状态灯和停靠点页都读这几个 ──
+    // 当前这一轮是 open、停在第 3 回、上限 3 章已交 1 章 —— 正好让状态灯显示
+    // 「正在写第 3 回」、停靠点页显示「还能写 2 章」，两边断言都有东西可对齐。
+    case 'run.current':
+      return { run: { ...RUN }, verdict: RUN_VERDICT }
+    case 'run.list':
+      return { items: [{ ...RUN }, { ...RUN_CLOSED }], total: 2 }
+    case 'run.get':
+      return { run: { ...RUN }, verdict: RUN_VERDICT }
+    case 'run.open':
+      return { run: { ...RUN, chapter: Number(payload?.chapter ?? RUN.chapter) }, verdict: RUN_VERDICT }
+    case 'run.claim':
+      return { run: { ...RUN, status: 'waiting' }, verdict: { level: 'orange', text: '第 3 回交完，等确认' } }
+    case 'run.review':
+      return { run: { ...RUN, status: 'open' }, verdict: RUN_VERDICT }
+    case 'run.close':
+      return { run: { ...RUN_CLOSED }, verdict: { level: 'grey', text: '这一轮已经关了' } }
     case 'project.list': return { projects: [PROJECT, PROJECT2] }
     case 'project.get': return { project: payload?.projectId === PROJECT2.id ? PROJECT2 : PROJECT }
     case 'overview': return OVERVIEW
@@ -766,10 +821,11 @@ check('main 用 key 而非 id（宿主 MainPanel 读 entryKey）',
 check('main 拿到真组件', typeof captured === 'function')
 check('样式已注入（NIGHTWRITE_CSS 非空）', /nw-shell/.test(src))
 
-// ══ 2. 六页逐页挂载 ════════════════════════════════════════
+// ══ 2. 八页逐页挂载 ════════════════════════════════════════
 // 逐页冒烟用的页面清单（= src/10-core.js 里 PAGES 的 id 顺序）。
-// 底栏导航钮数走 DOCK_COUNT 这个常量，改页数只改这里。
-const PAGES = ['cockpit', 'plan', 'pipeline', 'studio', 'review', 'world', 'scout', 'settings']
+// 导航钮数走 DOCK_COUNT 这个常量，改页数只改这里。
+// 长夜的导航形态是底栏居中胶囊（.nw-dock），不是左侧目录树。
+const PAGES = ['today', 'read', 'plan', 'dispatch', 'review', 'world', 'scout', 'settings']
 const DOCK_COUNT = 8
 const seen = {}
 
@@ -786,37 +842,42 @@ for (const page of PAGES) {
   check(`${page} · 零抛错`, throws.length === 0, throws.slice(0, 3).map((t) => `${t.name}: ${t.error}`).join(' | '))
   check(`${page} · 外壳 nw-shell`, cls.has('nw-shell'))
   check(`${page} · 顶栏 nw-top`, cls.has('nw-top'))
-  check(`${page} · 底栏 nw-bottom`, cls.has('nw-bottom'))
+  check(`${page} · 底栏胶回 nw-dock`, cls.has('nw-dock'))
   check(`${page} · 八页导航 ${DOCK_COUNT} 钮`, countCls(tree, 'nw-dock-btn') === DOCK_COUNT)
   check(`${page} · 顶栏有书名`, tx.some((t) => String(t).includes('元末女帝')))
 }
 
-// ── 流水线（派单台） ──
+// ── 派单页：岗位 + 单据（原来是流水线页） ──
 {
-  const { cls, tx, tree } = seen.pipeline
-  check('流水线 · 岗位格 3 个', countCls(tree, 'nw-role') === 3)
-  check('流水线 · 总编格标黄', cls.has('nw-role-boss'))
-  check('流水线 · 岗位名在', tx.some((t) => String(t).includes('故事架构师')))
-  check('流水线 · 只有总编带「有权派单」', tx.filter((t) => String(t) === '有权派单').length === 1)
-  check('流水线 · 单据 2 张', countCls(tree, 'nw-dp') === 2)
-  check('流水线 · 待办票有「发到对话」', tx.some((t) => String(t).includes('发到对话')))
-  check('流水线 · 已交票摊出回执', countCls(tree, 'nw-dp-report') === 1)
-  check('流水线 · 回执结论上屏', tx.some((t) => String(t) === '通过'))
-  check('流水线 · 回执按 ### 切段', countCls(tree, 'nw-dp-sec') === 2)
-  check('流水线 · 开票表单在', cls.has('nw-pipe-form'))
-  check('流水线 · 剩余时间算出分钟', tx.some((t) => /还剩 \d+ 分钟/.test(String(t))))
-  check('流水线 · 没有抛错占位', !cls.has('nw-error'))
+  const { cls, tx, tree } = seen.dispatch
+  check('派单 · 岗位格 3 个', countCls(tree, 'nw-role') === 3)
+  check('派单 · 总编格标黄', cls.has('nw-role-boss'))
+  check('派单 · 岗位名在', tx.some((t) => String(t).includes('故事架构师')))
+  check('派单 · 只有总编带「有权派单」', tx.filter((t) => String(t) === '有权派单').length === 1)
+  check('派单 · 单据 2 张', countCls(tree, 'nw-dp') === 2)
+  check('派单 · 待办票有「发到对话」', tx.some((t) => String(t).includes('发到对话')))
+  check('派单 · 已交票摊出回执', countCls(tree, 'nw-dp-report') === 1)
+  check('派单 · 回执结论上屏', tx.some((t) => String(t) === '通过'))
+  check('派单 · 回执按 ### 切段', countCls(tree, 'nw-dp-sec') === 2)
+  check('派单 · 开票表单在', cls.has('nw-pipe-form'))
+  check('派单 · 剩余时间算出分钟', tx.some((t) => /还剩 \d+ 分钟/.test(String(t))))
+  check('派单 · 没有抛错占位', !cls.has('nw-error'))
+  // 两页合并的证据：同一屏里既有在途工单，也有指令单与队列。
+  check('派单 · 单据与指令单同屏', cls.has('nw-dp') && cls.has('nw-order'))
+  check('派单 · 页头说明在', tx.some((t) => String(t).includes('派单')))
 }
 
-// ── 驾驶舱 ──
+// ── 今天页：状态条 + 驾驶舱（原驾驶舱页） ──
 {
-  const { cls, tx, tree } = seen.cockpit
-  check('驾驶舱 · 四个大数字', countCls(tree, 'nw-stat') === 4)
-  check('驾驶舱 · 欠账 3 条', countCls(tree, 'nw-debt') === 3)
-  check('驾驶舱 · 今日建议文案', tx.some((t) => String(t).includes('先处理第 2 回')))
-  check('驾驶舱 · 最近产出取 overview.recent', countCls(tree, 'nw-recent-row') === 3)
-  check('驾驶舱 · 最近章节 3 行', countCls(tree, 'nw-recent-row') === 3)
-  check('驾驶舱 · 没有抛错占位', !cls.has('nw-error'))
+  const { cls, tx, tree } = seen.today
+  check('今天 · 四个大数字', countCls(tree, 'nw-stat') === 4)
+  check('今天 · 欠账 3 条', countCls(tree, 'nw-debt') === 3)
+  check('今天 · 今日建议文案', tx.some((t) => String(t).includes('先处理第 2 回')))
+  check('今天 · 最近产出取 overview.recent', countCls(tree, 'nw-recent-row') === 3)
+  check('今天 · 状态条在', countCls(tree, 'nw-today-run') === 1)
+  check('今天 · 状态条说了还能写几章', tx.some((t) => /还能写 \d+ 章/.test(String(t))))
+  check('今天 · 驾驶舱内嵌没有二次套壳', countCls(tree, 'nw-page') >= 1 && countCls(tree, 'nw-today') === 1)
+  check('今天 · 没有抛错占位', !cls.has('nw-error'))
 }
 
 // ── 大纲 ──
@@ -829,12 +890,12 @@ for (const page of PAGES) {
   // 卷 2 个 + 三视图 3 个 = 5 片
   check('大纲 · 卷切换 2 + 三视图 3 = 5 片', countCls(tree, 'nw-seg-btn') === 2 + 3)
   check('大纲 · 每卷 2 章 = 2 张卡', countCls(tree, 'nw-pcard') === 2)
-  check('大纲 · 送去生产台按钮在', tx.some((t) => String(t).includes('送去生产台')))
+  check('大纲 · 送去派单按钮在', tx.some((t) => String(t).includes('送去派单')))
 }
 
-// ── 生产台 ──
+// ── 派单页里的生产台半截（原生产台页） ──
 {
-  const { cls, tx, tree } = seen.studio
+  const { cls, tx, tree } = seen.dispatch
   check('生产台 · 三栏网格', cls.has('nw-studio-cols'))
   check('生产台 · 模板 2 个', countCls(tree, 'nw-tpl') === 2)
   check('生产台 · 上下文包在', cls.has('nw-ctx'))
@@ -843,20 +904,20 @@ for (const page of PAGES) {
   check('生产台 · 指令单在', cls.has('nw-order'))
 }
 
-// ── 顶栏三个快动作（从底栏搬上来） ──
+// ── 顶栏：品牌 + 状态灯 + 作品与活量 + 快动作；导航在底栏胶囊里 ──
+// 长夜自己的取舍：导航常驻视线终点（底栏居中），而不是左侧目录树；
+// 「今天有多少活压着」摊在顶栏一行里，抬眼就能看到。
 {
-  const { tx, tree } = seen.cockpit
+  const { tx, tree, cls } = seen.today
   const inTop = all(tree).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('nw-top-right'))
   const topText = inTop.length ? allText(inTop[0]).map(String).join(' ') : ''
-  check('顶栏 · 续写一章在顶栏', topText.includes('续写一章'), topText.slice(0, 60))
-  check('顶栏 · 连更 3 章在顶栏', topText.includes('连更 3 章'))
-  check('顶栏 · 体检在顶栏', topText.includes('体检'))
-  check('顶栏 · 队列状态在顶栏', /队列空闲|\d+ 章在队列里/.test(topText), topText.slice(0, 80))
-  // 【24 条 #2】底栏右侧现在常驻「最新 / 新章」两个按钮。
-  const bottom = all(seen.cockpit.tree || []).filter((n) => n.kind === 'el' && typeof n.cls === 'string' && n.cls.split(/\s+/).includes('nw-bottom-acts'))
-  const bottomText = bottom.length ? allText(bottom[0]).map(String).join(' ') : ''
-
-  check('底栏 · 右侧两个常驻按钮', seen.cockpit.cls.has('nw-bottom-acts') && bottomText.includes('最新') && bottomText.includes('新章'), bottomText.slice(0, 60))
+  check('顶栏 · 底栏导航在位', cls.has('nw-bottom') && cls.has('nw-dock'))
+  check('顶栏 · 快动作三件保留', topText.includes('续写一章') && topText.includes('连更 3 章') && topText.includes('体检'), topText.slice(0, 80))
+  check('顶栏 · 下一本新书入口在', topText.includes('＋'))
+  check('顶栏 · 命令入口在', topText.includes('＼K') || topText.includes('⌘K'))
+  check('顶栏 · 状态灯在', countCls(tree, 'nw-lamp') === 1)
+  check('顶栏 · 作品切换下拉在', cls.has('nw-top-mid'))
+  check('顶栏 · 活量两个小标', countCls(tree, 'nw-top-stat') >= 2)
 }
 
 // ── 验收台 ──
@@ -864,8 +925,9 @@ for (const page of PAGES) {
   const { cls, tree } = seen.review
   check('验收台 · 列表在', cls.has('nw-rv-list'))
   check('验收台 · 默认待验收只 1 行', countCls(tree, 'nw-rv-row') === 1)
-  // 验收台现在是「五个抽屉 + 四个筛选片」= 9 个 nw-seg-btn（新增冷读、意见池）
-  check('验收台 · 五抽屉 + 四筛选 = 9 片', countCls(tree, 'nw-seg-btn') === 9)
+  // P4 之后验收台是三层分段：3 档（逐章 / 读者视角 / 历史版本）
+  // + 逐章下的 3 视图（稿子 / 提案 / 问题单）+ 4 个筛选片 = 10 个 nw-seg-btn。
+  check('验收台 · 3 档 + 3 视图 + 4 筛选 = 10 片', countCls(tree, 'nw-seg-btn') === 10, String(countCls(tree, 'nw-seg-btn')))
 }
 
 // ══ 深水区：提案抽屉 ═══════════════════════════════════════
@@ -930,6 +992,7 @@ for (const page of PAGES) {
   check('设置 · 主题三档', countCls(tree, 'nw-theme-card') === 3)
 }
 
+
 // ══ 3. 深水区：验收详情（一次打开第 3 回） ═══════════════════
 {
   hookMap = new Map()
@@ -984,14 +1047,16 @@ for (const page of PAGES) {
   const rowsFirst = countCls(first, 'nw-rv-row')
   // 模拟用户点第二个筛选片（已采纳）→ useState setter 打 dirty，重挂一轮
   const segs = all(first).filter((n) => typeof n.cls === 'string' && n.cls.split(/\s+/).includes('nw-seg-btn'))
-  check('验收台 · 抽屉/筛选片都是按钮', segs.length === 9 && segs.every((n) => n.kind === 'el' && n.tag === 'button'))
+  // P4 之后验收台是三层分段：3 个档（逐章 / 读者视角 / 历史版本）
+  // + 逐章下的 3 个视图（稿子 / 提案 / 问题单）+ 4 个筛选片 = 10。
+  check('验收台 · 档位/视图/筛选片都是按钮', segs.length === 10 && segs.every((n) => n.kind === 'el' && n.tag === 'button'), `segs=${segs.length}`)
   check('验收台 · 初次行数 = 1（待验收）', rowsFirst === 1)
 }
 
 // ══ 5. 无作品时的兜底 ═══════════════════════════════════════
 {
   hookMap = new Map()
-  store['nw.page'] = 'cockpit'
+  store['nw.page'] = 'today'
   delete store['nw.project']
   win.fetch = global.fetch = async (url, opt) => {
     let op = ''
@@ -1002,14 +1067,21 @@ for (const page of PAGES) {
   const tree = await mount(captured, {})
   const tx = allText(tree)
   const throws = throwsOf(tree)
+  // 没有作品时不再是「一句空态」，而是整屏一张能填的三步建书向导。
   check('无作品 · 零抛错', throws.length === 0, throws.slice(0, 2).map((t) => t.error).join(' | '))
-  check('无作品 · 出现空态提示', tx.some((t) => String(t).includes('还没有作品')))
+  check('无作品 · 首屏是建书页', countCls(tree, 'nw-create') === 1)
+  check('无作品 · 摊开的是表单不是空态', countCls(tree, 'nw-empty') === 0)
+  check('无作品 · 三步进度条在', countCls(tree, 'nw-create-step') === 3)
+  check('无作品 · 第一屏只问两项', countCls(tree, 'nw-create-field') === 2, String(countCls(tree, 'nw-create-field')))
+  check('无作品 · 顶栏不再挂导航', countCls(tree, 'nw-dock-btn') === 0)
+  check('无作品 · 不显示未填的原始值',
+    !tx.some((t) => /^(null|undefined|NaN|\[object Object\])$/.test(String(t).trim())))
 }
 
 // ══ 6. 后端报错时的显示 ═════════════════════════════════════
 {
   hookMap = new Map()
-  store['nw.page'] = 'cockpit'
+  store['nw.page'] = 'today'
   store['nw.project'] = PROJECT.id
   win.fetch = global.fetch = async () => ({ json: async () => ({ ok: false, error: { code: 'fs', message: '目录不可写' } }), status: 500 })
   const tree = await mount(captured, {})
@@ -1037,7 +1109,7 @@ for (const page of PAGES) {
     fetchCalls.push(op)
     return { json: async () => ({ ok: true, value: mockValue(op, payload) }), status: 200 }
   }
-  store['nw.page'] = 'cockpit'
+  store['nw.page'] = 'today'
   store['nw.project'] = PROJECT.id
   const T = (page) => seen[page].tree
   const clickable = (tree, cls) => all(tree)
@@ -1046,7 +1118,7 @@ for (const page of PAGES) {
 
   // ── 1. 状态灯 ──
   {
-    const t = T('cockpit')
+    const t = T('today')
     const tx = allText(t).map(String).join(' ')
     check('#1 状态灯 · 灯泡 + 灯点都在', countCls(t, 'nw-lamp') === 1 && countCls(t, 'nw-lamp-dot') === 1)
     check('#1 状态灯 · 写着正在写第几回', /正在写第 \d+ 回/.test(tx), tx.slice(0, 80))
@@ -1056,7 +1128,7 @@ for (const page of PAGES) {
 
   // ── 2. 底栏右侧两个按钮 ──
   {
-    const t = T('cockpit')
+    const t = T('today')
     const acts = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-bottom-acts'))
     const names = acts.length ? allText(acts[0]).map(String) : []
     check('#2 底栏 · 右侧动作区在', acts.length === 1)
@@ -1065,7 +1137,7 @@ for (const page of PAGES) {
 
   // ── 3. Ctrl+K 命令面板 ──
   {
-    const t = T('cockpit')
+    const t = T('today')
     check('#3 命令面板 · 顶栏有 Ctrl+K 入口', countCls(t, 'nw-cmdk-open') >= 1)
     const btn = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-cmdk-open'))
     check('#3 命令面板 · 入口可点', typeof btn?.props?.onClick === 'function')
@@ -1074,7 +1146,7 @@ for (const page of PAGES) {
 
   // ── 4. 一句大白话 + 一个按钮 ──
   {
-    const t = T('cockpit')
+    const t = T('today')
     check('#4 行动卡 · 在', countCls(t, 'nw-action') === 1)
     const actionCard = all(t).find((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-action'))
     const cardBtns = actionCard
@@ -1086,7 +1158,7 @@ for (const page of PAGES) {
 
   // ── 5. 两周柱状图 ──
   {
-    const t = T('cockpit')
+    const t = T('today')
     check('#5 柱状图 · 容器在', countCls(t, 'nw-days') === 1)
     check('#5 柱状图 · 14 根柱子', countCls(t, 'nw-day') === 14)
     check('#5 柱状图 · 断更的柱子有专用样式', countCls(t, 'nw-day-off') === 2)
@@ -1095,7 +1167,7 @@ for (const page of PAGES) {
 
   // ── 6. 全书进度条 ──
   {
-    const t = T('cockpit')
+    const t = T('today')
     const tx = allText(t).map(String).join(' ')
     // 【12 条 #4】进度条已接真数据：卷分段来自大纲（MOCK 里 2 卷），不再是写死的 3 段。
     check('#6 进度条 · 容器 + 卷分段跟大纲走', countCls(t, 'nw-progress') === 1 && countCls(t, 'nw-progress-vol') === OUTLINE.volumes.length, `${countCls(t, 'nw-progress-vol')} 段 / 大纲 ${OUTLINE.volumes.length} 卷`)
@@ -1126,7 +1198,7 @@ for (const page of PAGES) {
 
   // ── 10. 上下文可拖可关 ──
   {
-    const t = T('studio')
+    const t = T('dispatch')
     const rows = all(t).filter((n) => n.kind === 'el' && String(n.cls ?? '').split(/\s+/).includes('nw-ctx-row'))
     check('#10 上下文 · 行可拖', rows.length > 0 && rows.every((n) => n.props?.draggable === true), `rows=${rows.length}`)
     check('#10 上下文 · 每行有抓手', countCls(t, 'nw-ctx-grip') === rows.length)
@@ -1136,7 +1208,7 @@ for (const page of PAGES) {
 
   // ── 11. 预算条 ──
   {
-    const t = T('studio')
+    const t = T('dispatch')
     const tx = allText(t).map(String).join(' ')
     check('#11 预算条 · 计量条在', countCls(t, 'nw-ctx-meter') === 1)
     check('#11 预算条 · 百分比上屏', /\d+% 已用/.test(tx), tx.slice(0, 120))
@@ -1145,9 +1217,10 @@ for (const page of PAGES) {
 
   // ── 12. 意图复用 ──
   {
-    const t = T('studio')
+    const t = T('dispatch')
     check('#12 意图复用 · 容器在', countCls(t, 'nw-chips') === 1)
-    check('#12 意图复用 · 最近三条', countCls(t, 'nw-chip') === 3)
+    // 数量由队列里真写过什么决定，不由常量决定：mock 里 2 单、2 条不同意图。
+    check('#12 意图复用 · 最近几条按队列历史来', countCls(t, 'nw-chip') === 2)
     check('#12 意图复用 · 每条可点', clickable(t, 'nw-chip'))
   }
 
@@ -1237,7 +1310,8 @@ for (const page of PAGES) {
   {
     const t = T('scout')
     check('#21 侦察产出 · 容器在', countCls(t, 'nw-hist') === 1)
-    check('#21 侦察产出 · 四条记录', countCls(t, 'nw-hist-row') === 4)
+    // 记录来自 analyze.list + scan.list 的真实产物：1 次拆书 + 1 次扫榜 = 2 条。
+    check('#21 侦察产出 · 记录按真实产物来', countCls(t, 'nw-hist-row') === 2)
     check('#21 侦察产出 · 每条可点展开', clickable(t, 'nw-hist-row') || countCls(t, 'nw-hist-detail') >= 0)
   }
 
@@ -1246,7 +1320,7 @@ for (const page of PAGES) {
     const t = T('scout')
     check('#22 扫榜表 · 表格在', countCls(t, 'nw-scan') === 1)
     check('#22 扫榜表 · 7 列表头', countCls(t, 'nw-scan-th') === 7)
-    check('#22 扫榜表 · 6 行数据', countCls(t, 'nw-scan-row') === 6)
+    check('#22 扫榜表 · 行数按榜单实际条数', countCls(t, 'nw-scan-row') === 2)
     check('#22 扫榜表 · 表头可点排序', clickable(t, 'nw-scan-th'))
     check('#22 扫榜表 · 有导出 CSV 出口', allText(t).some((x) => String(x).includes('导出 CSV')))
   }
@@ -1340,14 +1414,14 @@ for (const page of PAGES) {
 
   // ── 4. 队列派给 agent ──
   {
-    store['nw.page'] = 'studio'
+    store['nw.page'] = 'dispatch'
     store['nw.project'] = PROJECT.id
     hookMap = new Map()
     const t = await mount(captured, {})
     const tx = allText(t).map(String).join(' ')
     check('派单 · 按钮在', /派给 agent/.test(tx))
     check('派单 · 拼 prompt 含关键 op', /nightwrite_op/.test(src) && /proposal\.save/.test(src))
-    check('派单 · 剪贴板失败有退路', countCls(t, 'nw-dispatch') === 0 && /setDispatchText/.test(src))
+    check('派单 · 剪贴板失败有退路', countCls(t, 'nw-dispatch') === 1 && /setDispatchText/.test(src))
   }
 
   // ── 6. AI 味词表（彩带真值） ──
@@ -1417,10 +1491,11 @@ for (const page of PAGES) {
 
     // 预算拦截：超了要问，且暂停时不排单。
     check('QA4 · 超预算会拦一道', /const budgetCheck = \(\) =>/.test(src) && /window\.confirm\(/.test(src))
-    check('QA4 · 顶栏写明超了多少', countCls(T('cockpit'), 'nw-budget') >= 0 && /nw-budget-stop nw-budget-halt/.test(src))
+    check('QA4 · 顶栏写明超了多少', countCls(T('today'), 'nw-budget') >= 0 && /nw-budget-stop nw-budget-halt/.test(src))
     check('QA4 · 暂停时快动作有提示', /className: paused \? 'nw-btn-halt' : ''/.test(src) && /现在是暂停状态/.test(src))
   }
 }
+
 // ══ 【借 LNW 六项】地图 / 成书 / 检查更新 / 冷读 / 意见池 / 简报 ══
 {
   const t = src
@@ -1513,6 +1588,358 @@ for (const page of PAGES) {
   check('任务包 · 默认不展开', countCls(t, 'nw-tp-body') === 0)
   check('任务包 · 挂在流水线页', /h\(TaskPackBoard, \{ projectId, toast/.test(src))
 }
+
+// ── 25. 正文页 ──
+// 这一页的存在本身就是修的一个结构性缺口：以前要读一章，得进验收台（审稿的地方），
+// 首屏是分数表。现在有一页只摊正文，字号行距、读到哪、下一回都在这儿。
+{
+  store['nw.page'] = 'read'
+  store['nw.project'] = PROJECT.id
+  store['nw.openChapter'] = '3'
+  hookMap = new Map()
+  const t = await mount(plugin._test.Root, {})
+  const tx = allText(t).map(String).join(' ')
+  check('正文页 · 零抛错', throwsOf(t).length === 0, throwsOf(t).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
+  check('正文页 · 版心在', countCls(t, 'nw-read') === 1)
+  check('正文页 · 读出这一章的标题', tx.includes('第 3 回'))
+  // 正文来自 chapter.get（桩里那句「雨落下来的时候，他站在城头。」），不是演示段落。
+  check('正文页 · 正文来自 chapter.get', tx.includes('雨落下来的时候'))
+  check('正文页 · 逐段铺开', countCls(t, 'nw-read-para') >= 1, String(countCls(t, 'nw-read-para')))
+  check('正文页 · 阅读/编辑两档', countCls(t, 'nw-read-tab') === 2)
+  check('正文页 · 上一回/下一回都在', tx.includes('上一回') && tx.includes('下一回'))
+  check('正文页 · 字号行距可调', countCls(t, 'nw-read-font') === 1 && tx.includes('行距'))
+  check('正文页 · 能直接跳去验收这一回', tx.includes('去验收这一回'))
+  // 只读页面不该冒出验收台的东西：分数、问题单、采纳按钮一个都不该有。
+  check('正文页 · 不夹带验收台', countCls(t, 'nw-score-grid') === 0 && countCls(t, 'nw-rv-side') === 0)
+}
+
+// ── 26. 今天页的状态条（原「停靠点」页，P4 并进今天） ──
+// run.* 七个 op 以前后端齐全、界面 0 处调用 —— 状态机在跑，人碰不到。
+// 并进「今天」的理由写在 src/29-today.js 的头注释里：门禁放在人看不到的地方拦人，
+// 等于没拦。所以这里断言的重点从「有一页停靠点」变成「今天页第一眼就说清能不能写」。
+{
+  store['nw.page'] = 'today'
+  store['nw.project'] = PROJECT.id
+  hookMap = new Map()
+  const t = await mount(plugin._test.Root, {})
+  const tx = allText(t).map(String).join(' ')
+  check('今天 · 状态条零抛错', throwsOf(t).length === 0, throwsOf(t).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
+  check('今天 · 版心在', countCls(t, 'nw-today') === 1)
+  check('今天 · 状态条在', countCls(t, 'nw-today-run') === 1)
+  check('今天 · 一句话说清能不能写', tx.includes('还能写 2 章'))
+  check('今天 · 这一轮的进度', tx.includes('1 / 3 章'), tx.slice(0, 100))
+  check('今天 · 进行中标绿', countCls(t, 'nw-today-run-green') === 1, String(countCls(t, 'nw-today-run-green')))
+  // 今天页 / 派单页都得挂在 Workbench 的分派表里，不然点导航就是白屏。
+  check('分派表 · 今天与派单都在', /today: h\(TodayPage/.test(src) && /dispatch: h\(DispatchPage/.test(src))
+  // 顶栏状态灯读的是 run.current，不是写死的常量。
+  check('状态灯 · 读 run.current 而非 MOCK',
+    /api\('run\.current'/.test(src) && !/MOCK\.run/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')))
+}
+
+// ── 26b. 今天页的两个极端状态 ──
+// 门禁最容易咬人的场景只有两个：「一章交完等确认」和「还没开过轮」。
+// 两边都得把出路摆在脸上，而不是让人去别的页找。
+{
+  hookMap = new Map()
+  const waiting = { ...RUN, status: 'waiting' }
+  const verdictW = { level: 'orange', text: '第 3 回交完，等确认' }
+  const t = await mount(plugin._test.TodayRunStrip, {
+    projectId: PROJECT.id, run: waiting, verdict: verdictW, toast() {}, onChanged() {},
+  })
+  const tx = allText(t).map(String).join(' ')
+  check('今天 · 等确认不抛错', throwsOf(t).length === 0, throwsOf(t).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
+  check('今天 · 等确认标黄', countCls(t, 'nw-today-run-amber') === 1)
+  check('今天 · 交过的章一行一条', countCls(t, 'nw-run-ch') === 1, String(countCls(t, 'nw-run-ch')))
+  check('今天 · 每章有确认/打回', tx.includes('确认') || tx.includes('打回'), tx.slice(0, 120))
+  check('今天 · 能收尾', tx.includes('收尾关掉'))
+  check('今天 · 等确认时不给开轮表单', countCls(t, 'nw-run-form') === 0)
+}
+
+{
+  hookMap = new Map()
+  const verdictR = { level: 'red', text: '还没开一轮，写正文前要先 run.open 登记' }
+  const t = await mount(plugin._test.TodayRunStrip, {
+    projectId: PROJECT.id, run: null, verdict: verdictR, toast() {}, onChanged() {},
+  })
+  const tx = allText(t).map(String).join(' ')
+  check('今天 · 没开轮不抛错', throwsOf(t).length === 0, throwsOf(t).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
+  check('今天 · 没开轮说清状态', tx.includes('还没开一轮'))
+  // RunOpenForm 常态下只摆一个「开一轮」按钮（表单点开才摊）——
+  // 开轮是一次性动作，把三个输入框常年摆在首屏只会把人吓走。
+  check('今天 · 没开轮给开轮入口', tx.includes('开一轮'), tx.slice(0, 120))
+  check('今天 · 开轮入口可点', countCls(t, 'nw-actions') >= 1)
+  check('今天 · 没开轮标红', countCls(t, 'nw-today-run-red') === 1)
+  check('今天 · 没开轮也说明不开也能写', tx.includes('不开轮也能写'))
+}
+
+// ── 27. 建书页：三步向导（没有作品时的首屏） ──
+// 这一页是「进门第一屏」，不再是「还没有作品」的一句话。
+// 以前一屏摊 15 个字段，人都没想清楚写什么就先被体量、预算、质检门槛问住。
+// 现在只问两件必须现在答的事（叫什么叫、想看什么），其余折进第 2 步的可跳过区。
+// 这一段压的是结构：三步都在、必填能拦、规模卡可选、第 3 步才出现「建这本」。
+{
+  store['nw.project'] = ''
+  hookMap = new Map()
+  const toasts = []
+  const dones = []
+  const props = { toast: (m) => toasts.push(String(m)), onDone: (id, extra) => dones.push({ id, extra }) }
+  let t = await mount(plugin._test.CreateProjectPage, props)
+  let tx = allText(t).map(String).join(' ')
+
+  check('建书页 · 零抛错', throwsOf(t).length === 0, throwsOf(t).slice(0, 2).map((x) => `${x.name}: ${x.error}`).join(' | '))
+  check('建书页 · 版心在', countCls(t, 'nw-create') === 1)
+  check('建书页 · 三步进度条在', countCls(t, 'nw-create-step') === 3)
+  check('建书页 · 第一步就两个必填', countCls(t, 'nw-create-field') === 2)
+  check('建书页 · 书名输入框在', all(t).some((n) => n.props?.id === 'create-name'))
+  check('建书页 · 想法输入框在', all(t).some((n) => n.props?.id === 'create-idea'))
+  check('建书页 · 必填项标了必填', tx.includes('必填'))
+  check('建书页 · 右栏实时预估上屏', countCls(t, 'nw-kv') >= 5 && tx.includes('全书预计'))
+  check('建书页 · 初始不显示原始值', !/undefined|NaN|\[object Object\]/.test(tx), tx.slice(0, 120))
+  check('建书页 · 第一步没有提交按钮', !all(t).some((n) => n.props?.className && String(n.props.className).includes('nw-create-submit')))
+  check('建书页 · 第一步有下一步', all(t).some((n) => n.props?.className && String(n.props.className).includes('nw-create-next')))
+
+  // 空表单点「下一步」：必须拦住，红字标出缺的是哪一项，并且还停在第一步。
+  const next1 = all(t).find((n) => n.props?.className && String(n.props.className).includes('nw-create-next'))
+  await next1.props.onClick()
+  t = await mount(plugin._test.CreateProjectPage, props)
+  tx = allText(t).map(String).join(' ')
+  check('建书页 · 空表单被拦下', countCls(t, 'nw-create-field-bad') >= 1)
+  check('建书页 · 说清是必填', tx.includes('这一项必填'))
+  check('建书页 · 提示还剩几项没填', /还有 \d+ 项没填对/.test(tx), tx.slice(0, 160))
+  check('建书页 · 被拦下时还停在第一步', all(t).some((n) => n.props?.id === 'create-name'))
+  check('建书页 · 被拦下时不发创建请求', dones.length === 0)
+
+  // 填完两项再下一步 → 第二屏是四张规模卡，不是一堆数字输入框。
+  const fillIn = async (id, value) => {
+    const node = all(t).find((n) => n.kind === 'el' && n.props?.id === id)
+    check(`建书页 · 找到 ${id}`, !!node)
+    node.props.onChange({ target: { value } })
+    t = await mount(plugin._test.CreateProjectPage, props)
+  }
+  await fillIn('create-name', '元末女帝：系统让我截胡朱重八')
+  await fillIn('create-idea', '元末乱世，现代女生穿成村姑，系统只会催她嫁给朱重八。')
+  const next2 = all(t).find((n) => n.props?.className && String(n.props.className).includes('nw-create-next'))
+  await next2.props.onClick()
+  t = await mount(plugin._test.CreateProjectPage, props)
+  tx = allText(t).map(String).join(' ')
+  check('建书页 · 第二步不再问数字', countCls(t, 'nw-create-field') === 0)
+  check('建书页 · 四张规模卡', countCls(t, 'nw-create-scale') === 4)
+  check('建书页 · 默认选中一个', countCls(t, 'nw-create-scale-on') === 1)
+  check('建书页 · 规模卡上写清体量', tx.includes('短篇') && tx.includes('长篇') && tx.includes('让 AI 定'))
+  check('建书页 · 有可跳过的更多', all(t).some((n) => n.props?.className && String(n.props.className).includes('nw-create-more')))
+  check('建书页 · 更多默认收起', countCls(t, 'nw-create-more-body') === 0)
+
+  // 展开「更多」：可跳过的三个字段才出现。它们不是必填，不填也能建。
+  const more = all(t).find((n) => n.props?.className && String(n.props.className).includes('nw-create-more'))
+  await more.props.onClick()
+  t = await mount(plugin._test.CreateProjectPage, props)
+  check('建书页 · 展开后有可跳过的三项', countCls(t, 'nw-create-field') === 3)
+  check('建书页 · 可跳过的三项都在',
+    ['genre', 'protagonist', 'hook'].every((k) => all(t).some((n) => n.props?.id === `create-${k}`)))
+  check('建书页 · 可跳过项不标必填', !allText(t).map(String).join(' ').includes('这一项必填'))
+
+  // 第三步才出现「建这本」，并且告诉你建完会发生什么。
+  const next3 = all(t).find((n) => n.props?.className && String(n.props.className).includes('nw-create-next'))
+  await next3.props.onClick()
+  t = await mount(plugin._test.CreateProjectPage, props)
+  tx = allText(t).map(String).join(' ')
+  check('建书页 · 第三步复述要建的东西', tx.includes('元末女帝') && tx.includes('中篇'))
+  check('建书页 · 第三步给「先出骨架」开关', countCls(t, 'nw-create-check') === 1)
+  check('建书页 · 第三步才有提交按钮', all(t).some((n) => n.props?.className && String(n.props.className).includes('nw-create-submit')))
+  check('建书页 · 三步都不抛错', throwsOf(t).length === 0)
+}
+
+// ── 28. 建书校验函数（纯函数，直接喂脏数据） ──
+// 建书页能拦住靠的是它：一个不认识 DOM 的纯函数，输入脏值也不许崩。
+{
+  const V = plugin._test.validateCreate
+  const bad = V(null)
+  check('校验 · null 不崩且判不通过', bad && bad.ok === false && typeof bad.errors === 'object')
+  check('校验 · null 时书名报必填', !!bad.errors.name)
+  const empty = V({})
+  check('校验 · 空对象判不通过', empty.ok === false)
+  check('校验 · 空对象缺两项（名 + 想法）', !!empty.errors.name && !!empty.errors.idea)
+  const ok = V({ name: '元末女帝', idea: '穿成村姑，系统催婚' })
+  check('校验 · 两项齐则通过', ok.ok === true)
+  check('校验 · 中篇默认体量', ok.scale.id === 'medium' && ok.brief.volumes === 2 && ok.brief.chaptersPerVolume === 50)
+  check('校验 · 每章字数跟着体量走', ok.project.targetWords === 2500)
+  check('校验 · 门槛与预算给默认值', ok.project.qualityGate === 70 && ok.project.monthlyBudget === 600)
+  check('校验 · 想法落成卖点也落成前提', ok.project.logline === '穿成村姑，系统催婚' && ok.brief.premise === '穿成村姑，系统催婚')
+  const trim = V({ name: '  x  ', idea: '  y  ' })
+  check('校验 · 前后空格被去掉', trim.project.name === 'x' && trim.project.logline === 'y')
+  const short = V({ name: 'a', idea: 'b', scale: 'short' })
+  check('校验 · 短篇体量对得上', short.brief.volumes === 1 && short.brief.chaptersPerVolume === 30 && short.project.targetWords === 2000)
+  const ai = V({ name: 'a', idea: 'b', scale: 'ai' })
+  check('校验 · 让 AI 定就是三卷二十章', ai.scale.id === 'ai' && ai.brief.volumes === 3)
+  const unknown = V({ name: 'a', idea: 'b', scale: 'nope' })
+  check('校验 · 乱填体量回落中篇', unknown.scale.id === 'medium')
+  const tooLong = V({ name: 'a'.repeat(61), idea: 'b' })
+  check('校验 · 超长书名被拦', tooLong.ok === false && !!tooLong.errors.name && tooLong.errors.name.includes('60'))
+  const dirty = V({ name: undefined, idea: null, genre: NaN, protagonist: {}, hook: [] })
+  check('校验 · 全脏值不崩', dirty.ok === false && !!dirty.errors.name)
+  check('校验 · 脏可选值不弄脏 brief', dirty.brief.genre === '' && dirty.brief.protagonist === '' && dirty.brief.hook === '')
+  check('校验 · 报错项按名字给出', typeof dirty.first === 'string' && dirty.first.length > 0)
+  const steps = plugin._test.createStepIssues
+  check('校验 · 第一步只拦名字与想法', Object.keys(steps({}, 1)).length === 2)
+  check('校验 · 第二步不拦可跳过的项', Object.keys(steps({}, 2)).length === 0)
+}
+
+// ── 29. 建书成功路径（填完 → 三步 → 三块落盘 → 往上跳） ──
+// 上面那两段只压了「拦住」。这一段压真交：project.create 拿到的字段对不对、
+// 大纲 brief 有没有跟着写、骨架有没有排、跳转回调有没有带上新作品的 id。
+{
+  store['nw.project'] = ''
+  hookMap = new Map()
+  const sent = []
+  win.fetch = global.fetch = async (url, opt) => {
+    let op = ''
+    let body = {}
+    try { body = JSON.parse(opt.body); op = body.op } catch { /* 空 */ }
+    sent.push({ op, payload: body.payload })
+    if (op === 'project.create') {
+      return { json: async () => ({ ok: true, value: { id: 'pm0000new001', name: body.payload.name, dir: '/tmp/x', meta: {} } }), status: 200 }
+    }
+    if (op === 'outline.save') return { json: async () => ({ ok: true, value: { outline: OUTLINE } }), status: 200 }
+    if (op === 'outline.generate') return { json: async () => ({ ok: true, value: { outline: OUTLINE } }), status: 200 }
+    return { json: async () => ({ ok: true, value: {} }), status: 200 }
+  }
+  const toasts = []
+  const dones = []
+  const props = { toast: (m) => toasts.push(String(m)), onDone: (id, extra) => dones.push({ id, extra }) }
+  let t = await mount(plugin._test.CreateProjectPage, props)
+
+  const fill = async (id, value) => {
+    const node = all(t).find((n) => n.kind === 'el' && n.props?.id === id)
+    check(`建书 · 找到 ${id}`, !!node)
+    node.props.onChange({ target: { value } })
+    t = await mount(plugin._test.CreateProjectPage, props)
+  }
+  const click = async (cls) => {
+    const node = all(t).find((n) => n.props?.className && String(n.props.className).includes(cls))
+    check(`建书 · 点到 ${cls}`, !!node)
+    await node.props.onClick()
+    t = await mount(plugin._test.CreateProjectPage, props)
+  }
+
+  await fill('create-name', '元末女帝：系统让我截胡朱重八')
+  await fill('create-idea', '穿成元末村姑，系统只会催她嫁给朱重八。')
+  await click('nw-create-next')
+  // 选长篇：6 卷 × 50 章 × 2500 字
+  // 注意用「整个 token 相等」而不是 includes：nw-create-scale-head/-meta/-desc 也含
+  // nw-create-scale 这个子串，includes 会把里面的 span 当成卡片本身。
+  const scaleCards = all(t).filter((n) => {
+    const tokens = String(n.props?.className ?? '').split(/\s+/)
+    return n.kind === 'el' && n.tag === 'button' && tokens.includes('nw-create-scale')
+  })
+  const longCard = scaleCards.find((n) => allText(n).map(String).join(' ').includes('长篇'))
+  check('建书 · 找到长篇卡', !!longCard)
+  await longCard.props.onClick()
+  t = await mount(plugin._test.CreateProjectPage, props)
+  await click('nw-create-next')
+  await click('nw-create-submit')
+
+  const create = sent.find((x) => x.op === 'project.create')
+  check('建书 · 发了 project.create', !!create)
+  check('建书 · 元信息字段带全',
+    !!create && create.payload.name === '元末女帝：系统让我截胡朱重八' &&
+    create.payload.logline === '穿成元末村姑，系统只会催她嫁给朱重八。' &&
+    create.payload.targetWords === 2500 &&
+    create.payload.qualityGate === 70 &&
+    create.payload.monthlyBudget === 600,
+    JSON.stringify(create?.payload))
+  const outline = sent.find((x) => x.op === 'outline.save')
+  check('建书 · 方案也落盘了', !!outline, sent.map((x) => x.op).join(','))
+  check('建书 · 方案挂在新建的作品上', !!outline && outline.payload.projectId === 'pm0000new001')
+  check('建书 · brief 带上想法与体量',
+    !!outline && outline.payload.outline.brief.premise === '穿成元末村姑，系统只会催她嫁给朱重八。' &&
+    outline.payload.outline.brief.volumes === 6 &&
+    outline.payload.outline.brief.chaptersPerVolume === 50,
+    JSON.stringify(outline?.payload?.outline?.brief))
+  check('建书 · 六个详细字段建书时不碰',
+    !!outline && (outline.payload.outline.brief.audience ?? '') === '' && (outline.payload.outline.brief.ending ?? '') === '')
+  check('建书 · 勾了就先排骨架', sent.some((x) => x.op === 'outline.generate'))
+  check('建书 · 往上跳了', dones.length === 1 && dones[0].id === 'pm0000new001', JSON.stringify(dones))
+  check('建书 · 报了成功', toasts.some((m) => m.includes('已建')), toasts.join(' | '))
+  check('建书 · 成功后不再显示建书中', !allText(t).map(String).join(' ').includes('建书中'))
+}
+
+// ── 30. 建书：第二步失败要说清「建了但方案没存进去」 ──
+{
+  store['nw.project'] = ''
+  hookMap = new Map()
+  win.fetch = global.fetch = async (url, opt) => {
+    let op = ''
+    let body = {}
+    try { body = JSON.parse(opt.body); op = body.op } catch { /* 空 */ }
+    if (op === 'project.create') {
+      return { json: async () => ({ ok: true, value: { id: 'pm0000new002', name: body.payload.name, dir: '/tmp/x', meta: {} } }), status: 200 }
+    }
+    if (op === 'outline.save') {
+      return { json: async () => ({ ok: false, error: { code: 'fs', message: '大纲目录不可写' } }), status: 500 }
+    }
+    return { json: async () => ({ ok: true, value: {} }), status: 200 }
+  }
+  const toasts = []
+  const dones = []
+  const props = { toast: (m) => toasts.push(String(m)), onDone: (id, extra) => dones.push({ id, extra }) }
+  let t = await mount(plugin._test.CreateProjectPage, props)
+  const fill = async (id, value) => {
+    const node = all(t).find((n) => n.kind === 'el' && n.props?.id === id)
+    node.props.onChange({ target: { value } })
+    t = await mount(plugin._test.CreateProjectPage, props)
+  }
+  const click = async (cls) => {
+    const node = all(t).find((n) => n.props?.className && String(n.props.className).includes(cls))
+    await node.props.onClick()
+    t = await mount(plugin._test.CreateProjectPage, props)
+  }
+  await fill('create-name', '只有名字的书')
+  await fill('create-idea', '一句话想法。')
+  await click('nw-create-next')
+  await click('nw-create-next')
+  await click('nw-create-submit')
+
+  check('建书 · 第二步失败也照样往上跳', dones.length === 1 && dones[0].id === 'pm0000new002', JSON.stringify(dones))
+  check('建书 · 第二步失败说清原因', toasts.some((m) => m.includes('方案没存进去') && m.includes('大纲目录不可写')), toasts.join(' | '))
+  check('建书 · 第二步失败传回给调用方', dones[0]?.extra?.briefError === '大纲目录不可写', JSON.stringify(dones[0]?.extra))
+  check('建书 · 第二步失败不崩', throwsOf(t).length === 0)
+}
+
+// ── 31. 建书：服务端整个拒绝时把原话端上来 ──
+{
+  store['nw.project'] = ''
+  hookMap = new Map()
+  win.fetch = global.fetch = async () => ({
+    json: async () => ({ ok: false, error: { code: 'fs', message: '磁盘满了，建不了目录' } }),
+    status: 500,
+  })
+  const dones = []
+  const props = { toast: () => {}, onDone: (id) => dones.push(id) }
+  let t = await mount(plugin._test.CreateProjectPage, props)
+  const fill = async (id, value) => {
+    const node = all(t).find((n) => n.kind === 'el' && n.props?.id === id)
+    node.props.onChange({ target: { value } })
+    t = await mount(plugin._test.CreateProjectPage, props)
+  }
+  const click = async (cls) => {
+    const node = all(t).find((n) => n.props?.className && String(n.props.className).includes(cls))
+    await node.props.onClick()
+    t = await mount(plugin._test.CreateProjectPage, props)
+  }
+  await fill('create-name', '建不出来的书')
+  await fill('create-idea', '一句话想法。')
+  await click('nw-create-next')
+  await click('nw-create-next')
+  await click('nw-create-submit')
+
+  const tx = allText(t).map(String).join(' ')
+  check('建书 · 服务端拒绝时把原话上屏', tx.includes('磁盘满了，建不了目录'), tx.slice(0, 160))
+  check('建书 · 服务端拒绝时带上 code', countCls(t, 'nw-create-code') === 1)
+  check('建书 · 服务端拒绝时不往上跳', dones.length === 0)
+  // countCls 会把 Btn 组件节点和它渲染出的 button 各数一次，所以这里是 >= 1。
+  check('建书 · 服务端拒绝后能重新提交', countCls(t, 'nw-create-submit') >= 1 && !tx.includes('建书中'))
+}
+
 let pass = 0
 let failCount = 0
 for (const row of results) {

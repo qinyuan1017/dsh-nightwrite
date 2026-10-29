@@ -24,24 +24,57 @@ const LS = {
   paused: 'nw.paused',
   autosave: 'nw.autosave',
   readMode: 'nw.readmode',
+  // 正文页的三件事：读到哪、字多大、行多松。都是「下次打开还得是我上次的样子」。
+  readPos: 'nw.readpos',
+  readFont: 'nw.readfont',
+  readLine: 'nw.readline',
   // 【QA】底栏「⏭ 最新」与命令面板跳章都写这个键，验收台读它直接打开那一回。
   openChapter: 'nw.openChapter',
   openPara: 'nw.openPara',
 }
 
-// 七页：方案 → 大纲 → 指令 → 验收，四个阶段各自一站。
-// 「大纲」是 m06994 补的：之前从「一句话方案」到「可下单的章节意图」中间断了一截。
+// 八页，四组。导航从「底栏十个等权按钮」改成「左侧竖栏按动作分组」。
+//
+// 为什么这么分：原来十颗钉子在底栏排一行，视觉上完全等权 —— 天天要开的「正文」
+// 和一年动两次的「设置」占一样宽。作者每次都得在十个词里找一遍。
+//
+// 分组不是按功能模块，是按「你现在想干什么」：
+//   今天 → 先看今天。单拎在最上，不属于任何组。
+//   写   → 摊开稿子读 / 规划骨架 / 排一张单让人写
+//   审   → 逐章验收、提案、问题单、读者视角
+//   资料 → 世界库、侦察
+//   系统 → 设置
+//
+// 页数 10 → 8：`pipeline`（派单台）和 `studio`（生产台）合成 `dispatch`（派单），
+// 它们本来就是同一件事的两半（一个排单、一个派人）；`run`（停靠点）并进 `today`，
+// 因为「今天能不能写」跟「今天该写什么」是同一个人在同一秒钟要回答的两个问题。
 const PAGES = [
-  { id: 'cockpit', label: '驾驶舱', icon: '🌙' },
-  { id: 'plan', label: '大纲', icon: '📐' },
-  { id: 'pipeline', label: '流水线', icon: '🛠' },
-  { id: 'studio', label: '生产台', icon: '🎬' },
-  { id: 'review', label: '验收台', icon: '📋' },
-  { id: 'world', label: '世界库', icon: '🗂' },
-  { id: 'scout', label: '侦察', icon: '🔍' },
-  { id: 'settings', label: '设置', icon: '⚙️' },
+  { id: 'today', label: '今天', icon: '🌙', group: '今天' },
+  { id: 'read', label: '正文', icon: '📖', group: '写' },
+  { id: 'plan', label: '大纲', icon: '📐', group: '写' },
+  { id: 'dispatch', label: '派单', icon: '🛠', group: '写' },
+  { id: 'review', label: '验收台', icon: '📋', group: '审' },
+  { id: 'world', label: '世界库', icon: '🗂', group: '资料' },
+  { id: 'scout', label: '侦察', icon: '🔍', group: '资料' },
+  { id: 'settings', label: '设置', icon: '⚙️', group: '系统' },
 ]
 const PAGE_LABEL = Object.fromEntries(PAGES.map((p) => [p.id, p.label]))
+const PAGE_IDS = PAGES.map((p) => p.id)
+/** 旧版本存过的页 id（底栏十页时代）→ 新 id。老 localStorage 不该把界面卡在黑屏。 */
+const PAGE_ALIAS = {
+  cockpit: 'today',
+  pipeline: 'dispatch',
+  studio: 'dispatch',
+  run: 'today',
+}
+/** 认不出来的页 id 一律落到今天；避免 localStorage 里留着旧值时整页渲染 null。 */
+function normalizePage(id) {
+  const key = String(id ?? '').trim()
+  if (PAGE_IDS.includes(key)) return key
+  const alias = PAGE_ALIAS[key]
+  if (alias) return alias
+  return 'today'
+}
 
 const LEDGER_TABS = [
   { value: 'characters', label: '人物', icon: '👤' },

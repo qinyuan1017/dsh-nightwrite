@@ -21,7 +21,7 @@ const used = new Set((source.replace(/--nw-[a-z0-9-]+/g, '').match(/nw-[a-z0-9-]
 const defined = new Set((css.match(/\.(nw-[a-z0-9-]+)/g) ?? []).map((hit) => hit.slice(1)))
 
 // 模板前缀片段：拼出来的类名（`nw-tag-${tone}`）本身不会有定义，跳过。
-const PREFIX = /^nw-(bar|dot|tag|stat|score|prop|prob|ptl|heat|para|export|q|theme|debt-dot|dp|lint|lint-cal|map-edge|opinion|health|policy|cost)-$/
+const PREFIX = /^nw-(bar|dot|tag|stat|score|prop|prob|ptl|heat|para|export|q|theme|debt-dot|dp|lint|lint-cal|map-edge|opinion|health|policy|cost|lamp|run-verdict|today-run)-$/
 const keyframes = new Set((css.match(/@keyframes\s+(nw-[a-z0-9-]+)/g) ?? []).map((hit) => hit.split(/\s+/)[1]))
 
 const missing = [...used]

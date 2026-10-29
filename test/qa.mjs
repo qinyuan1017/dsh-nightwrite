@@ -152,7 +152,7 @@ function auditTree(page, tree) {
 }
 
 // ── 2. 逐页渲染并审计 ──
-const PAGES = ['cockpit', 'plan', 'studio', 'review', 'world', 'scout', 'settings']
+const PAGES = ['today', 'read', 'plan', 'dispatch', 'review', 'world', 'scout', 'settings']
 const trees = {}
 for (const page of PAGES) {
   resetHooks()
@@ -184,11 +184,13 @@ for (const page of PAGES) {
 }
 
 // ── 4. 空态：没有作品 ──
+// 以前这里要求「没有作品时给一句空态文案」。改成建书首屏之后，判据变了：
+// 没有作品要看到一张能填的表，而不是一句「还没有作品，去别处建」。
 {
   resetHooks()
   store['nw.page'] = 'cockpit'
   // Root 的 effect 在 projectId 为空时会自动挑第一个作品，所以光清 store 看不到空态。
-  // 临时把 fetch 换成「一个作品都没有」的桩，才真的走到「还没有作品」那一屏。
+  // 临时把 fetch 换成「一个作品都没有」的桩，才真的走到建书那一屏。
   const realFetch = global.fetch
   const emptyFetch = async (url, opt) => {
     let op = ''
@@ -208,8 +210,16 @@ for (const page of PAGES) {
   trees.empty = tree
   for (const t of throwsOf(tree)) report('bad', 'empty', '组件抛错', `${t.name}: ${t.error}`)
   auditTree('empty', tree)
-  if (!allText(tree).some((t) => String(t).includes('还没有作品'))) {
-    report('warn', 'empty', '没有作品时没给明确空态文案', allText(tree).slice(0, 6).join(' | '))
+  const emptyText = allText(tree).map(String)
+  if (!countCls(tree, 'nw-create')) {
+    report('bad', 'empty', '没有作品时没落到建书页', emptyText.slice(0, 6).join(' | '))
+  }
+  // 新向导第一屏只问两件事（叫什么、想看什么），其余折进第二步的可跳过区。
+  const fields = countCls(tree, 'nw-create-field')
+  if (fields !== 2) report('bad', 'empty', '建书页首屏应只问两项', `${fields} 个字段`)
+  if (countCls(tree, 'nw-create-step') !== 3) report('bad', 'empty', '建书页没有三步进度条', '')
+  if (!emptyText.some((t) => t.includes('先建一本'))) {
+    report('warn', 'empty', '建书页没说明这一步在干什么', emptyText.slice(0, 6).join(' | '))
   }
 }
 
@@ -249,7 +259,7 @@ for (const page of PAGES) {
       && n.cls.split(/\s+/).includes('on')).length
   })
   if (navCounts.some((n) => n !== 1)) {
-    report('bad', 'nav', '底栏高亮不是恰好 1 个', `各页高亮数：${navCounts.join(',')}`)
+    report('bad', 'nav', '底栏胶囊高亮不是恰好 1 个', `各页高亮数：${navCounts.join(',')}`)
   }
   const pageLabels = PAGES.map((page) => allText(trees[page]).join(' '))
   PAGES.forEach((page, i) => {

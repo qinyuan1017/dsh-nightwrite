@@ -41,7 +41,7 @@ jobs:
       - name: test/backend.mjs（119 op 分派 + store 落盘）
         run: node test/backend.mjs
 
-      - name: test/smoke.mjs（假宿主迷你渲染器，8 页 + 组件）
+      - name: test/smoke.mjs（假宿主迷你渲染器，8 页 + 底栏胶囊 + 三步建书 + 组件）
         run: node test/smoke.mjs
 
       - name: test/hooks.mjs（客户端 hooks / store 行为）

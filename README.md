@@ -20,28 +20,51 @@ dsh plugin --profile desktop add file:C:/path/to/dsh-nightwrite
 
 ## 八个页面
 
+**导航在底栏居中的胶囊里**（`.nw-dock`）—— 底栏是视线的终点，八个词一扫就过，不占正文的宽度。
+作品越写越长，屏幕就越该留给稿子。以前底栏是十颗等权的钉子，后来把同一件事的两半合了两次、变成八颗；
+「今天有多少活压着」不藏在导航里，而是摊在顶栏一行上。
+
 | 页 | key | 干什么 |
 | --- | --- | --- |
-| 🌙 驾驶舱 | `cockpit` | 待验收 / 队列 / 欠账 / 今日字数，欠账可点击跳转 |
-| 📐 大纲 | `plan` | 老板的方案 → 卷章骨架 → 一键把「第几回 + 意图」送进生产台 |
-| 🧵 流水线 | `pipeline` | 派单台：11 个岗位、开票、发到对话、收回执 |
-| 🎬 生产台 | `studio` | 上下文装配审计、指令单、批量开写 |
-| 📋 验收台 | `review` | 三个抽屉：逐章拍板 / 提案（before-after 采纳）/ 问题单 |
+| 🌙 今天 | `today` | 一屏回答两件事：现在能不能写（run 状态条 + 确认/打回/收尾）、今天该写什么 |
+| 📖 正文 | `read` | 只摊正文：字号行距、读到哪记到哪、J/K 换回、想改就切「编辑」 |
+| 📐 大纲 | `plan` | 老板的方案 → 卷章骨架 → 一键把「第几回 + 意图」送去派单 |
+| 🛠 派单 | `dispatch` | 上游是 11 个岗位与在途工单，下游是上下文包、指令单、队列 |
+| 📋 验收台 | `review` | 三档：逐章拍板（内含提案/问题单视图切换）/ 读者视角 / 历史版本 |
 | 🗂 世界库 | `world` | 8 栏账本：人物/地点/伏笔/事件/术语/规则/高光/冲突 |
 | 🔍 侦察 | `scout` | 拆文 / 扫榜 / 资料研究 / 封面 |
-| ⚙️ 设置 | `settings` | 作品参数、质量门、预算、数据位置 |
+| ⚙️ 设置 | `settings` | 系统 | 作品参数、写作原则、质量门、预算、数据位置 |
 
-## 工作流（四段，各有一页）
+两次合并都是因为「同一件事被拆成两个菜单」：
+
+- `pipeline` + `studio` → `dispatch`：一个排单、一个派人，本来就是同一条流水线的上下段。
+- `run` + `cockpit` → `today`：「现在能不能写」和「今天该写什么」是同一个人同一秒的两个问题。
+  分成两页的后果是：「一键开工」撞到服务端门禁才知道上一轮没确认；而停靠点在导航最右边，一天点不到两次。
+  **门禁放在人看不到的地方拦人，等于没拦。**
+
+## 工作流
 
 ```
-驾驶舱（今天该干什么）
-  → 大纲（一句话方案 → 卷章骨架 → 摘要/钩子 AI 回填 → 送去生产台）
-    → 生产台（上下文包 + 指令单 + 队列）
-      → 验收台（逐章拍板 / 采纳提案 / 关问题单）
+今天（现在能不能写 + 今天该干什么）
+  → 大纲（一句话方案 → 卷章骨架 → 摘要/钩子 AI 回填 → 送去派单）
+    → 派单（上下文包 + 指令单 + 队列 + 岗位在途工单）
+      → 正文（摊开读 / 顺手改）
+        → 验收台（逐章拍板 / 采纳提案 / 关问题单）
 ```
 
-三个快动作 `✍️ 续写一章` `⚡ 连更 3 章` `🩺 体检` 在**顶栏右侧**，和队列状态、暂停放在一起。
-底栏只有居中的八页导航。
+顶栏把活量摊在一行里：品牌 + 当前页 · 状态灯 · 作品切换 · 待验收/队列/本月花销 · 快动作（续写一章 / 连更 3 章 / 体检）+ `＋ 新书`。
+底栏只管导航和两个常驻键（最新 / 新章）。预算超了在顶栏那个计量条上直接写明超了多少。
+
+顶栏下方那条黄色的「写作原则」是这本书的铁律：写进 `project.settings.writePrinciple`，
+派单时自动插到每张工作单的第一行（`src/30-studio.js` 的 `dispatch()`），设置页可改。
+这一条是 LNW 没有的：它把原则写死在源码里只能看，长夜让它每一轮都真的传到模型面前。
+
+一本作品都没有时，上面八页一页都不显示 —— 整屏摊开的是三步建书向导（`src/12-create.js`）：
+第一步只问两件必须现在答的事（叫什么、想看什么）；第二步选一个体量（短篇/中篇/长篇/让 AI 定），
+题材主角钩子折进「更多（可跳过）」；第三步复述 + 勾选「建完先把全书骨架排好」。
+提交走三个 op：`project.create` → `outline.save`（方案）→ `outline.generate`（骨架）。
+三段失败都不回滚已建的目录，但会把「建了但哪一步没存进去」的原因说清。
+`project.list` 自己失败时给的是错误框和「重试」，不会把「读不到」当成「你没有作品」。
 
 ## 目录
 
@@ -51,11 +74,16 @@ lib/store.js      数据层：library.json / chapters/0001.txt / ledger.json / t
                   queue.json / outline.json / proposals.json / problems.json
 lib/client.js     客户端 bundle（由 build.mjs 从 src/ 拼出，勿手改）
 src/10-core.js    常量 / api() / 基础控件
-src/20-cockpit.js 驾驶舱
+src/12-create.js  建作品（三步向导：写什么 → 怎么排 → 确认，三个 op 都落盘）
+src/20-cockpit.js 驾驶舱（现在作为「今天」页的下半截，bare 模式内嵌）
 src/25-plan.js    大纲（方案卡 + 卷章骨架）
-src/30-studio.js  生产台（含 buildContext 上下文装配）
-src/40-review.js  验收台（逐章列表 + ReviewDetail 深水区 + 五抽屉）
-src/45-triage.js  提案抽屉 / 问题单抽屉
+src/26-dispatch.js 派单页（岗位与工单 + 指令单 + 队列合成一页）
+src/28-run.js     开轮表单与每章行（状态条在 src/29-today.js）
+src/29-today.js   今天页（run 状态条 + 内嵌驾驶舱）
+src/30-studio.js  指令单与队列（含 buildContext 上下文装配，被派单页内嵌）
+src/40-review.js  验收台（逐章列表 + ReviewDetail 深水区 + 三档：逐章/读者视角/历史版本）
+src/42-read.js    正文页（只读不审，字号行距 + 阅读位置 + J/K 换回）
+src/45-triage.js  提案与问题单（验收台里的两个视图）
 src/47-opinions.js 冷读 / 意见池
 src/50-world.js   世界库
 src/52-worldmap.js 世界地图（第四视图，拖坐标 + 连线）
@@ -63,14 +91,14 @@ src/60-scout.js   侦察
 src/70-settings.js 设置（含成书导出 / 检查更新 / 语料池）
 src/74-book.js    成书导出（TXT/MD/EPUB/DOCX）+ 检查更新
 src/85-css.js     全部样式（NIGHTWRITE_CSS）
-src/90-shell.js   顶栏 / 底栏 / 导航 / Root / apply
+src/90-shell.js   顶栏 / 底栏胶囊导航 / 写作原则条 / Root / apply
 build.mjs         拼接 src/*.js → lib/client.js，并补 factory 的 return
-test/smoke.mjs    迷你 React 渲染器冒烟（323 项）
-test/backend.mjs  真实后端端到端（709 项）
-test/check24.mjs  24 条界面增补的落点核对（36 处标记，覆盖 24/24）
+test/smoke.mjs    迷你 React 渲染器冒烟（438 项）
+test/backend.mjs  真实后端端到端（721 项）
+test/check24.mjs  24 条界面增补的落点核对（38 处标记，覆盖 24/24）
 test/wordcount-parity.mjs 客户端 countChars 与服务端 countWords 逐例比对（11 项）
 test/skills-check.mjs 25 份 SKILL.md 的结构校验（377 项）
-test/hooks.mjs     React hook 顺序静态检查（46 项：先 return 后调 hook 会白屏，冒烟测不出来。
+test/hooks.mjs     React hook 顺序静态检查（53 项：先 return 后调 hook 会白屏，冒烟测不出来。
                    自写扫描器认 if 块里的早退 + 调 eslint 的 rules-of-hooks 兜底，两套判据互相补漏）
 test/css-cover.mjs  界面上出现的每个 nw- 类在 CSS 里都有定义
 test/qa.mjs       全库自检（越界路径 / 未闭合标签 / 死代码）
@@ -84,8 +112,8 @@ nightwrite-skills-all.md  25 份 SKILL.md 的合并本（便于整份复制/通�
 ```bash
 node build.mjs                                      # 重建 lib/client.js
 node --check index.js lib/store.js src/*.js         # 语法
-node test/backend.mjs                               # 709 项
-node test/smoke.mjs                                 # 323 项
+node test/backend.mjs                               # 721 项
+node test/smoke.mjs                                 # 438 项
 node test/check24.mjs                               # 24 条落点
 node test/wordcount-parity.mjs                      # 字数口径一致
 node test/hooks.mjs                                 # hook 顺序（防白屏）

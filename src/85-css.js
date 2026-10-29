@@ -61,12 +61,14 @@ const NIGHTWRITE_CSS = `
 .nw-top-hint-on{color:var(--nw-teal)}
 
 /* ── 主体 ── */
+/* 【P1】主体改成「左竖栏 + 内容区」。以前是一条底栏横排十颗钉子，
+   天天要开的「正文」和一年动两次的「设置」占一样宽。 */
 .nw-body{flex:1;min-height:0;overflow:auto;padding:14px 16px 8px}
 .nw-page{display:flex;flex-direction:column;gap:14px;min-height:0;max-width:1360px;margin:0 auto}
 .nw-cockpit{max-width:1360px}
 .nw-review{max-width:1360px}
 
-/* ── 底栏：只放导航，且居中 ── */
+/* ── 底栏：居中的胶囊导航 ── */
 .nw-bottom{display:flex;align-items:center;justify-content:center;padding:8px 16px;border-top:1px solid var(--nw-line);background:var(--nw-bg-1);flex:none}
 .nw-dock{display:flex;gap:2px;flex:none;background:var(--nw-bg-2);border:1px solid var(--nw-line);border-radius:999px;padding:3px}
 .nw-dock-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 12px;border-radius:999px;color:var(--nw-fg-3);font-size:11px}
@@ -75,6 +77,16 @@ const NIGHTWRITE_CSS = `
 .nw-dock-icon{font-size:13px;line-height:1.2}
 .nw-dock-label{line-height:1.3}
 .nw-dock-badge{position:absolute;top:1px;right:3px;background:var(--nw-red);color:#fff;font-size:9px;line-height:1.35;border-radius:999px;padding:0 4px}
+.nw-bottom-pad{flex:1 1 0;min-width:120px}
+.nw-bottom-acts{flex:1 1 0;display:flex;justify-content:flex-end;gap:6px;min-width:120px}
+.nw-bottom-btn{white-space:nowrap}
+
+.nw-principle{display:flex;align-items:center;gap:8px;width:100%;padding:6px 16px;border:0;border-bottom:1px solid var(--nw-line);background:linear-gradient(90deg,var(--nw-amber-weak),transparent 60%);color:var(--nw-fg-2);font:inherit;font-size:11.5px;text-align:left;cursor:pointer;flex:none}
+.nw-principle:hover{color:var(--nw-fg)}
+.nw-principle-mark{flex:none;color:var(--nw-amber)}
+.nw-principle-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nw-principle-tog{flex:none;color:var(--nw-fg-3);font-size:10.5px}
+
 
 /* ── 通用控件 ── */
 .nw-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:8px;border:1px solid var(--nw-line-2);color:var(--nw-fg);background:var(--nw-bg-2);transition:.12s}
@@ -387,10 +399,6 @@ const NIGHTWRITE_CSS = `
 .nw-lamp-sub{font-size:10px;color:var(--nw-fg-3);font-family:ui-monospace,Consolas,monospace}
 .nw-cmdk-open{flex:none}
 
-/* ── #2 底栏右侧按钮 + 居中 ── */
-.nw-bottom-pad{flex:1 1 0;min-width:120px}
-.nw-bottom-acts{flex:1 1 0;display:flex;justify-content:flex-end;gap:6px;min-width:120px}
-.nw-bottom-btn{white-space:nowrap}
 
 /* ── #3 命令面板 ── */
 .nw-cmdk-list{display:flex;flex-direction:column;gap:2px;margin-top:8px;max-height:320px;overflow:auto}
@@ -515,6 +523,7 @@ const NIGHTWRITE_CSS = `
 
 /* ── #14 段落视图 + 点亮 ── */
 .nw-para-list{display:flex;flex-direction:column;gap:2px;padding:2px 2px 6px;max-height:52vh;overflow:auto}
+.nw-para-empty{margin:0;padding:22px 10px;color:var(--nw-fg-3);font-size:13px;text-align:center}
 .nw-para{position:relative;padding:6px 10px 6px 30px;border-radius:7px;border-left:2px solid transparent;font-size:14px;line-height:2;color:var(--nw-fg);cursor:pointer;background:none;border-top:0;border-right:0;border-bottom:0;width:100%;text-align:left;font-family:inherit}
 .nw-para:hover{background:var(--nw-bg-2)}
 .nw-para:focus-visible{outline:2px solid var(--nw-amber);outline-offset:1px}
@@ -713,10 +722,13 @@ const NIGHTWRITE_CSS = `
   .nw-top{flex-direction:column;align-items:stretch;gap:6px}
   .nw-top-mid,.nw-top-right{flex-wrap:wrap;justify-content:flex-start;gap:6px}
   .nw-top-hint{order:-1;width:100%}
-  .nw-bottom-pad{flex-direction:column;gap:5px}
-  .nw-bottom-acts{width:100%;justify-content:center;flex-wrap:wrap}
+  /* 窄屏：竖栏转成一条可横滑的横排，组名藏起来（省掉一行高度）。 */
+  .nw-bottom{padding:6px 8px}
+  .nw-bottom-pad{display:none}
+  .nw-bottom-acts{display:none}
   .nw-dock{gap:2px;overflow-x:auto;max-width:100%}
-  .nw-dock-btn{padding:4px 5px;white-space:nowrap}
+  .nw-dock-btn{padding:4px 6px;white-space:nowrap}
+  .nw-principle{padding:6px 10px}
   .nw-stat-grid{grid-template-columns:1fr 1fr}
   .nw-actions{grid-template-columns:1fr}
   .nw-rv-docbar{flex-wrap:wrap;gap:5px}
@@ -1099,4 +1111,185 @@ const NIGHTWRITE_CSS = `
 
 /* ── 派单票上的子代理编号 ─────────────────────────────── */
 .nw-dp-child{font-family:var(--nw-mono);font-size:10.5px;color:var(--nw-teal)}
+
+/* ── 状态灯按 verdict 上色：红灯就真的是红的 ─────────────
+   以前只有「亮 / 不亮」两态，等于没说实话——没开轮、等确认、可以写三种状态
+   长得一模一样。现在按绿色绿、琥珀黄、红色红，看颜色就知道卡没卡。 */
+.nw-lamp-green .nw-lamp-dot{background:var(--nw-green)}
+.nw-lamp-amber .nw-lamp-dot{background:var(--nw-amber);animation:nw-pulse 1.6s infinite}
+.nw-lamp-red .nw-lamp-dot{background:var(--nw-red)}
+.nw-lamp-red{border-color:var(--nw-red)}
+.nw-lamp-amber{border-color:var(--nw-amber)}
+.nw-lamp-grey .nw-lamp-dot{background:var(--nw-fg-3)}
+
+/* ── 正文页：字、章号、进度，别的一概不摆 ───────────────── */
+.nw-read{display:flex;flex-direction:column;gap:14px}
+.nw-read-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.nw-read-nav{display:flex;align-items:center;gap:8px}
+.nw-read-pos{font-size:11.5px;color:var(--nw-fg-3);font-family:var(--nw-mono)}
+.nw-read-font{display:flex;align-items:center;gap:6px;margin-left:auto}
+.nw-read-font-n{font-size:11.5px;color:var(--nw-fg-2);font-family:var(--nw-mono);min-width:18px;text-align:center}
+.nw-read-sheet{border:1px solid var(--nw-line);border-radius:12px;background:var(--nw-bg-2);padding:22px 26px 16px}
+.nw-read-head{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--nw-line);margin-bottom:16px}
+.nw-read-title{margin:0;font-size:17px;font-weight:600;color:var(--nw-fg)}
+.nw-read-sub{margin-left:auto;font-size:11.5px;color:var(--nw-fg-3)}
+.nw-read-doc{color:var(--nw-fg-1);max-width:44em}
+.nw-read-para{margin:0 0 1.05em;text-indent:2em;letter-spacing:.01em}
+.nw-read-para:hover{background:rgba(217,160,84,.06);border-radius:4px}
+.nw-read-tab{min-width:64px}
+.nw-read-empty{margin:0;padding:18px 0;color:var(--nw-fg-3);font-size:13px}
+.nw-read-edit{display:flex;flex-direction:column;gap:10px}
+.nw-read-foot{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.nw-read-more{display:flex;justify-content:center;padding:8px 0 2px}
+.nw-read-tail{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--nw-line)}
+.nw-read-tail .nw-btn:last-child{margin-left:auto}
+.nw-read-flag{font-size:11.5px;color:var(--nw-green)}
+
+@media (max-width:760px){
+  .nw-read-sheet{padding:16px 14px 12px}
+  .nw-read-doc{max-width:none}
+}
+
+/* ── 停靠点：一句话说清「现在能不能写」 ─────────────────── */
+.nw-run{display:flex;flex-direction:column;gap:14px}
+.nw-run-hero h2{margin:0 0 4px;font-size:18px;color:var(--nw-fg)}
+.nw-run-verdict{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--nw-line);background:var(--nw-bg-2)}
+.nw-run-verdict-dot{width:9px;height:9px;border-radius:50%;background:var(--nw-fg-3);flex:none}
+.nw-run-verdict-text{font-size:13px;color:var(--nw-fg-1)}
+.nw-run-verdict-green{border-color:var(--nw-green)}
+.nw-run-verdict-green .nw-run-verdict-dot{background:var(--nw-green)}
+.nw-run-verdict-amber{border-color:var(--nw-amber)}
+.nw-run-verdict-amber .nw-run-verdict-dot{background:var(--nw-amber)}
+.nw-run-verdict-red{border-color:var(--nw-red)}
+.nw-run-verdict-red .nw-run-verdict-dot{background:var(--nw-red)}
+.nw-run-verdict .nw-btn{margin-left:auto}
+.nw-run-active{display:flex;flex-direction:column;gap:12px;border:1px solid var(--nw-line);border-radius:12px;background:var(--nw-bg-2);padding:16px 18px}
+.nw-run-head{display:flex;align-items:flex-start;gap:12px}
+.nw-run-head h3{margin:0 0 3px;font-size:15px;color:var(--nw-fg)}
+.nw-run-head .nw-actions{margin-left:auto;align-items:center}
+.nw-run-count{font-size:11.5px;color:var(--nw-fg-2);font-family:var(--nw-mono)}
+.nw-run-chs{display:flex;flex-direction:column;gap:6px}
+.nw-run-ch{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;background:var(--nw-bg-3);font-size:12px}
+.nw-run-ch-done{opacity:.72}
+.nw-run-ch-n{font-weight:600;color:var(--nw-fg-1);min-width:56px}
+.nw-run-ch-w{color:var(--nw-fg-2);font-family:var(--nw-mono);font-size:11.5px}
+.nw-run-ch-at{color:var(--nw-fg-3);font-family:var(--nw-mono);font-size:11px}
+.nw-run-ch-acts{margin-left:auto;display:flex;gap:6px}
+.nw-run-foot{display:flex;align-items:flex-end;gap:12px;border-top:1px solid var(--nw-line);padding-top:12px}
+.nw-run-foot .nw-field{flex:1;margin:0}
+.nw-run-foot .nw-actions{align-self:flex-end}
+.nw-run-form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
+.nw-run-form .nw-actions{grid-column:1/-1}
+.nw-run-hist{display:flex;flex-direction:column;gap:5px}
+.nw-run-hist-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;border:1px solid transparent;background:var(--nw-bg-2);cursor:pointer;text-align:left;font-size:12px}
+.nw-run-hist-row:hover{border-color:var(--nw-amber)}
+.nw-run-hist-id{font-family:var(--nw-mono);font-size:10.5px;color:var(--nw-fg-3)}
+.nw-run-hist-n{color:var(--nw-fg-2);font-family:var(--nw-mono);font-size:11.5px}
+.nw-run-hist-at{margin-left:auto;color:var(--nw-fg-3);font-family:var(--nw-mono);font-size:11px}
+
+@media (max-width:760px){
+  .nw-run-form{grid-template-columns:1fr}
+  .nw-run-foot{flex-direction:column;align-items:stretch}
+}
+
+/* ── 建作品页（没有作品时的首屏） ─────────────────────────── */
+.nw-top-solo{justify-content:flex-start;gap:12px}
+.nw-top-solo .nw-brand-page{margin-left:2px}
+.nw-create{display:flex;flex-direction:column;gap:16px}
+.nw-create-lead{display:flex;flex-direction:column;gap:5px}
+.nw-create-title{margin:0;font-size:20px;color:var(--nw-fg)}
+.nw-create-sub{margin:0;color:var(--nw-fg-2);font-size:12.5px;line-height:1.7;max-width:640px}
+.nw-create-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.nw-create-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.nw-create-side{display:flex;flex-direction:column;gap:14px;position:sticky;top:12px}
+.nw-create-card{display:flex;flex-direction:column;gap:10px}
+.nw-create-field{display:flex;flex-direction:column;gap:5px;margin:0}
+.nw-create-field>label{font-size:12px;color:var(--nw-fg-2)}
+.nw-create-field-bad>label{color:var(--nw-red)}
+.nw-create-field-bad .nw-input{border-color:var(--nw-red)}
+.nw-create-hint{font-size:11px;color:var(--nw-fg-3);line-height:1.5}
+.nw-create-err{font-size:11px;color:var(--nw-red);line-height:1.5}
+.nw-create-steps{margin:0;padding-left:17px;color:var(--nw-fg-2);font-size:12px;line-height:1.9}
+.nw-create-submit{width:100%;justify-content:center}
+.nw-create-notice{margin:0;font-size:11.5px;color:var(--nw-amber);line-height:1.6}
+.nw-create-fail{font-size:11.5px;line-height:1.6;flex-wrap:wrap}
+.nw-create-code{font-family:var(--nw-mono);font-size:10.5px;color:var(--nw-fg-3)}
+.nw-create-steps-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nw-create-step{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--nw-bg-2);color:var(--nw-fg-3);font-size:11.5px}
+.nw-create-step-n{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--nw-bg-3);color:var(--nw-fg-2);font-size:10px;font-weight:700}
+.nw-create-step.on{background:var(--nw-amber-weak);color:var(--nw-amber);font-weight:600}
+.nw-create-step.on .nw-create-step-n{background:var(--nw-amber);color:var(--nw-bg)}
+.nw-create-step.done{color:var(--nw-fg-2)}
+.nw-create-scale-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.nw-create-scale{display:flex;flex-direction:column;gap:4px;padding:11px 12px;border:1px solid var(--nw-line);border-radius:10px;background:var(--nw-bg);color:var(--nw-fg);font:inherit;text-align:left;cursor:pointer}
+.nw-create-scale:hover{border-color:var(--nw-amber)}
+.nw-create-scale-on{border-color:var(--nw-amber);background:var(--nw-amber-weak)}
+.nw-create-scale-head{display:flex;align-items:center;gap:8px}
+.nw-create-scale-name{font-size:13px;font-weight:600}
+.nw-create-scale-meta{font-size:11px;color:var(--nw-fg-2);font-family:var(--nw-mono)}
+.nw-create-scale-desc{font-size:11px;color:var(--nw-fg-3);line-height:1.5}
+.nw-create-scale-total{font-size:11.5px;color:var(--nw-amber);font-weight:600;margin-top:2px}
+.nw-create-more{align-self:flex-start;border:0;background:transparent;color:var(--nw-fg-2);font:inherit;font-size:11.5px;cursor:pointer;padding:2px 0}
+.nw-create-more:hover{color:var(--nw-amber)}
+.nw-create-more-body{display:flex;flex-direction:column;gap:10px;padding:11px 12px;border:1px dashed var(--nw-line);border-radius:10px}
+.nw-create-check{display:flex;flex-direction:column;gap:5px;padding:11px 12px;border:1px solid var(--nw-line);border-radius:10px;background:var(--nw-bg-2)}
+.nw-create-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:4px}
+.nw-create-foot .nw-btn-primary{flex:1;justify-content:center}
+.nw-create-next{flex:1;justify-content:center}
+
+/* ══ 【P1/P4/P5】今天 / 派单 / 读者视角 / 历史版本 ══════════════════ */
+
+/* ── 今天：顶部一条「现在能不能写」 ── */
+.nw-today-run{display:flex;flex-direction:column;gap:8px;padding:9px 12px;border:1px solid var(--nw-line);border-radius:10px;background:var(--nw-bg-1)}
+.nw-today-run-green{border-color:var(--nw-green)}
+.nw-today-run-amber{border-color:var(--nw-amber)}
+.nw-today-run-red{border-color:var(--nw-red)}
+.nw-today-run-blocked{background:var(--nw-bg-1);box-shadow:inset 2px 0 0 var(--nw-amber)}
+.nw-today-run-line{display:flex;align-items:center;gap:8px}
+.nw-today-run-dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--nw-fg-3)}
+.nw-today-run-green .nw-today-run-dot{background:var(--nw-green)}
+.nw-today-run-amber .nw-today-run-dot{background:var(--nw-amber);animation:nw-pulse 2.4s ease-in-out infinite}
+.nw-today-run-red .nw-today-run-dot{background:var(--nw-red)}
+.nw-today-run-text{flex:1;min-width:0;font-size:12.5px;color:var(--nw-fg)}
+.nw-today-run-count{flex:none;font-size:11px;color:var(--nw-fg-2);font-family:var(--nw-mono)}
+.nw-today-run-body{display:flex;flex-direction:column;gap:8px;padding-top:8px;border-top:1px dashed var(--nw-line)}
+.nw-today-run-foot{display:flex;align-items:flex-end;gap:8px}
+.nw-today-run-foot .nw-field{flex:1;min-width:0}
+
+/* ── 派单：把两页拼起来的过渡头 ── */
+.nw-dispatch-lead{display:flex;flex-direction:column;gap:3px}
+.nw-dispatch-lead h2{margin:0;font-size:15px;font-weight:600}
+.nw-dispatch-lead p{margin:0}
+
+/* ── 验收台：读者视角两视图 ── */
+.nw-reader{display:flex;flex-direction:column;gap:12px}
+
+/* ── 验收台：历史版本整屏 ── */
+.nw-vers{display:flex;flex-direction:column;gap:12px}
+.nw-vers-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nw-vers-list{display:flex;flex-direction:column;gap:4px}
+.nw-vers-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid var(--nw-line);border-radius:8px;background:var(--nw-bg-1)}
+.nw-vers-row.on{border-color:var(--nw-amber);background:var(--nw-amber-weak)}
+.nw-vers-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--nw-fg);font:inherit;font-size:12px;text-align:left;cursor:pointer;padding:3px 0}
+.nw-vers-at{flex:none;font-family:var(--nw-mono);font-size:11px;color:var(--nw-fg-2)}
+.nw-vers-w{flex:none;font-family:var(--nw-mono);font-size:11px;color:var(--nw-fg-2)}
+.nw-vers-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:var(--nw-fg-3);font-family:var(--nw-mono)}
+.nw-vers-text{margin:0;max-height:440px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.85;color:var(--nw-fg)}
+
+/* ── 顶栏：超预算才浮的那条 ── */
+.nw-top-new{white-space:nowrap}
+.nw-top-warn{width:100%;border:0;border-top:1px solid var(--nw-amber);background:var(--nw-amber-weak);color:var(--nw-amber);font:inherit;font-size:11.5px;padding:5px 16px;text-align:left;cursor:pointer;flex:none}
+
+/* 今天页外壳（内嵌的驾驶舱是 bare 的，不再套 .nw-page）。 */
+.nw-today{max-width:1360px}
+
+@media (max-width:900px){
+  .nw-today-run-foot{flex-direction:column;align-items:stretch}
+}
+
+@media (max-width:900px){
+  .nw-create-cols{grid-template-columns:1fr}
+  .nw-create-side{position:static}
+  .nw-create-scale-grid{grid-template-columns:1fr}
+}
 `

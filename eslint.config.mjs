@@ -149,7 +149,7 @@ export default [
     // 产物 / 备份 / 自动生成 / 临时脚本都不 lint
     ignores: [
       'node_modules/**',
-      'lib/client.js', // build.mjs 的产物（389KB 拼接文件）
+      'lib/client.js', // build.mjs 的产物（430KB 拼接文件）
       '**/*.bak-*',
       '.bak-*/**',
       '.tmpwork/**',

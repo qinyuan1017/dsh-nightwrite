@@ -1,7 +1,7 @@
 {
   "name": "dsh-nightwrite",
   "version": "0.1.0",
-  "description": "长夜 · AI 主写的小说工作台：驾驶舱 / 大纲 / 生产台 / 验收台（含提案·问题单）/ 世界库 / 侦察 / 设置",
+  "description": "长夜 · AI 主写的小说工作台：今天 / 正文 / 大纲 / 派单 / 验收台（含提案·问题单）/ 世界库 / 侦察 / 设置",
   "type": "module",
   "main": "index.js",
   "types": "./types/index.d.ts",

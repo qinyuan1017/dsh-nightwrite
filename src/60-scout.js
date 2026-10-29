@@ -47,59 +47,125 @@ const SCOUT_CASES = [
 
 // ── 21. 最近干过什么 ──────────────────────────────────────
 
-function ScoutHistory({ toast }) {
-  const [open, setOpen] = useState('h1')
+/**
+ * 把「拆过的书」和「扫过的榜」拼成一条时间线。
+ *
+ * 以前这四条是写死的（拆文 / 扫榜 / 资料 / 封面各一条），点开还提示「演示数据」。
+ * 现在只列真的落过盘的东西：analyze.list 和 scan.list 的索引，按时间倒序。
+ * 一条都没跑过就老实说没有 —— 比摆四条假记录诚实。
+ */
+function scoutHistoryRows(analyses, scans) {
+  const rows = []
+  for (const row of Array.isArray(analyses) ? analyses : []) {
+    rows.push({
+      id: `an-${row.id}`,
+      kind: '拆文',
+      icon: '🧪',
+      title: row.title || '拆书',
+      sub: `${row.chapters ?? 0} 章 · ${fmtWords(row.totalWords ?? 0)} · 平均情绪 ${row.avgEmotion ?? '—'}`,
+      at: String(row.createdAt ?? ''),
+    })
+  }
+  for (const row of Array.isArray(scans) ? scans : []) {
+    rows.push({
+      id: `sb-${row.id}`,
+      kind: '扫榜',
+      icon: '📊',
+      title: `${row.platform || '榜单'}${row.genre ? ` · ${row.genre}` : ''}`,
+      sub: `${row.count ?? (Array.isArray(row.rows) ? row.rows.length : 0)} 本书${row.note ? ` · ${row.note}` : ''}`,
+      at: String(row.createdAt ?? ''),
+    })
+  }
+  return rows.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8)
+}
+
+function fmtAgo(iso) {
+  const at = Date.parse(String(iso ?? ''))
+  if (!Number.isFinite(at)) return '—'
+  const mins = Math.max(0, Math.round((Date.now() - at) / 60000))
+  if (mins < 1) return '刚刚'
+  if (mins < 60) return `${mins} 分钟前`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours} 小时前`
+  const days = Math.round(hours / 24)
+  if (days < 30) return `${days} 天前`
+  return `${Math.round(days / 30)} 个月前`
+}
+
+function ScoutHistory({ projectId, toast }) {
+  const [open, setOpen] = useState('')
+  const ana = useAsync(() => api('analyze.list', { projectId }), [projectId], { skip: !projectId })
+  const sca = useAsync(() => api('scan.list', { projectId }), [projectId], { skip: !projectId })
+  const rows = useMemo(
+    () => scoutHistoryRows(ana.data?.items, sca.data?.items),
+    [ana.data, sca.data],
+  )
   return h(
     Card,
-    { title: '最近干过什么', extra: h('span', { className: 'nw-card-badge' }, `${MOCK.history.length} 条`) },
-    h('div', { className: 'nw-hist' }, MOCK.history.map((row) => h(
-      'div',
-      { className: `nw-hist-row${open === row.id ? ' on' : ''}`, key: row.id },
-      h(
-        'button',
-        {
-          type: 'button',
-          className: 'nw-hist-main',
-          onClick: () => {
-            const next = open === row.id ? '' : row.id
-            setOpen(next)
-            if (next) toast?.(`${row.title} · ${row.at}`)
-          },
-        },
-        h('span', { className: 'nw-hist-icon' }, row.icon),
+    { title: '最近干过什么', extra: h('span', { className: 'nw-card-badge' }, `${rows.length} 条`) },
+    rows.length
+      ? h('div', { className: 'nw-hist' }, rows.map((row) => h(
+        'div',
+        { className: `nw-hist-row${open === row.id ? ' on' : ''}`, key: row.id },
         h(
-          'span',
-          { className: 'nw-hist-body' },
-          h('span', { className: 'nw-hist-title' }, row.title),
-          h('span', { className: 'nw-hist-sub' }, row.sub),
-        ),
-        h(Tag, { tone: 'grey' }, row.kind),
-        h('span', { className: 'nw-hist-at' }, row.age),
-        h('span', { className: 'nw-prop-go' }, open === row.id ? '▾' : '▸'),
-      ),
-      open === row.id
-        ? h(
-          'div',
-          { className: 'nw-hist-detail' },
-          h('p', null, `${row.sub}`),
-          h('p', { className: 'nw-hint' }, `发生时间：${row.at} · 产出已落回工作区（演示数据）`),
+          'button',
+          {
+            type: 'button',
+            className: 'nw-hist-main',
+            onClick: () => {
+              const next = open === row.id ? '' : row.id
+              setOpen(next)
+              if (next) toast?.(`${row.title} · ${fmtAgo(row.at)}`)
+            },
+          },
+          h('span', { className: 'nw-hist-icon' }, row.icon),
           h(
-            'div',
-            { className: 'nw-actions' },
-            h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`打开产物：${row.title}（演示）`) }, '打开产物'),
-            h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`已按「${row.kind}」再跑一次（演示）`) }, '再跑一次'),
+            'span',
+            { className: 'nw-hist-body' },
+            h('span', { className: 'nw-hist-title' }, row.title),
+            h('span', { className: 'nw-hist-sub' }, row.sub),
           ),
-        )
-        : null,
-    ))),
+          h(Tag, { tone: 'grey' }, row.kind),
+          h('span', { className: 'nw-hist-at' }, fmtAgo(row.at)),
+          h('span', { className: 'nw-prop-go' }, open === row.id ? '▾' : '▸'),
+        ),
+        open === row.id
+          ? h(
+            'div',
+            { className: 'nw-hist-detail' },
+            h('p', null, row.sub),
+            h('p', { className: 'nw-hint' }, `发生时间：${row.at || '—'}`),
+            h(
+              'div',
+              { className: 'nw-actions' },
+              h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`${row.title} 的产物就在工作区里`) }, '打开产物'),
+              h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`再跑一次：${row.kind}`) }, '再跑一次'),
+            ),
+          )
+          : null,
+      )))
+      : h(Empty, null, '还没跑过拆文或扫榜。下面的「拆一本书」「扫一次榜」跑完就会出现在这里。'),
   )
 }
 
 // ── 22. 扫榜结果表格 ──────────────────────────────────────
 
-function ScanTable({ toast }) {
+function ScanTable({ projectId, toast }) {
   const [sortKey, setSortKey] = useState('rank')
   const [asc, setAsc] = useState(true)
+  const sca = useAsync(() => api('scan.list', { projectId }), [projectId], { skip: !projectId })
+  const latestId = useMemo(() => {
+    const items = Array.isArray(sca.data?.items) ? sca.data.items : []
+    return items.length ? items[0].id : ''
+  }, [sca.data])
+  // scan.list 只回索引（平台 / 时间 / 条数），表格要的是榜单的每一行，
+  // 所以拿到最新那次的 id 之后还得再取一次全文 —— 不然表格永远是空的。
+  const one = useAsync(
+    () => api('scan.get', { projectId, id: latestId }),
+    [projectId, latestId],
+    { skip: !projectId || !latestId },
+  )
+  const latest = latestId ? one.data : null
   const cols = [
     { key: 'rank', label: '#', num: true },
     { key: 'platform', label: '平台' },
@@ -110,7 +176,16 @@ function ScanTable({ toast }) {
     { key: 'trend', label: '趋势' },
   ]
   const rows = useMemo(() => {
-    const list = MOCK.scan.slice()
+    // 真数据：最近一次扫榜的 rows，缺的列（平台、钩子）由榜单本身补或显示「—」。
+    const list = (latest?.rows ?? []).map((row) => ({
+      rank: row.rank,
+      platform: row.platform ?? latest?.platform ?? '—',
+      book: row.book,
+      genre: row.genre,
+      collect: row.collect,
+      hook: row.hook ?? '—',
+      trend: row.trend,
+    }))
     const weight = (row) => {
       if (sortKey === 'rank') return row.rank
       if (sortKey === 'collect') return parseFloat(String(row.collect)) * (/万/.test(row.collect) ? 10000 : 1)
@@ -124,62 +199,81 @@ function ScanTable({ toast }) {
       return asc ? x - y : y - x
     })
     return list
-  }, [sortKey, asc])
+  }, [latest, sortKey, asc])
 
   return h(
     Card,
     {
       title: '扫榜结果',
       extra: h('div', { className: 'nw-actions' },
-        h(Tag, { tone: 'blue' }, '演示数据'),
+        latest ? h(Tag, { tone: 'blue' }, `${latest.platform || '榜单'} · ${fmtAgo(latest.createdAt)}`) : null,
         h(Btn, {
           small: true,
           kind: 'ghost',
-          onClick: () => toast?.('已导出 CSV（演示，未落盘）'),
+          disabled: !rows.length,
+          onClick: () => {
+            if (!rows.length) return
+            const head = cols.map((col) => col.label).join(',')
+            const body = rows.map((row) => cols.map((col) => `"${String(row[col.key] ?? '')}"`).join(',')).join('\n')
+            const blob = `${head}\n${body}`
+            try {
+              const url = URL.createObjectURL(new Blob([blob], { type: 'text/csv' }))
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `扫榜-${latest?.platform || '榜单'}-${Date.now()}.csv`
+              a.click()
+              URL.revokeObjectURL(url)
+              toast?.('已导出 CSV')
+            } catch {
+              toast?.('导出失败，用复制吧')
+            }
+          },
         }, '导出 CSV')),
     },
-    h(
-      'div',
-      { className: 'nw-scan' },
-      h(
+    rows.length
+      ? h(
         'div',
-        { className: 'nw-scan-head' },
-        cols.map((col) => h(
+        { className: 'nw-scan' },
+        h(
+          'div',
+          { className: 'nw-scan-head' },
+          cols.map((col) => h(
+            'button',
+            {
+              type: 'button',
+              key: col.key,
+              className: `nw-scan-th${sortKey === col.key ? ' on' : ''}`,
+              onClick: () => {
+                if (sortKey === col.key) setAsc(!asc)
+                else {
+                  setSortKey(col.key)
+                  setAsc(true)
+                }
+                toast?.(`按「${col.label}」${sortKey === col.key && asc ? '降序' : '升序'}排序`)
+              },
+            },
+            col.label,
+            sortKey === col.key ? (asc ? ' ↑' : ' ↓') : '',
+          )),
+        ),
+        rows.map((row) => h(
           'button',
           {
             type: 'button',
-            key: col.key,
-            className: `nw-scan-th${sortKey === col.key ? ' on' : ''}`,
-            onClick: () => {
-              if (sortKey === col.key) setAsc(!asc)
-              else {
-                setSortKey(col.key)
-                setAsc(true)
-              }
-              toast?.(`按「${col.label}」${sortKey === col.key && asc ? '降序' : '升序'}排序`)
-            },
+            className: 'nw-scan-row',
+            key: `${row.rank}-${row.book}`,
+            onClick: () => toast?.(`《${row.book}》· ${row.platform} · ${row.genre} · 收藏 ${row.collect} · 钩子：${row.hook}`),
           },
-          col.label,
-          sortKey === col.key ? (asc ? ' ↑' : ' ↓') : '',
+          h('span', { className: 'nw-scan-td nw-scan-rank' }, String(row.rank)),
+          h('span', { className: 'nw-scan-td' }, row.platform),
+          h('span', { className: 'nw-scan-td nw-scan-book' }, row.book),
+          h('span', { className: 'nw-scan-td' }, h(Tag, { tone: 'grey' }, row.genre || '—')),
+          h('span', { className: 'nw-scan-td nw-scan-num' }, row.collect || '—'),
+          h('span', { className: 'nw-scan-td nw-scan-hook' }, row.hook || '—'),
+          h('span', { className: `nw-scan-td nw-scan-trend${/↓/.test(row.trend) ? ' down' : /↑/.test(row.trend) ? ' up' : ''}` }, row.trend || '—'),
         )),
-      ),
-      rows.map((row) => h(
-        'button',
-        {
-          type: 'button',
-          className: 'nw-scan-row',
-          key: row.rank,
-          onClick: () => toast?.(`《${row.book}》· ${row.platform} · ${row.genre} · 收藏 ${row.collect} · 钩子：${row.hook}`),
-        },
-        h('span', { className: 'nw-scan-td nw-scan-rank' }, String(row.rank)),
-        h('span', { className: 'nw-scan-td' }, row.platform),
-        h('span', { className: 'nw-scan-td nw-scan-book' }, row.book),
-        h('span', { className: 'nw-scan-td' }, h(Tag, { tone: 'grey' }, row.genre)),
-        h('span', { className: 'nw-scan-td nw-scan-num' }, row.collect),
-        h('span', { className: 'nw-scan-td nw-scan-hook' }, row.hook),
-        h('span', { className: `nw-scan-td nw-scan-trend${/↓/.test(row.trend) ? ' down' : /↑/.test(row.trend) ? ' up' : ''}` }, row.trend),
-      )),
-    ),
+      )
+      : h(Empty, null, '还没有扫过榜。把榜单文本粘到下面的「扫榜」里，跑完表格就出来了。'),
   )
 }
 
@@ -228,9 +322,9 @@ function ScoutPage({
       )),
     ),
     // 【24 条 #21】最近干过什么：点完就忘是现在的毛病。
-    h(ScoutHistory, { toast }),
+    h(ScoutHistory, { projectId, toast }),
     // 【24 条 #22】扫榜结果做成表格：能排序，能点开。
-    h(ScanTable, { toast }),
+    h(ScanTable, { projectId, toast }),
     // 第 2/3/4 批：拆书 / 导入 / 扫榜三件真能跑的活。
     // 上面四张卡是「交给 agent」，下面三块是「当场就出结果」——
     // 能算的立刻算，算不了的才去麻烦 agent。

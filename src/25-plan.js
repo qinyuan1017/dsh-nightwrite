@@ -131,7 +131,7 @@ function PlanRow({ row, onEdit, onSend }) {
       }),
     ),
     h(Tag, { tone: tone.tone }, tone.label),
-    h(Btn, { small: true, kind: 'ghost', onClick: onSend }, '送去生产台'),
+    h(Btn, { small: true, kind: 'ghost', onClick: onSend }, '送去派单'),
   )
 }
 
@@ -161,7 +161,7 @@ function PlanCard({ row, onEdit, onSend, onOpen }) {
       'div',
       { className: 'nw-pcard-foot' },
       h(Btn, { small: true, kind: 'ghost', onClick: onOpen }, '编辑'),
-      h(Btn, { small: true, kind: 'ghost', onClick: onSend }, '送去生产台'),
+      h(Btn, { small: true, kind: 'ghost', onClick: onSend }, '送去派单'),
     ),
   )
 }
@@ -191,7 +191,7 @@ function PlanTimeline({ volumes, onSend }) {
         )),
       ),
     )),
-    h('p', { className: 'nw-hint' }, '点是章：灰=未排，琥珀=已有稿，绿=已采纳。点一下直接送去生产台。'),
+    h('p', { className: 'nw-hint' }, '点是章：灰=未排，琥珀=已有稿，绿=已采纳。点一下直接送去派单。'),
   )
 }
 
@@ -306,8 +306,8 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
   const send = (row) => {
     writeLS(LS.orderChapter, String(row.chapter))
     writeLS(LS.orderIntent, [row.summary, row.hook ? `章末钩子：${row.hook}` : ''].filter(Boolean).join(' · '))
-    toast(`第 ${row.chapter} 回已送去生产台`)
-    go('studio')
+    toast(`第 ${row.chapter} 回已送去派单`)
+    go('dispatch')
   }
 
   const active = volumes[Math.max(0, Math.min(volumes.length - 1, openVol - 1))] ?? null
@@ -430,7 +430,7 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
               send(active.chapters[cardOpen])
               setCardOpen(null)
             },
-          }, '送去生产台'),
+          }, '送去派单'),
         ),
       },
       h(Field, { label: '标题' }, h(Input, {

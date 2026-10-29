@@ -1,78 +1,29 @@
 /**
- * 长夜 · 界面演示数据与新小部件
+ * 长夜 · 小部件与「可选演示数据」
  *
- * 这些是「界面先长出来、内核后接」的那一层：所有数字都是写死的假数据，
- * 每个可点的东西都有可见反馈（toast / 展开 / 滚动 / 排序），没有一个点了没反应。
- * 后端接通后，把 MOCK 里的常量换成 RPC 返回值即可，组件签名不用动。
+ * 这里现在只剩两类东西：
+ *   1. 通用小部件（状态灯、柱状图、进度条、彩带、出处弹窗…），数据全由调用方传进来；
+ *   2. MOCK 里那两块「用户自己点开才显示的演示数据」（提案板 / 问题单）。
+ *
+ * 以前这一层还写死过状态灯、两周柱状图、意图、扫榜表、侦察历史、验收正文，
+ * 每一样都在冒充当下真实发生的事 —— 灯永远亮着、数字永远不动、
+ * 空项目看着天天在写。那些全接成真数据了，别再往这儿加常量。
  */
 
-// ── 假数据 ──────────────────────────────────────────────────
+// ── 演示数据（仅「点开才看」两处） ──────────────────────────
 
 const MOCK = {
-  // 状态灯：AI 现在到底动不动
-  run: { writing: true, chapter: 5, words: 1240, total: 2500, eta: '约 42 秒' },
-
-  // 两周柱状图：每天写了多少字（0 = 断更）
-  days: [
-    { d: '10-14', w: 2600 }, { d: '10-15', w: 1800 }, { d: '10-16', w: 0 },
-    { d: '10-17', w: 3100 }, { d: '10-18', w: 2500 }, { d: '10-19', w: 900 },
-    { d: '10-20', w: 2700 }, { d: '10-21', w: 0 }, { d: '10-22', w: 2200 },
-    { d: '10-23', w: 3300 }, { d: '10-24', w: 2500 }, { d: '10-25', w: 1200 },
-    { d: '10-26', w: 2800 }, { d: '10-27', w: 1240 },
-  ],
-
-  // 全书进度：卷名 + 每卷章数
-  volumes: [
-    { name: '第一卷 · 城头夜雨', chapters: 12, done: 6 },
-    { name: '第二卷 · 淮右风云', chapters: 12, done: 0 },
-    { name: '第三卷 · 金陵座上', chapters: 6, done: 0 },
-  ],
-  progress: { words: 12840, target: 60000, chapter: 6, total: 30 },
-
-  // 意图复用：最近三次用过的指令
+  // 意图复用：队列里一条能用的意图都抽不出来时（全新项目第一次进来）顶上三条。
+  // 这是唯一保留下来的「填充用」假数据 —— 它填的是一个空输入框的候选，
+  // 不冒充任何已经发生的事，也不会让作者以为自己在写。
   intents: [
     '主角吃瘪但埋下钩子，章末反转，不许死人',
     '连更：延续上一章钩子，节奏加快，多写对话',
     '过渡章：交代势力关系，用一场雨把场景从城头带到营帐',
   ],
 
-  // 账本出处：格 → 哪回哪句话
-  sources: {
-    'characters.name': { chapter: 3, quote: '朱砂把伞往上抬了抬，雨珠顺着伞骨滑到袖口。' },
-    'characters.role': { chapter: 2, quote: '「你算什么身份，也配在城头站着？」' },
-    'characters.state': { chapter: 5, quote: '金丹三层的灵力在经脉里转了一圈，才勉强压下胸口的闷痛。' },
-    'characters.lastChapter': { chapter: 5, quote: '她最后一次露面是第五回结尾。' },
-    'foreshadow.name': { chapter: 3, quote: '雨里有人低低喊了一声她的名字，喊得极轻。' },
-    'foreshadow.plannedChapter': { chapter: 3, quote: '这一声名字，本该在第十二回才被捡起来。' },
-    'terms.name': { chapter: 1, quote: '「朱砂」两个字，在军籍上写得清清楚楚。' },
-  },
-
-  // 侦察「最近干过什么」
-  history: [
-    { id: 'h1', kind: '拆文', icon: '🧪', title: '《长夜行》拆解完成', sub: '黄金三章 + 120 章摘要 · 落盘 拆文库/长夜行/', at: '今天 11:20', age: '2 小时前' },
-    { id: 'h2', kind: '扫榜', icon: '📊', title: '起点 + 番茄 长篇榜', sub: '抓到 48 本，题材分布：权谋 21 / 种田 11 / 系统 9', at: '昨天 20:05', age: '1 天前' },
-    { id: 'h3', kind: '资料', icon: '📚', title: '元末城防与火器', sub: '交回 9 条结论，附 4 个出处', at: '10-25 15:40', age: '2 天前' },
-    { id: 'h4', kind: '封面', icon: '🎨', title: '《元末女帝》封面 v2', sub: '冷灰史诗风 · 1536×2048', at: '10-24 09:12', age: '3 天前' },
-  ],
-
-  // 扫榜结果表
-  scan: [
-    { rank: 1, platform: '起点', book: '我在大明当暴君', genre: '历史', collect: '38.2 万', hook: '开局就把皇帝绑了', trend: '↑ 12' },
-    { rank: 2, platform: '番茄', book: '重生之我家有矿', genre: '都市', collect: '96.5 万', hook: '一锄头挖出金矿', trend: '↑ 5' },
-    { rank: 3, platform: '起点', book: '北望山河', genre: '权谋', collect: '21.7 万', hook: '城破那夜她改了军令', trend: '↓ 2' },
-    { rank: 4, platform: '七猫', book: '嫁进侯门第三年', genre: '宅斗', collect: '64.1 万', hook: '休书递上来时她笑了', trend: '↑ 31' },
-    { rank: 5, platform: '晋江', book: '纸上谈兵', genre: '古言', collect: '18.9 万', hook: '她替兄长去考了武举', trend: '— 0' },
-    { rank: 6, platform: '番茄', book: '系统让我截胡', genre: '系统', collect: '88.3 万', hook: '任务目标：抢了主角的机缘', trend: '↑ 9' },
-  ],
-
-  // 提案批量
-  proposals: [
-    { chapter: 3, title: '删掉重复的「仿佛」', diffs: 2 },
-    { chapter: 3, title: '把雨声改到段首', diffs: 1 },
-    { chapter: 5, title: '重写章末钩子', diffs: 1 },
-  ],
-
-  // 提案板：真实列表为空时顶上来的演示行（页面不能只显示一句「没有待批提案」）
+  // 提案板 / 问题单：真实列表为空时，用户主动点「看演示」才顶上来的行。
+  // 默认不显示，所以它不会骗人；留着是为了让人知道这两块长什么样。
   proposalsDemo: [
     {
       id: 'demo-p1', chapter: 3, title: '删掉重复的「仿佛」', kind: 'rewrite', status: 'pending',
@@ -94,51 +45,67 @@ const MOCK = {
     },
   ],
 
-  // 问题单：同理的演示行
+  // 问题单：同理的演示行。
   problemsDemo: [
     { id: 'demo-q1', chapter: 3, type: 'ai-style', severity: 'major', status: 'open', text: '连续三段都用「仿佛」，AI 味重', quote: '雨声仿佛在耳边' },
     { id: 'demo-q2', chapter: 3, type: 'logic', severity: 'critical', status: 'open', text: '第 2 回说她没带伞，这一回伞从哪来的', quote: '朱砂把伞往上抬了抬' },
     { id: 'demo-q3', chapter: 5, type: 'style', severity: 'minor', status: 'open', text: '「灵力」和「真气」混用，设定里只该有一个', quote: '金丹三层的灵力' },
     { id: 'demo-q4', chapter: 7, type: 'other', severity: 'note', status: 'fixed', text: '章末少一个空行', quote: '' },
   ],
-
-  // 验收详情正文：章节还没有字的时候顶上来，保证彩带 / 点亮 / 段落视图都有东西可看
-  reviewText: [
-    '雨声仿佛在耳边，仿佛很近，又仿佛很远。朱砂把伞往上抬了抬，雨珠顺着伞骨滑到袖口。',
-    '城头上的火把被风吹得歪向一边，守卒缩着脖子，谁也不敢先开口。',
-    '「你算什么身份，也配在城头站着？」',
-    '说话的人披着半旧的猩红斗篷，靴底沾着泥，一看就是从马背上直接下来的。',
-    '朱砂没有回头。金丹三层的灵力在经脉里缓缓转了一圈，才勉强压下胸口的闷痛。',
-    '她听见有人在雨里低低喊了一声她的名字，喊得极轻，像是怕被谁听见。',
-    '身后那人忽然提高了声音，说的是军籍上的事——「朱砂」两个字，在册子上写得清清楚楚。',
-    '火把忽然灭了。黑暗里只有雨，和越来越近的脚步声。',
-    '她终于转过身。',
-    '「你要找的人，三年前就死在这座城头上了。」',
-    '那人愣了一下，随即笑了。笑得很难看，像是终于等到了一句早就知道答案的话。',
-    '雨更大了。远处传来三声号角，紧接着是城门轴木转动时那种闷到骨头里的响声。',
-  ],
-
-  // 扫榜结果的更多字段（表格用）
 }
 
 // ── 1. 状态灯 ──────────────────────────────────────────────
 
-function StatusLamp({ toast }) {
-  const run = MOCK.run
+/**
+ * 状态灯：一眼看到「现在能不能写、卡在哪」。
+ *
+ * 以前这里读的是 MOCK.run 里写死的一条（第 5 回 / 1240/2500 字 / 约 42 秒），
+ * 灯永远亮着、数字永远不动 —— 那是最坏的一种假象：它在告诉你一件没发生的事。
+ * 现在读 run.current 的真状态：没开轮就明说没开轮，等确认就明说等确认。
+ *
+ * 点它已经不只弹一句 toast，而是直接跳到停靠点那一页 —— 「卡住了」这件事
+ * 需要的是一个能按的出口，不是一句飘三秒的解释。
+ */
+function StatusLamp({ toast, run, verdict, project, chapters, go }) {
+  const live = !!run && (run.status === 'open' || run.status === 'waiting')
+  const chapter = Number(run?.currentChapter ?? run?.chapter ?? 0) || 0
+  const done = run?.chapters?.length ?? 0
+  const max = Number(run?.maxChapters ?? 0) || 0
+  const target = Number(project?.targetWords ?? 0) || 0
+  const words = chapter
+    ? Number((chapters ?? []).find((row) => Number(row.chapter) === chapter)?.words ?? 0) || 0
+    : 0
+  const level = verdict?.level ?? (live ? 'green' : 'red')
+
+  const text = !live
+    ? (run ? '这一轮已经停了' : '没开一轮')
+    : run.status === 'waiting'
+      ? `第 ${chapter} 回等确认`
+      : `正在写第 ${chapter} 回`
+  const sub = target > 0
+    ? `${words}/${target} 字`
+    : `${done}/${max || '—'} 章`
+
   return h(
     'button',
     {
       type: 'button',
-      className: `nw-lamp${run.writing ? ' on' : ''}`,
-      onClick: () => toast?.(`模拟：AI 正在写第 ${run.chapter} 回，已出 ${run.words} 字，${run.eta}后交稿`),
-      title: '点一下看这一单的详情（演示数据）',
+      className: `nw-lamp nw-lamp-${level}${live ? ' on' : ''}`,
+      onClick: () => {
+        if (go) {
+          go('today')
+          return
+        }
+        toast?.(verdict?.text ?? text)
+      },
+      title: verdict?.text ?? text,
     },
     h('span', { className: 'nw-lamp-dot' }),
     h(
       'span',
       { className: 'nw-lamp-body' },
-      h('span', { className: 'nw-lamp-text' }, run.writing ? `正在写第 ${run.chapter} 回` : '队列空闲'),
-      h('span', { className: 'nw-lamp-sub' }, `${run.words}/${run.total} 字`),
+      h('span', { className: 'nw-lamp-text' }, text),
+      h('span', { className: 'nw-lamp-sub' }, sub),
     ),
   )
 }
@@ -223,8 +190,9 @@ function ProgressTrack({ progress, volumes, toast }) {
 // ── 3. 命令面板 ────────────────────────────────────────────
 
 const CMD_ITEMS = [
-  { id: 'write', icon: '✍️', label: '写第 6 章', hint: '排工单 + 跳生产台', page: 'studio' },
-  { id: 'batch', icon: '⚡', label: '连更 3 章', hint: '排三张工单', page: 'studio' },
+  { id: 'write', icon: '✍️', label: '写第 6 章', hint: '排工单 + 跳派单页', page: 'dispatch' },
+  { id: 'batch', icon: '⚡', label: '连更 3 章', hint: '排三张工单', page: 'dispatch' },
+  { id: 'read', icon: '📖', label: '读上一章', hint: '摊开正文，只读不审', page: 'read' },
   { id: 'jump', icon: '⏭', label: '跳到第 12 回', hint: '打开验收详情', page: 'review' },
   { id: 'find', icon: '🔍', label: '找「玉玺」', hint: '正文 + 八类账本一起搜', page: 'world' },
   { id: 'check', icon: '🩺', label: '体检全书', hint: '查设定冲突与伏笔逾期', page: 'review' },
@@ -419,12 +387,19 @@ function CommandPalette({ projectId, onClose, go, toast }) {
 
 // ── 12. 意图复用 ───────────────────────────────────────────
 
-function IntentChips({ onPick, toast }) {
+/**
+ * 最近用过的意图。
+ *
+ * items 由生产台从队列历史里抽（真数据）；抽不出来时才回落到 MOCK 的三条，
+ * 这样空项目第一次进来也有东西可点，不会摆一条空的「最近用过」。
+ */
+function IntentChips({ onPick, toast, items }) {
+  const list = Array.isArray(items) && items.length ? items : MOCK.intents
   return h(
     'div',
     { className: 'nw-chips' },
     h('span', { className: 'nw-chips-label' }, '最近用过'),
-    MOCK.intents.map((text, index) => h(
+    list.map((text, index) => h(
       'button',
       {
         type: 'button',

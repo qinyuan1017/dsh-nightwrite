@@ -1,12 +1,19 @@
 /**
  * 长夜 · 外壳与挂载
  *
- * 顶栏（书名 / 当前页 / 预算 / 队列）+ 底栏（三键 + 六页 dock）+ 挂到会话区 main slot。
+ * 顶栏（品牌 / 当前页 / 状态灯 / 作品 / 统计 / 预算 / 快动作）+ 底栏（居中胶囊导航 + 右侧两个常驻键）
+ * + 写作原则条，挂到会话区 main slot。
+ *
+ * 这一套壳是长夜自己的：底栏导航居中、胶囊里有十颗以内等权的钉子，顶栏把「待验收 / 队列 /
+ * 本月花销」摊在一行里 —— 作者抬眼就知道现在有几笔活压着。不要照搬别人的左侧竖栏：
+ * 那是另一种取舍（把导航做成目录树），长夜的取舍是把「今天有多少活」摊在顶上。
  */
 
+// 【24 条 #1】状态灯：一眼看到 AI 到底在不在动。
+// 以前这里读的是写死的一条假数据，现在读 run.current：没开轮就是灰的，等确认是橙的。
 function TopBar({
   projects, projectId, page, onSwitch, stats, project, onPause, paused, onQuick, busy, queueCount,
-  onCommand, toast,
+  onCommand, onNewProject, toast, run, runVerdict, chapters, go,
 }) {
   // 【12 条 #6】月预算不是摆设：设置里填的 monthlyBudget 以前只显示成一个孤立的 ¥37，
   // 没人知道这个月还剩多少。这里把它算成「已用 / 预算」并给一条细进度。
@@ -24,9 +31,9 @@ function TopBar({
       h('span', { className: 'nw-brand-name' }, '长夜'),
       h('span', { className: 'nw-brand-page' }, PAGE_LABEL[page] ?? ''),
     ),
-    // 【24 条 #1】状态灯：一眼看到 AI 到底在不在动。
-    // 现在用 MOCK 固定值渲染完整形态（灯泡亮 + 第 5 回 + 1240/2500 字），点它有 toast。
-    h(StatusLamp, { toast }),
+    h(StatusLamp, {
+      toast, run, verdict: runVerdict, project, chapters, go,
+    }),
     h(
       'div',
       { className: 'nw-top-mid' },
@@ -62,8 +69,6 @@ function TopBar({
         )
         : h('span', { className: 'nw-top-stat nw-top-cost' }, fmtCost(stats.totalCost ?? 0)),
     ),
-    // 三个快动作从底栏搬上来：底栏只留导航，快动作跟「队列/暂停」这些运行态放一起，
-    // 一眼就能看到「现在会不会有东西在跑」。
     h(
       'div',
       { className: 'nw-top-right' },
@@ -89,6 +94,7 @@ function TopBar({
         disabled: busy,
       }, '⚡ 连更 3 章'),
       h(Btn, { kind: 'ghost', small: true, onClick: () => onQuick?.('check'), disabled: busy }, '🩺 体检'),
+      h(Btn, { kind: 'ghost', small: true, className: 'nw-top-new', onClick: () => onNewProject?.(), disabled: busy, title: '建一本新作品' }, '＋ 新书'),
       h(Btn, {
         small: true,
         kind: paused ? 'primary' : 'ghost',
@@ -98,6 +104,8 @@ function TopBar({
   )
 }
 
+// 【24 条 #2】底栏导航：一整排等权的钉子，居中摆。十页以内这一排扫过去比目录树快，
+// 而且它常驻在视线终点，不用先把眼睛挪到左边再往下找。
 function DockNav({ page, go, queueCount }) {
   return h(
     'nav',
@@ -109,10 +117,11 @@ function DockNav({ page, go, queueCount }) {
         key: item.id,
         className: `nw-dock-btn${page === item.id ? ' on' : ''}`,
         onClick: () => go(item.id),
+        title: item.label,
       },
       h('span', { className: 'nw-dock-icon' }, item.icon),
       h('span', { className: 'nw-dock-label' }, item.label),
-      item.id === 'studio' && queueCount ? h('span', { className: 'nw-dock-badge' }, String(queueCount)) : null,
+      item.id === 'dispatch' && queueCount ? h('span', { className: 'nw-dock-badge' }, String(queueCount)) : null,
     )),
   )
 }
@@ -126,7 +135,7 @@ function BottomBar({
     // 左占位：让中间那颗 dock 真正居中，不会被右侧两个按钮推歪。
     h('div', { className: 'nw-bottom-pad' }),
     h(DockNav, { page, go, queueCount }),
-    // 【24 条 #2】底栏右侧两个常驻小按钮：跳到最新章 / 加一章空壳。
+    // 底栏右侧两个常驻小按钮：跳到最新章 / 加一章空壳。
     // 写长篇天天要「翻到最后」，把它放在手边比放进菜单里合理。
     h(
       'div',
@@ -136,14 +145,14 @@ function BottomBar({
         kind: 'ghost',
         className: 'nw-bottom-btn',
         onClick: onJumpLatest,
-        title: '跳到最后一章（演示）',
+        title: '跳到最后一章',
       }, '⏭ 最新'),
       h(Btn, {
         small: true,
         kind: 'ghost',
         className: 'nw-bottom-btn',
         onClick: onNewChapter,
-        title: '新增一章空壳（演示）',
+        title: '新增一章空单',
       }, '＋ 新章'),
     ),
   )
@@ -151,11 +160,27 @@ function BottomBar({
 
 function Workbench(props) {
   const {
-    projects, projectId, project, chapters, page, setPage, go, toast, items, theme, setTheme,
-    onSwitch, onRefresh, refreshKey, stats, paused, setPaused, command, setCommand,
+    projects, projectsLoading, projectsError, projectId, project, chapters, page, setPage, go, toast, items,
+    theme, setTheme, onSwitch, onRefresh, refreshKey, stats, paused, setPaused, command, setCommand,
   } = props
 
   const [quickBusy, setQuickBusy] = useState(false)
+  // 顶栏那个 ＋ 打开的建书页。做成外壳内的一层状态，而不是「清空当前作品再回退」——
+  // 后者会先把已经打开的稿子关掉，作者一点 ＋ 就丢失当前位置。
+  const [newBook, setNewBook] = useState(false)
+  // 写作原则条默认展开。收起状态记在 localStorage，切作品/切页都记得。
+  const [principleOpen, setPrincipleOpen] = useState(() => readLS('nw.principle', '1') !== '0')
+  const principle = String(project?.settings?.writePrinciple ?? '').trim()
+
+  // 停靠点状态提到外壳这一层：状态灯（顶栏）、快动作（排单前先开轮）、
+  // 停靠点页本身都要用，放在这里只拉一次。
+  const runRes = useAsync(
+    () => api('run.current', { projectId }),
+    [projectId, refreshKey],
+    { skip: !projectId },
+  )
+  const run = runRes.data?.run ?? null
+  const runVerdict = runRes.data?.verdict ?? null
 
   useEffect(() => {
     const root = document.querySelector('.nw-shell')
@@ -199,6 +224,23 @@ function Workbench(props) {
       const list = await api('chapter.list', { projectId })
       const last = list.chapters.length ? list.chapters[list.chapters.length - 1].chapter : 0
       const count = mode === 'batch' ? 3 : 1
+      // 排单前先在停靠点登记一轮：不登记也能写，但那次写入事后查不到是哪一轮的。
+      // 已经有开着的轮就沿用（openRun 会拒第二条），别让「点两下」变成一次报错。
+      let registered = run
+      if (!registered || (registered.status !== 'open' && registered.status !== 'waiting')) {
+        try {
+          const opened = await api('run.open', {
+            projectId,
+            chapter: last + 1,
+            maxChapters: count,
+            note: mode === 'batch' ? '顶栏连更 3 章' : '顶栏续写一章',
+          })
+          registered = opened.run
+        } catch (error) {
+          // run.open 被拒（已有一轮没结束）不该挡住排单，但必须说出来。
+          toast(`没开新轮：${error.message}`)
+        }
+      }
       for (let i = 0; i < count; i += 1) {
         await api('queue.add', {
           projectId,
@@ -211,7 +253,7 @@ function Workbench(props) {
       }
       onRefresh?.()
       toast(mode === 'batch' ? '已排 3 章' : '已排 1 章')
-      go('studio')
+      go('dispatch')
     } catch (error) {
       toast(error.message)
     } finally {
@@ -219,13 +261,100 @@ function Workbench(props) {
     }
   }
 
+  // 一本作品都没有的时候，整屏只干一件事：建一本。
+  //
+  // 以前这里是十页空界面 + 一句「还没有作品。先去设置里建一本。」—— 指路牌指向的
+  // 设置页里，那个新建弹窗只有书名和题材两栏。第一次打开的人面对的是十个死页面
+  // 和一条「去别处」的提示，等于进门就被请出去。
+  //
+  // 判据用服务端真数据（projects 来自 project.list），不是本地猜的。
+  //
+  // 但「读不出来」和「确实没有」必须分开：project.list 自己失败时 projects 也是空数组，
+  // 那时把建书表单摊开，等于告诉用户「你一本书都没有」—— 而真相是书都在，只是没读到。
+  // 空数组只在那次读取成功之后才算数。
+  if (!projects.length) {
+    let solo = null
+    if (projectsLoading) {
+      // 列表还没回来时先别把表单摊开：闪一下再消失，比不显示更让人手忙。
+      solo = h(Loading, { text: '读作品列表…' })
+    } else if (projectsError) {
+      solo = h(ErrorBox, { error: projectsError, onRetry: () => onRefresh?.() })
+    } else {
+      solo = h(CreateProjectPage, {
+        toast,
+        onDone: (id) => {
+          onRefresh?.()
+          onSwitch?.(id)
+        },
+      })
+    }
+    return h(
+      'div',
+      { className: `nw-shell nw-theme-${theme}`, 'data-page': 'create' },
+      h(
+        'div',
+        { className: 'nw-top nw-top-solo' },
+        h(
+          'div',
+          { className: 'nw-brand' },
+          h('span', { className: 'nw-brand-mark' }, '🌙'),
+          h('span', { className: 'nw-brand-name' }, '长夜'),
+          h('span', { className: 'nw-brand-page' }, '建作品'),
+        ),
+      ),
+      h('div', { className: 'nw-body' }, solo),
+      h(Toast, { items }),
+    )
+  }
+
+  // 顶栏 ＋ 打开的建书页。和「一本都没有」时走同一套建书流程，区别只是
+  // 建完回到原来的作品、原来那一页 —— 作者是在写第二本，不是第一次进门。
+  if (newBook) {
+    return h(
+      'div',
+      { className: `nw-shell nw-theme-${theme}`, 'data-page': 'create' },
+      h(
+        'div',
+        { className: 'nw-top nw-top-solo' },
+        h(
+          'div',
+          { className: 'nw-brand' },
+          h('span', { className: 'nw-brand-mark' }, '🌙'),
+          h('span', { className: 'nw-brand-name' }, '长夜'),
+          h('span', { className: 'nw-brand-page' }, '建作品'),
+        ),
+        h('div', { className: 'nw-top-right' },
+          h(Btn, { small: true, kind: 'ghost', onClick: () => setNewBook(false) }, '← 回原来的作品')),
+      ),
+      h('div', { className: 'nw-body' }, h(CreateProjectPage, {
+        toast,
+        onDone: (id) => {
+          setNewBook(false)
+          onRefresh?.()
+          onSwitch?.(id)
+        },
+      })),
+      h(Toast, { items }),
+    )
+  }
+
   const content = {
-    cockpit: h(CockpitPage, { projectId, project, go, toast, refreshKey }),
+    // 今天：驾驶舱 + 停靠点合成一页。「现在能不能写」和「今天该写什么」
+    // 是同一个人在同一秒钟要回答的两个问题，分成两页等于把门禁藏起来。
+    today: h(TodayPage, {
+      projectId, project, chapters, go, toast, refreshKey, onRefresh,
+    }),
+    // 正文页：把稿子摊开读。以前读稿只能进验收台，而验收台首屏是分数表 ——
+    // 那是校对视角，不是作者天天要看的视角。
+    read: h(ReadPage, {
+      projectId, project, chapters, go, toast, onRefresh,
+    }),
     plan: h(PlanPage, { projectId, project, go, toast, onRefresh }),
-    // 流水线：派单台。AI 干活的过程以前在工作台上完全不可见，
-    // 这一页让「派出去没有 / 对方做完没有 / 说了什么」有痕迹。
-    pipeline: h(PipelinePage, { projectId, project, toast, onRefresh }),
-    studio: h(StudioPage, { projectId, project, chapters, go, toast, onRefresh }),
+    // 派单：原来的「流水线」（谁在干）+「生产台」（写什么单）合成一页。
+    // 它们本来就是一件事的两半：排一张单，派人去写。
+    dispatch: h(DispatchPage, {
+      projectId, project, chapters, go, toast, onRefresh, refreshKey,
+    }),
     review: h(ReviewPage, { projectId, chapters, project, toast, onRefresh, refreshKey }),
     // 【24 条 #20】逾期伏笔点一下要能跳到那一回 —— 世界库自己不会开验收详情，
     // 所以这里给它一个「开某章」的回调，走 ReviewPage 的 openChapter 约定。
@@ -249,7 +378,16 @@ function Workbench(props) {
       projectId, project, toast, onRefresh,
     }),
     settings: h(SettingsPage, {
-      projectId, project, projects, chapters, onSwitch, toast, onRefresh, theme, setTheme,
+      projectId,
+      project,
+      projects,
+      chapters,
+      onSwitch,
+      onNewProject: () => setNewBook(true),
+      toast,
+      onRefresh,
+      theme,
+      setTheme,
     }),
   }[page] ?? null
 
@@ -269,8 +407,32 @@ function Workbench(props) {
       busy: quickBusy,
       queueCount: stats?.queued ?? 0,
       onCommand: () => setCommand?.(true),
+      onNewProject: () => setNewBook(true),
       toast,
+      run,
+      runVerdict,
+      chapters,
+      go,
     }),
+    // 【P5】写作原则条。常显在顶栏下面一行：模型每轮都看得见，人也看得见。
+    // 可折起来（记 localStorage）——天天读同一句话会变成背景噪音，
+    // 但默认展开，因为「第一次用的人得知道有这回事」。
+    principle ? h(
+      'button',
+      {
+        type: 'button',
+        className: 'nw-principle',
+        onClick: () => {
+          const next = principleOpen ? '0' : '1'
+          writeLS('nw.principle', next)
+          setPrincipleOpen(!principleOpen)
+        },
+        title: principleOpen ? '收起' : '展开',
+      },
+      h('span', { className: 'nw-principle-mark' }, '⚡'),
+      h('span', { className: 'nw-principle-text' }, principleOpen ? principle : '写作原则 · 点开看这一本的铁律'),
+      h('span', { className: 'nw-principle-tog' }, principleOpen ? '收起' : '展开'),
+    ) : null,
     h('div', { className: 'nw-body' }, content),
     h(BottomBar, {
       page,
@@ -293,8 +455,8 @@ function Workbench(props) {
       onNewChapter: () => {
         writeLS(LS.orderChapter, String((chapters.length ? chapters[chapters.length - 1].chapter : 0) + 1))
         writeLS(LS.orderIntent, '')
-        go('studio')
-        toast('已开一张新章空单（演示）')
+        go('dispatch')
+        toast('已开一张新章空单')
       },
     }),
     command ? h(CommandPalette, { projectId, onClose: () => setCommand?.(false), go, toast }) : null,
@@ -303,7 +465,7 @@ function Workbench(props) {
 }
 
 function Root() {
-  const [page, setPage] = useState(readLS(LS.page, 'cockpit'))
+  const [page, setPage] = useState(() => normalizePage(readLS(LS.page, 'today')))
   const [projectId, setProjectId] = useState(readLS(LS.project, ''))
   const [theme, setThemeState] = useState(readLS(LS.theme, 'dark'))
   const [refreshKey, setRefreshKey] = useState(0)
@@ -352,8 +514,9 @@ function Root() {
   // 【12 条 #1】切页前先问一句：有没保存的正文就先拦住。
   // 拦的只是「换页」，不拦「同一页里换章」—— 那是验收台自己的事。
   const go = useCallback((next, arg) => {
-    const current = readLS(LS.page, 'cockpit')
-    if (next !== current && dirtyGuard.active) {
+    const target = normalizePage(next)
+    const current = normalizePage(readLS(LS.page, 'today'))
+    if (target !== current && dirtyGuard.active) {
       const label = dirtyGuard.label || '当前这一章'
       // confirm 是同步的，不需要额外的弹窗状态机；关掉返回 false 就不走。
       if (!window.confirm(`${label}还有改动没保存，确定要离开吗？\n\n离开后内容会留在本地草稿里，下次打开这一章会提示你。`)) {
@@ -361,8 +524,8 @@ function Root() {
       }
       setDirtyGuard(false)
     }
-    setPage(next)
-    writeLS(LS.page, next)
+    setPage(target)
+    writeLS(LS.page, target)
     if (arg?.chapter) writeLS('nw.openChapter', String(arg.chapter))
   }, [])
 
@@ -397,7 +560,10 @@ function Root() {
   }, [])
 
   return h(Workbench, {
-    projects, projectId, project, chapters, page, setPage, go, toast,
+    projects,
+    projectsLoading: projectsRes.loading,
+    projectsError: projectsRes.error,
+    projectId, project, chapters, page, setPage, go, toast,
     items: toasts, theme, setTheme, onSwitch, onRefresh, refreshKey, stats, paused, setPaused,
     command, setCommand,
   })

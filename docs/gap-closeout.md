@@ -345,7 +345,7 @@ StudioPage 是「接口报错」才触发，所以只在后端挂的时候出现
 
 **验**：
 ```bash
-node test/hooks.mjs        # → 46 过 / 0 不过 · hook 顺序检查 ·（eslint 通过）
+node test/hooks.mjs        # → 53 过 / 0 不过 · hook 顺序检查 ·（eslint 通过）
 ```
 
 **教训**：一个「全绿」的检查器可能只是它看不见。写检查器时要拿「已知有问题的文件」
@@ -359,11 +359,11 @@ node test/hooks.mjs        # → 46 过 / 0 不过 · hook 顺序检查 ·（esl
 |---|---|
 | RPC op | **119**（读 60 / 写 59） |
 | 服务端 lib | 24 个模块，`lib/` 合计 8,000+ 行 |
-| 客户端 | 18 个 `src/*.js` 片段 → `lib/client.js` **406,498 字节** |
-| 界面 | 8 页 |
+| 客户端 | 23 个 `src/*.js` 片段 → `lib/client.js` **482,569 字节** |
+| 界面 | 8 页 + 三步建书向导 + 写作原则条（P0–P5 重构：底栏十颗钉子收成八颗仍是底栏居中胶囊，`pipeline`+`studio`→`dispatch`，`run`+`cockpit`→`today`，验收台 5 抽屉→3 档） |
 | 岗位 | 11 个（coordinator 独占派单权） |
 | 技能 | 25 个 + **71 份 reference / 702,718 字节** |
-| 测试 | backend **709** / smoke **323** / hooks **46** / skills-check **377** / wordcount-parity **11** / css 619 类缺 0 / check24 24-24 / qa 严重 0 —— 合计 **1,466 项断言，全绿** |
+| 测试 | backend **721** / smoke **438** / hooks **53** / skills-check **377** / wordcount-parity **11** / css 707 类缺 0 / check24 24-24 / qa 严重 0 —— 五个测试脚本合计 **1,600 项断言，全绿** |
 | 宿主能力 | `inject = ['tools', 'subagents']`，2 个钩子，1 个 `Config` |
 | 依赖 | 0（`dependencies` / `peerDependencies` / `devDependencies` 里只有 eslint + prettier 是 dev） |
 

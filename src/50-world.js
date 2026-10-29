@@ -197,7 +197,9 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
           { key: node.row.id ?? index, onClick: () => onPick?.(node.row), style: { cursor: 'pointer' } },
           h('circle', {
             cx: node.x,
-            nw: node.y,
+            // 这里以前写的是 nw: node.y，SVG 不认这个属性 —— 圆全画在 y=0，
+            // 一屏关系图会变成顶部叠在一起的一堆点。cy 才是纵坐标。
+            cy: node.y,
             r: node.r,
             fill: index === 0 ? 'rgba(217,160,84,.18)' : 'rgba(127,135,146,.14)',
             stroke: index === 0 ? '#d9a054' : toneOf(node.row.role ?? node.row.state),
@@ -393,14 +395,16 @@ function WorldPage({
             rows,
             onEdit: setEdit,
             onDelete: del,
-            // 【24 条 #18】格 → 出处。真数据没有记出处时，用演示出处顶上，界面不留空。
+            // 【24 条 #18】格 → 出处。账本行里有 sourceChapter / sourceQuote 就用真的，
+            // 没有就直说「这一类还没有记出处」——不再拿演示出处冒充。
             onSource: (cell) => {
-              const hit = MOCK.sources[`${cell.kind}.${cell.key}`]
+              const chapter = Number(cell.row?.sourceChapter ?? 0)
+              const quote = String(cell.row?.sourceQuote ?? '').trim()
               setSource({
-                chapter: hit?.chapter ?? 0,
-                quote: hit?.quote ?? `「${cell.value ?? '（空）'}」（这一类还没有记出处）`,
+                chapter,
+                quote: quote || `「${cell.value ?? '（空）'}」（这一类还没有记出处）`,
                 title: `${LEDGER_TABS.find((t) => t.value === cell.kind)?.label ?? cell.kind} · ${cell.label}`,
-                demo: !hit,
+                demo: !quote,
               })
             },
           })

@@ -177,7 +177,9 @@ function ContextAudit({
   )
 }
 
-function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
+function StudioPage({
+  projectId, project, chapters, go, toast, onRefresh, bare,
+}) {
   const tpl = useAsync(() => api('templates.list', { projectId }), [projectId], { skip: !projectId })
   const q = useAsync(() => api('queue.list', { projectId }), [projectId], { skip: !projectId })
   const led = useAsync(() => api('ledger.get', { projectId }), [projectId], { skip: !projectId })
@@ -210,7 +212,7 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
     setForm((prev) => (prev.chapter ? prev : { ...prev, chapter: lastChapter + 1 }))
   }, [lastChapter])
 
-  // 大纲页「送去生产台」写的就是这两个键：章号 + 意图（摘要 + 章末钩子）。
+  // 大纲页「送去派单」写的就是这两个键：章号 + 意图（摘要 + 章末钩子）。
   // 读一次就清掉，否则切页回来会把用户已经改过的指令单再盖一遍。
   useEffect(() => {
     const wanted = readLS(LS.orderChapter, '')
@@ -225,6 +227,20 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
   const templates = tpl.data?.items ?? []
   const queue = q.data?.items ?? []
   const ledger = led.data?.ledger ?? {}
+
+  // 【24 条 #12】意图复用：从队列里真实排过的单子抽最近三条，去掉重复和空串。
+  // 以前这三条是写死的常量，跟这个项目写过什么毫无关系。
+  const recentIntents = useMemo(() => {
+    const seen = new Set()
+    const out = []
+    for (let i = queue.length - 1; i >= 0 && out.length < 3; i -= 1) {
+      const text = String(queue[i]?.intent ?? '').trim()
+      if (!text || seen.has(text)) continue
+      seen.add(text)
+      out.push(text)
+    }
+    return out
+  }, [queue])
 
   const buildContext = useCallback(() => {
     const rows = []
@@ -346,13 +362,18 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
   // 不自动调 agent（界面不该替用户发指令），但也不让按钮点了没下文。
   const dispatch = async (row) => {
     const intent = String(row.intent || row.templateName || '').trim() || '（这行没写意图，先补一句要写什么）'
+    // 【P5】写作原则插在工作单最上面：模型读这段话时第一眼看到的就是它，
+    // 而不是读完五条流程说明之后才想起「哦还有风格要求」。
+    // 没设就不插，不留一个空行占位。
+    const principle = String(project?.settings?.writePrinciple ?? '').trim()
     const prompt = [
+      principle ? `【这本书的原则】${principle}` : null,
       `用 nightwrite_op 写第 ${row.chapter} 回。`,
       `意图：${intent}`,
       '开工前读：chapter.list 看已有稿、ledger.get 拿设定与伏笔、outline.get 看这一回的骨架、templates.list 选节奏模板。',
       '交稿时：chapter.save 写正文（status 交 review），proposal.save 提你建议的改动（不要自己改已验收的稿），problem.save 记你发现但没改的毛病。',
       `质检门槛 ${Number(project?.qualityGate ?? 70)} 分；低于门槛就别交，先自己修。`,
-    ].join('\n')
+    ].filter(Boolean).join('\n')
     try {
       await navigator.clipboard.writeText(prompt)
       await move(row.id, { status: 'running' })
@@ -365,10 +386,11 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
     }
   }
 
-  if (!projectId) return h(Empty, null, '还没有作品，去「设置 → 作品数据」新建一部。')
+  if (!projectId) return h(Empty, null, '还没有作品。建一本就能排单。')
 
   return h(
-    'div',
+    // bare：被「派单」页内嵌时用，不再套一层 .nw-page（否则版心双份 max-width）。
+    bare ? Fragment : 'div',
     { className: 'nw-page nw-studio' },
     h(
       'div',
@@ -423,6 +445,7 @@ function StudioPage({ projectId, project, chapters, go, toast, onRefresh }) {
           // 【24 条 #12】意图复用：最近三次用过的指令，点一下填回来。
           h(IntentChips, {
             toast,
+            items: recentIntents,
             onPick: (text) => setForm((prev) => ({ ...prev, intent: text })),
           }),
           form.templateName ? h('p', { className: 'nw-hint' }, `已套模板：${form.templateName}`) : null,

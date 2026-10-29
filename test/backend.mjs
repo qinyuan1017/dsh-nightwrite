@@ -129,6 +129,81 @@ try {
   const listRenamed = await handleRpc({ op: 'project.list' }, {}, { root })
   check('library.json 索引同步改名', listRenamed.projects[0]?.name === '元末女帝（改）', listRenamed.projects[0]?.name)
 
+  // ══ 3b. 建书首屏发的两份 payload（界面 → 服务端，全字段） ══════
+  // 这一段专门压「建作品表单填满之后，那两份 payload 到底能不能落盘」：
+  // 元信息走 project.create，详细方案走 outline.save。界面上是两张表，
+  // 服务端是两次写，任何一半丢了都算建失败。
+  console.log('\n— 3b. 建书表单的完整 payload')
+  const fullProject = {
+    name: '元末女帝：系统让我截胡朱重八',
+    genre: '历史穿越',
+    logline: '穿成元末一个村姑，系统只会催她嫁给朱重八。',
+    targetWords: 3000,
+    qualityGate: 75,
+    monthlyBudget: 800,
+  }
+  const fullBrief = {
+    premise: '元末乱世，现代女生穿成村姑。',
+    genre: '历史穿越',
+    audience: '看历史穿越的女频读者',
+    protagonist: '林小满',
+    goal: '活下来',
+    conflict: '系统的任务和她的意愿正好相反',
+    hook: '第一句系统提示就在催婚',
+    ending: '她自己坐上了那个位置',
+    volumes: 4,
+    chaptersPerVolume: 30,
+  }
+  const made3 = await handleRpc({ op: 'project.create', payload: fullProject }, {}, { root })
+  const pid3b = made3?.id
+  check('建书 · 六个元信息字段全部落盘',
+    made3?.meta?.name === fullProject.name &&
+    made3?.meta?.genre === fullProject.genre &&
+    made3?.meta?.logline === fullProject.logline &&
+    Number(made3?.meta?.targetWords) === 3000 &&
+    Number(made3?.meta?.qualityGate) === 75 &&
+    Number(made3?.meta?.monthlyBudget) === 800,
+    JSON.stringify(made3?.meta))
+  const pjRaw = JSON.parse(await readFile(join(made3.dir, 'project.json'), 'utf8'))
+  check('建书 · project.json 里没有 NaN / null', !/NaN|null/.test(JSON.stringify(pjRaw)), JSON.stringify(pjRaw).slice(0, 120))
+  check('建书 · 建完 chapters 目录就在', await store.projectDir(root, pid3b).then(() => true).catch(() => false))
+
+  const savedOutline = await handleRpc({ op: 'outline.save', payload: { projectId: pid3b, outline: { brief: fullBrief } } }, {}, { root })
+  check('建书 · 方案写进大纲', savedOutline?.outline?.brief?.premise === fullBrief.premise, JSON.stringify(savedOutline?.outline?.brief)?.slice(0, 80))
+  const ojRaw = JSON.parse(await readFile(join(made3.dir, 'outline.json'), 'utf8'))
+  check('建书 · outline.json 里 8 个文本字段全在',
+    ['premise', 'genre', 'audience', 'protagonist', 'goal', 'conflict', 'hook', 'ending']
+      .every((k) => ojRaw.brief?.[k] === fullBrief[k]),
+    JSON.stringify(ojRaw.brief)?.slice(0, 160))
+  check('建书 · 卷数字段落盘没被夹掉', ojRaw.brief?.volumes === 4 && ojRaw.brief?.chaptersPerVolume === 30,
+    `${ojRaw.brief?.volumes} / ${ojRaw.brief?.chaptersPerVolume}`)
+  const olBack = await handleRpc({ op: 'outline.get', payload: { projectId: pid3b } }, {}, { root })
+  check('建书 · outline.get 读得回方案', olBack?.outline?.brief?.protagonist === '林小满')
+
+  // 界面端的夹取范围必须和服务端 normalizeBrief 对得上，不然「界面允许、服务端改掉」。
+  const clampTry = await handleRpc({
+    op: 'outline.save',
+    payload: { projectId: pid3b, outline: { brief: { ...fullBrief, volumes: 999, chaptersPerVolume: 0 } } },
+  }, {}, { root })
+  check('建书 · 卷数上限由服务端夹到 30', Number(clampTry?.outline?.brief?.volumes) === 30, clampTry?.outline?.brief?.volumes)
+  // normalizeBrief 用 `Number(x) || base`：0 是假值，所以回落到默认 20（不是夹到 1）。
+  // 界面侧的下界也是 1、且空串单独判掉，所以这条只在有人绕过界面直接打接口时才走得到。
+  check('建书 · 每卷章数传 0 回落到默认 20', Number(clampTry?.outline?.brief?.chaptersPerVolume) === 20, clampTry?.outline?.brief?.chaptersPerVolume)
+
+  // 脏值兜底：界面会先拦，但服务端不能靠界面。
+  const dirty3 = await handleRpc({
+    op: 'project.create',
+    payload: { name: '   ', genre: null, logline: undefined, targetWords: 'abc', qualityGate: 'x', monthlyBudget: '' },
+  }, {}, { root })
+  check('建书 · 空书名兜成未命名作品（服务端不报错）', dirty3?.meta?.name === '未命名作品', dirty3?.meta?.name)
+  check('建书 · 脏数字兜成默认值',
+    Number(dirty3?.meta?.targetWords) === 2500 && Number(dirty3?.meta?.qualityGate) === 70 && Number(dirty3?.meta?.monthlyBudget) === 600,
+    JSON.stringify({ tw: dirty3?.meta?.targetWords, qg: dirty3?.meta?.qualityGate, mb: dirty3?.meta?.monthlyBudget }))
+  check('建书 · 脏题材兜成空串', dirty3?.meta?.genre === '', JSON.stringify(dirty3?.meta?.genre))
+  // 这一段造了两本临时作品，后面的「作品数 = 1」类断言会被带偏，用完即删。
+  await handleRpc({ op: 'project.delete', payload: { projectId: pid3b } }, {}, { root })
+  await handleRpc({ op: 'project.delete', payload: { projectId: dirty3.id } }, {}, { root })
+
   // ══ 4. 写章节 ════════════════════════════════════════════
   console.log('\n— 4. 写章节（chapter.save / get / list）')
   const ch1 = '第一回 城头夜雨\n\n雨落了三天。城头的火把熄了两回，守卒换班时踩进泥里，骂了一声又咽回去。'
