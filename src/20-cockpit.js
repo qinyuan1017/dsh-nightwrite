@@ -50,7 +50,10 @@ function outlineVolumes(outline, writtenChapters) {
 /** 大纲里一共规划了多少回；没大纲就回 0，让调用方自己兜底。 */
 function outlineTotal(outline) {
   const volumes = Array.isArray(outline?.volumes) ? outline.volumes : []
-  return volumes.reduce((sum, vol) => sum + (Array.isArray(vol?.chapters) ? vol.chapters.length : 0), 0)
+  return volumes.reduce(
+    (sum, vol) => sum + (Array.isArray(vol?.chapters) ? vol.chapters.length : 0),
+    0,
+  )
 }
 
 /**
@@ -100,24 +103,49 @@ function BriefingCard({ projectId, toast }) {
         'div',
         { className: 'nw-actions' },
         h('span', { className: 'nw-card-badge' }, '给 AI 看的'),
-        h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: load }, busy ? '正在汇总…' : open ? '重新生成' : '生成简报'),
+        h(
+          Btn,
+          { small: true, kind: 'ghost', disabled: busy, onClick: load },
+          busy ? '正在汇总…' : open ? '重新生成' : '生成简报',
+        ),
       ),
     },
-    h('p', { className: 'nw-hint' }, '一段纯文本：书写到哪、谁在场、欠什么、下一步该写哪一回。粘到对话开头用，比让 AI 自己翻文件准。'),
+    h(
+      'p',
+      { className: 'nw-hint' },
+      '一段纯文本：书写到哪、谁在场、欠什么、下一步该写哪一回。粘到对话开头用，比让 AI 自己翻文件准。',
+    ),
     open
       ? h(
-        'div',
-        { className: 'nw-brief' },
-        meta ? h('div', { className: 'nw-hint' }, `${meta.chapters} 回 · ${fmtWords(meta.totalWords ?? 0)} · 最近第 ${meta.lastChapter} 回`) : null,
-        h('pre', { className: 'nw-brief-text' }, text),
-        h('div', { className: 'nw-actions' }, h(Btn, { small: true, kind: 'primary', onClick: copy }, '复制全文')),
-      )
+          'div',
+          { className: 'nw-brief' },
+          meta
+            ? h(
+                'div',
+                { className: 'nw-hint' },
+                `${meta.chapters} 回 · ${fmtWords(meta.totalWords ?? 0)} · 最近第 ${meta.lastChapter} 回`,
+              )
+            : null,
+          h('pre', { className: 'nw-brief-text' }, text),
+          h(
+            'div',
+            { className: 'nw-actions' },
+            h(Btn, { small: true, kind: 'primary', onClick: copy }, '复制全文'),
+          ),
+        )
       : null,
   )
 }
 
 function DebtRow({ debt, onJump }) {
-  const tone = debt.level === 'red' ? 'red' : debt.level === 'orange' ? 'amber' : debt.level === 'yellow' ? 'blue' : 'grey'
+  const tone =
+    debt.level === 'red'
+      ? 'red'
+      : debt.level === 'orange'
+        ? 'amber'
+        : debt.level === 'yellow'
+          ? 'blue'
+          : 'grey'
   return h(
     'button',
     { type: 'button', className: 'nw-debt', onClick: () => onJump?.(debt) },
@@ -128,7 +156,11 @@ function DebtRow({ debt, onJump }) {
       h('span', { className: 'nw-debt-title' }, debt.title),
       h('span', { className: 'nw-debt-sub' }, debt.sub),
     ),
-    h(Tag, { tone }, debt.level === 'red' ? '必处理' : debt.level === 'orange' ? '该处理' : '待留意'),
+    h(
+      Tag,
+      { tone },
+      debt.level === 'red' ? '必处理' : debt.level === 'orange' ? '该处理' : '待留意',
+    ),
     h('span', { className: 'nw-debt-go' }, '›'),
   )
 }
@@ -184,20 +216,26 @@ function ActionCard({ stats, debts, go, toast }) {
       h('p', { className: 'nw-action-sub' }, sub),
     ),
     h(Btn, { kind: 'primary', onClick: action }, label),
-    h(Btn, {
-      kind: 'ghost',
-      small: true,
-      onClick: () => toast('演示：会按「红账 → 待验收 → 队列」重排一遍优先级'),
-    }, '换一个建议'),
+    h(
+      Btn,
+      {
+        kind: 'ghost',
+        small: true,
+        onClick: () => toast('演示：会按「红账 → 待验收 → 队列」重排一遍优先级'),
+      },
+      '换一个建议',
+    ),
   )
 }
 
-function CockpitPage({
-  projectId, project, go, toast, refreshKey, bare,
-}) {
-  const ov = useAsync(() => api('overview', { projectId }), [projectId, refreshKey], { skip: !projectId })
+function CockpitPage({ projectId, project, go, toast, refreshKey, bare }) {
+  const ov = useAsync(() => api('overview', { projectId }), [projectId, refreshKey], {
+    skip: !projectId,
+  })
   // 大纲只为了给进度条分段（哪几章属于哪一卷）。读一份本地 json，不贵。
-  const ol = useAsync(() => api('outline.get', { projectId }), [projectId, refreshKey], { skip: !projectId })
+  const ol = useAsync(() => api('outline.get', { projectId }), [projectId, refreshKey], {
+    skip: !projectId,
+  })
 
   if (!projectId) {
     return h(Empty, null, '还没有作品。点左上角那个 ＋ 建一本。')
@@ -213,7 +251,8 @@ function CockpitPage({
   // 【12 条 #4】进度条接真数：以前这里写死 MOCK.progress（12840/60000、第 6/30 回），
   // 不管作者写到第几章都显示同一根条。现在字数取 stats.totalWords、目标取作品的
   // targetWords、章数取 stats.chapters，卷分段取大纲的 volumes。
-  const targetWords = Number(stats.targetWords ?? project?.targetWords ?? 0) || Number(stats.totalWords ?? 0) || 1
+  const targetWords =
+    Number(stats.targetWords ?? project?.targetWords ?? 0) || Number(stats.totalWords ?? 0) || 1
   const progress = {
     words: Number(stats.totalWords ?? 0),
     target: targetWords,
@@ -230,9 +269,15 @@ function CockpitPage({
 
   // bare：被「今天」页内嵌时用。以前驾驶舱自己是一页，现在它前半段归今天页，
   // 再套一层 .nw-page 会出现两道 max-width 和两道 gap，版心对不齐。
-  const shell = (children) => (bare
-    ? h(Fragment, null, children)
-    : h('div', { className: 'nw-page nw-cockpit' }, children))
+  const shell = (children) =>
+    bare ? h(Fragment, null, children) : h('div', { className: 'nw-page nw-cockpit' }, children)
+
+  // 近七天的字数：dailyWords 是「旧 → 新」14 天，取尾巴七根。
+  // 不另发请求 —— 服务端 overview 已经把这两周一起给了，只是以前只用来画柱子。
+  const weekWords = (Array.isArray(stats.dailyWords) ? stats.dailyWords : [])
+    .slice(-7)
+    .reduce((sum, row) => sum + (Number(row?.words) || 0), 0)
+  const gate = Number(project?.qualityGate ?? 70)
 
   return shell([
     h(
@@ -262,24 +307,31 @@ function CockpitPage({
     h(ActionCard, { stats, debts, go, toast }),
     // 【24 条 #6】全书进度条：字数 / 章数 / 卷分割。
     h(ProgressTrack, { progress, volumes, toast }),
+    // 四块数字只放「顶栏没有的」。
+    // 待验收 / 队列这两个数顶栏已经常驻了，今天页再画一遍等于同一件事看两处 ——
+    // 少了嫌空，多了嫌吵，所以这里换成只有慢变量才看得出的四个：今天、这周、均分、欠账。
     h(
       'div',
       { className: 'nw-stats' },
       h(StatBox, {
-        label: '待验收',
-        value: stats.pending ?? 0,
-        unit: '章',
-        hint: (stats.pending ?? 0) ? '等你拍板' : '清空了',
-        tone: (stats.pending ?? 0) ? 'amber' : 'green',
-        onClick: () => go('review'),
+        label: '今日字数',
+        value: fmtWords(stats.writeToday ?? 0),
+        hint: `目标 ${fmtWords(stats.targetWords ?? 2500)}`,
+        tone: 'blue',
+        onClick: () => go('dispatch'),
       }),
       h(StatBox, {
-        label: '队列中',
-        value: stats.queued ?? 0,
-        unit: '章',
-        hint: (stats.running ?? 0) ? `${stats.running} 章在跑` : '空闲',
-        tone: (stats.queued ?? 0) ? 'teal' : 'green',
-        onClick: () => go('dispatch'),
+        label: '这七天',
+        value: fmtWords(weekWords),
+        hint: weekWords ? `日均 ${fmtWords(Math.round(weekWords / 7))}` : '过去七天没动笔',
+        tone: weekWords ? 'teal' : 'grey',
+      }),
+      h(StatBox, {
+        label: '均分',
+        value: stats.avgScore ?? 0,
+        unit: '分',
+        hint: (stats.accepted ?? 0) ? `已采纳 ${stats.accepted} 章` : '还没有采纳的章',
+        tone: Number(stats.avgScore) >= gate ? 'green' : 'amber',
       }),
       h(StatBox, {
         label: '欠账',
@@ -287,13 +339,6 @@ function CockpitPage({
         unit: '条',
         hint: red ? `${red} 条红账` : '干净',
         tone: red ? 'red' : 'green',
-      }),
-      h(StatBox, {
-        label: '今日字数',
-        value: fmtWords(stats.writeToday ?? 0),
-        hint: `目标 ${fmtWords(stats.targetWords ?? 2500)}`,
-        tone: 'blue',
-        onClick: () => go('dispatch'),
       }),
     ),
     h(
@@ -307,7 +352,13 @@ function CockpitPage({
           className: 'nw-card-debt',
         },
         debts.length
-          ? h('div', { className: 'nw-debt-list' }, debts.map((debt, index) => h(DebtRow, { debt, key: `${debt.kind}-${index}`, onJump: jump })))
+          ? h(
+              'div',
+              { className: 'nw-debt-list' },
+              debts.map((debt, index) =>
+                h(DebtRow, { debt, key: `${debt.kind}-${index}`, onJump: jump }),
+              ),
+            )
           : h(Empty, null, '没有欠账。世界状态干净，可以放心往下写。'),
       ),
       h(
@@ -321,9 +372,13 @@ function CockpitPage({
           // （见 lib/store.js dailyWordsFor，14 条、没写字的日子补 0）。
           // 拿不到就画一排空柱子 —— 以前退回演示曲线，作者会以为自己一直在写。
           h(DayBars, {
-            days: Array.isArray(stats.dailyWords) && stats.dailyWords.length
-              ? stats.dailyWords.map((row) => ({ d: String(row.day ?? '').slice(5), w: Number(row.words) || 0 }))
-              : emptyDays(14),
+            days:
+              Array.isArray(stats.dailyWords) && stats.dailyWords.length
+                ? stats.dailyWords.map((row) => ({
+                    d: String(row.day ?? '').slice(5),
+                    w: Number(row.words) || 0,
+                  }))
+                : emptyDays(14),
             target: stats.targetWords ?? 2500,
             toast,
           }),
@@ -344,22 +399,32 @@ function CockpitPage({
           { title: '最近产出' },
           (data.recent || []).length
             ? h(
-              'div',
-              { className: 'nw-recent' },
-              (data.recent || []).map((row) => h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'nw-recent-row',
-                  key: row.chapter,
-                  onClick: () => go('review', { chapter: row.chapter }),
-                },
-                h('span', { className: 'nw-recent-n' }, `第 ${row.chapter} 回`),
-                h('span', { className: 'nw-recent-title' }, row.title || ''),
-                h(Tag, { tone: STATUS_TONE[row.status] || 'grey' }, STATUS_LABEL[row.status] || row.status),
-                h('span', { className: `nw-recent-score nw-score-${scoreTone(row.score)}` }, row.score || '—'),
-              )),
-            )
+                'div',
+                { className: 'nw-recent' },
+                (data.recent || []).map((row) =>
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'nw-recent-row',
+                      key: row.chapter,
+                      onClick: () => go('review', { chapter: row.chapter }),
+                    },
+                    h('span', { className: 'nw-recent-n' }, `第 ${row.chapter} 回`),
+                    h('span', { className: 'nw-recent-title' }, row.title || ''),
+                    h(
+                      Tag,
+                      { tone: STATUS_TONE[row.status] || 'grey' },
+                      STATUS_LABEL[row.status] || row.status,
+                    ),
+                    h(
+                      'span',
+                      { className: `nw-recent-score nw-score-${scoreTone(row.score)}` },
+                      row.score || '—',
+                    ),
+                  ),
+                ),
+              )
             : h(Empty, null, '还没写过章节。'),
         ),
         // 简报是「把当前状态说给 AI 听」的出口：写完这段粘到对话开头，

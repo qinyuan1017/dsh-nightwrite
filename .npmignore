@@ -1,0 +1,28 @@
+# npm 只认 files / .npmignore，不读 .gitignore。
+# 这份文件是为了「本地开发时留下的东西绝不跟着包发出去」——
+# 2026-10 那一次 npm pack --dry-run 里混进 64 个 .bak-* 快照，
+# 其中 agents/.bak-agents5-* 还带着改名前的 changye-*，等于把旧版本一起发布。
+
+# 任何备份 / 快照 / 抓包 / 临时产物
+*.bak
+*.bak-*
+*.bak.*
+**/*.bak
+**/*.bak-*
+**/.bak-*
+
+# 不随包发布的开发资产
+test/
+.tmpwork/
+.github/
+docs/patches/
+docs/*.patch*
+eslint.config.mjs
+eslint-globals.json
+prettier.config.*
+.prettierrc*
+scripts/
+*.log
+*.tgz
+.DS_Store
+Thumbs.db

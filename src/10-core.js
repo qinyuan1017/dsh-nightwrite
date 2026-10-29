@@ -33,30 +33,25 @@ const LS = {
   openPara: 'nw.openPara',
 }
 
-// 八页，四组。导航从「底栏十个等权按钮」改成「左侧竖栏按动作分组」。
+// 八页。导航是底栏居中的胶囊（`.nw-dock`），不是左侧目录树。
 //
-// 为什么这么分：原来十颗钉子在底栏排一行，视觉上完全等权 —— 天天要开的「正文」
-// 和一年动两次的「设置」占一样宽。作者每次都得在十个词里找一遍。
-//
-// 分组不是按功能模块，是按「你现在想干什么」：
-//   今天 → 先看今天。单拎在最上，不属于任何组。
-//   写   → 摊开稿子读 / 规划骨架 / 排一张单让人写
-//   审   → 逐章验收、提案、问题单、读者视角
-//   资料 → 世界库、侦察
-//   系统 → 设置
+// 为什么在底栏：底栏是视线的终点，八个词一扫就过，不占正文的宽度。
+// 作品越写越长，屏幕就越该留给稿子。
 //
 // 页数 10 → 8：`pipeline`（派单台）和 `studio`（生产台）合成 `dispatch`（派单），
 // 它们本来就是同一件事的两半（一个排单、一个派人）；`run`（停靠点）并进 `today`，
 // 因为「今天能不能写」跟「今天该写什么」是同一个人在同一秒钟要回答的两个问题。
+//
+// 只在顺序上体现轻重：先看今天，再摊正文，规划与派单在后，验收与资料次之，设置垫底。
 const PAGES = [
-  { id: 'today', label: '今天', icon: '🌙', group: '今天' },
-  { id: 'read', label: '正文', icon: '📖', group: '写' },
-  { id: 'plan', label: '大纲', icon: '📐', group: '写' },
-  { id: 'dispatch', label: '派单', icon: '🛠', group: '写' },
-  { id: 'review', label: '验收台', icon: '📋', group: '审' },
-  { id: 'world', label: '世界库', icon: '🗂', group: '资料' },
-  { id: 'scout', label: '侦察', icon: '🔍', group: '资料' },
-  { id: 'settings', label: '设置', icon: '⚙️', group: '系统' },
+  { id: 'today', label: '今天', icon: '🌙' },
+  { id: 'read', label: '正文', icon: '📖' },
+  { id: 'plan', label: '大纲', icon: '📐' },
+  { id: 'dispatch', label: '派单', icon: '🛠' },
+  { id: 'review', label: '验收台', icon: '📋' },
+  { id: 'world', label: '世界库', icon: '🗂' },
+  { id: 'scout', label: '侦察', icon: '🔍' },
+  { id: 'settings', label: '设置', icon: '⚙️' },
 ]
 const PAGE_LABEL = Object.fromEntries(PAGES.map((p) => [p.id, p.label]))
 const PAGE_IDS = PAGES.map((p) => p.id)
@@ -238,16 +233,26 @@ function dropDraft(projectId, chapter) {
  * 而这是最没必要吵的一种架——所以在客户端也把这两步做掉。
  */
 function countChars(text) {
-  let body = String(text ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  let body = String(text ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
   if (body.startsWith('\ufeff')) body = body.slice(1)
   // frontmatter：开头 --- 包起来、且里面有 key: value 行，才认。认不出就原样算。
   const lines = body.split('\n')
   if (lines[0] === '---') {
     let closing = -1
     for (let i = 1; i < Math.min(lines.length, 201); i += 1) {
-      if (lines[i] === '---' || lines[i] === '...') { closing = i; break }
+      if (lines[i] === '---' || lines[i] === '...') {
+        closing = i
+        break
+      }
     }
-    if (closing >= 2 && lines.slice(1, closing).some((line) => /^[A-Za-z_\u3400-\u9FFF][^:\n]{0,80}:[ \t]*(?:.*)$/.test(line))) {
+    if (
+      closing >= 2 &&
+      lines
+        .slice(1, closing)
+        .some((line) => /^[A-Za-z_\u3400-\u9FFF][^:\n]{0,80}:[ \t]*(?:.*)$/.test(line))
+    ) {
       body = lines.slice(closing + 1).join('\n')
     }
   }
@@ -353,7 +358,13 @@ function Card({ title, extra, className = '', children, ...rest }) {
     'section',
     { className: `nw-card${className ? ` ${className}` : ''}`, ...rest },
     title
-      ? h('div', { className: 'nw-card-head' }, h('h3', null, title), h('div', { className: 'nw-card-line' }), extra)
+      ? h(
+          'div',
+          { className: 'nw-card-head' },
+          h('h3', null, title),
+          h('div', { className: 'nw-card-line' }),
+          extra,
+        )
       : null,
     children,
   )
@@ -371,12 +382,14 @@ function KV({ rows }) {
   return h(
     'div',
     { className: 'nw-kv-wrap' },
-    rows.map((row) => h(
-      'div',
-      { className: 'nw-kv', key: row.key },
-      h('span', { className: 'nw-kv-k' }, row.key),
-      h('span', { className: `nw-kv-v${row.mono ? ' nw-mono' : ''}` }, row.text),
-    )),
+    rows.map((row) =>
+      h(
+        'div',
+        { className: 'nw-kv', key: row.key },
+        h('span', { className: 'nw-kv-k' }, row.key),
+        h('span', { className: `nw-kv-v${row.mono ? ' nw-mono' : ''}` }, row.text),
+      ),
+    ),
   )
 }
 
@@ -406,7 +419,11 @@ function TextArea({ value, onChange, rows = 3, ...rest }) {
 function Select({ value, onChange, options }) {
   return h(
     'select',
-    { className: 'nw-input', value: value ?? '', onChange: (event) => onChange?.(event.target.value) },
+    {
+      className: 'nw-input',
+      value: value ?? '',
+      onChange: (event) => onChange?.(event.target.value),
+    },
     options.map((item) => h('option', { key: item.value, value: item.value }, item.label)),
   )
 }
@@ -426,12 +443,14 @@ function Toast({ items }) {
   return h(
     'div',
     { className: 'nw-toast-wrap' },
-    items.map((item) => h(
-      'div',
-      { className: 'nw-toast', key: item.id },
-      h('span', { className: 'nw-toast-mark' }, '›'),
-      item.text,
-    )),
+    items.map((item) =>
+      h(
+        'div',
+        { className: 'nw-toast', key: item.id },
+        h('span', { className: 'nw-toast-mark' }, '›'),
+        item.text,
+      ),
+    ),
   )
 }
 
@@ -544,8 +563,11 @@ function Modal({ title, onClose, children, footer }) {
       if (String(event.key) !== 'Tab') return
       const box = boxRef.current
       if (!box || typeof box.querySelectorAll !== 'function') return
-      const focusables = Array.from(box.querySelectorAll('a[href],button,input,textarea,select,[tabindex]:not([tabindex="-1"])'))
-        .filter((node) => !node.disabled)
+      const focusables = Array.from(
+        box.querySelectorAll(
+          'a[href],button,input,textarea,select,[tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((node) => !node.disabled)
       if (!focusables.length) return
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
@@ -594,7 +616,11 @@ function Modal({ title, onClose, children, footer }) {
         'div',
         { className: 'nw-modal-head' },
         h('h3', null, title),
-        h('button', { type: 'button', className: 'nw-icon-btn', onClick: onClose, 'aria-label': '关闭' }, '✕'),
+        h(
+          'button',
+          { type: 'button', className: 'nw-icon-btn', onClick: onClose, 'aria-label': '关闭' },
+          '✕',
+        ),
       ),
       h('div', { className: 'nw-modal-body' }, children),
       footer ? h('div', { className: 'nw-modal-foot' }, footer) : null,
@@ -621,6 +647,47 @@ function ErrorBox({ error, onRetry }) {
     h('span', null, error?.message || '出错了'),
     onRetry ? h(Btn, { small: true, kind: 'ghost', onClick: onRetry }, '重试') : null,
   )
+}
+
+/**
+ * 按场景分条的写作原则。
+ *
+ * 一本书只有一句铁律是不够的：打脸章要「三句内见血」，感情章要「不写心理写动作」，
+ * 战斗章要「短句、动词开头」—— 这三条互相打架，揉成一句就成了正确的废话。
+ *
+ * 存在 project.settings.principles = [{ id, name, text }]。
+ * settings.writePrinciple 仍然有效，当作「所有场景都吃」的兜底那条。
+ */
+function projectPrinciples(project) {
+  const raw = project?.settings?.principles
+  const list = Array.isArray(raw) ? raw : []
+  const rows = []
+  for (const row of list) {
+    if (!row || typeof row !== 'object') continue
+    const name = String(row.name ?? '').trim()
+    const text = String(row.text ?? '').trim()
+    if (!name || !text) continue
+    rows.push({ id: String(row.id ?? name), name, text })
+  }
+  const fallback = String(project?.settings?.writePrinciple ?? '').trim()
+  if (!rows.length && fallback) rows.push({ id: '_default', name: '通用', text: fallback })
+  return rows
+}
+
+/**
+ * 这一单该带哪一条原则。
+ *
+ * 匹配规则故意做得很土：模板名 / 意图里包含场景名就算命中，命中几条就都带上。
+ * 不猜语义 —— 猜错一次作者会记很久，而「模板叫打脸章就带打脸那条」他一看就懂。
+ */
+function pickPrinciple(project, hint) {
+  const rows = projectPrinciples(project)
+  if (!rows.length) return []
+  const text = String(hint ?? '')
+  const hit = rows.filter((row) => row.id !== '_default' && text.includes(row.name))
+  if (hit.length) return hit
+  const general = rows.find((row) => row.id === '_default')
+  return general ? [general] : []
 }
 
 function Bar({ value, max = 100, tone = 'amber' }) {

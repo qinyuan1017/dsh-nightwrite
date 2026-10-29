@@ -15,7 +15,8 @@ const OUTLINE_STATUS = {
 }
 
 function outlinePrompt(brief) {
-  const line = (key, label) => (String(brief?.[key] ?? '').trim() ? `- ${label}：${String(brief[key]).trim()}\n` : '')
+  const line = (key, label) =>
+    String(brief?.[key] ?? '').trim() ? `- ${label}：${String(brief[key]).trim()}\n` : ''
   return [
     '帮我把这份方案铺成卷章骨架，然后回填每章的一句话摘要与章末钩子。\n',
     '方案：\n',
@@ -36,7 +37,12 @@ function outlinePrompt(brief) {
 
 function PlanBrief({ brief, onEdit, onSave, onGenerate, onCopy, busy }) {
   const FIELDS = [
-    { key: 'premise', label: '一句话故事', rows: 2, placeholder: '例：元末，女主带着系统穿到朱元璋身边，要从他手里抢下天下。' },
+    {
+      key: 'premise',
+      label: '一句话故事',
+      rows: 2,
+      placeholder: '例：元末，女主带着系统穿到朱元璋身边，要从他手里抢下天下。',
+    },
     { key: 'genre', label: '题材', rows: 1, placeholder: '历史穿越 / 女帝' },
     { key: 'audience', label: '目标读者', rows: 1, placeholder: '看权谋爽文的男性读者' },
     { key: 'protagonist', label: '主角', rows: 1, placeholder: '名字 + 一句话身份' },
@@ -55,51 +61,73 @@ function PlanBrief({ brief, onEdit, onSave, onGenerate, onCopy, busy }) {
     h(
       'div',
       { className: 'nw-plan-grid' },
-      FIELDS.map((field) => h(
-        'div',
-        { className: `nw-plan-field${field.rows > 1 ? ' nw-plan-wide' : ''}`, key: field.key },
-        h(Field, { label: field.label }, field.rows > 1
-          ? h(TextArea, {
-            value: brief[field.key] ?? '',
-            rows: field.rows,
-            placeholder: field.placeholder,
-            onChange: (v) => onEdit({ [field.key]: v }),
-          })
-          : h(Input, {
-            value: brief[field.key] ?? '',
-            placeholder: field.placeholder,
-            onChange: (v) => onEdit({ [field.key]: v }),
-          })),
-      )),
-      h(
-        'div',
-        { className: 'nw-plan-field' },
-        h(Field, { label: '几卷' }, h(Input, {
-          type: 'number',
-          value: brief.volumes,
-          onChange: (v) => onEdit({ volumes: Number(v) || 1 }),
-        })),
+      FIELDS.map((field) =>
+        h(
+          'div',
+          { className: `nw-plan-field${field.rows > 1 ? ' nw-plan-wide' : ''}`, key: field.key },
+          h(
+            Field,
+            { label: field.label },
+            field.rows > 1
+              ? h(TextArea, {
+                  value: brief[field.key] ?? '',
+                  rows: field.rows,
+                  placeholder: field.placeholder,
+                  onChange: (v) => onEdit({ [field.key]: v }),
+                })
+              : h(Input, {
+                  value: brief[field.key] ?? '',
+                  placeholder: field.placeholder,
+                  onChange: (v) => onEdit({ [field.key]: v }),
+                }),
+          ),
+        ),
       ),
       h(
         'div',
         { className: 'nw-plan-field' },
-        h(Field, { label: '每卷几章' }, h(Input, {
-          type: 'number',
-          value: brief.chaptersPerVolume,
-          onChange: (v) => onEdit({ chaptersPerVolume: Number(v) || 1 }),
-        })),
+        h(
+          Field,
+          { label: '几卷' },
+          h(Input, {
+            type: 'number',
+            value: brief.volumes,
+            onChange: (v) => onEdit({ volumes: Number(v) || 1 }),
+          }),
+        ),
+      ),
+      h(
+        'div',
+        { className: 'nw-plan-field' },
+        h(
+          Field,
+          { label: '每卷几章' },
+          h(Input, {
+            type: 'number',
+            value: brief.chaptersPerVolume,
+            onChange: (v) => onEdit({ chaptersPerVolume: Number(v) || 1 }),
+          }),
+        ),
       ),
     ),
     h(
       'div',
       { className: 'nw-plan-foot' },
-      h('span', { className: 'nw-hint' }, `共 ${(brief.volumes || 0) * (brief.chaptersPerVolume || 0)} 章的位置`),
+      h(
+        'span',
+        { className: 'nw-hint' },
+        `共 ${(brief.volumes || 0) * (brief.chaptersPerVolume || 0)} 章的位置`,
+      ),
       h(
         'div',
         { className: 'nw-actions' },
         h(Btn, { kind: 'ghost', onClick: onCopy, disabled: busy }, '复制给 AI 的提示词'),
         h(Btn, { kind: 'ghost', onClick: onSave, disabled: busy }, '只存方案'),
-        h(Btn, { kind: 'primary', onClick: onGenerate, disabled: busy }, busy ? '生成中…' : '生成骨架'),
+        h(
+          Btn,
+          { kind: 'primary', onClick: onGenerate, disabled: busy },
+          busy ? '生成中…' : '生成骨架',
+        ),
       ),
     ),
   )
@@ -142,15 +170,25 @@ function PlanCard({ row, onEdit, onSend, onOpen }) {
   const empty = !String(row.title ?? '').trim() && !String(row.summary ?? '').trim()
   return h(
     'div',
-    { className: `nw-pcard${empty ? ' nw-pcard-empty' : ''}${row.status === 'written' ? ' nw-pcard-done' : ''}` },
+    {
+      className: `nw-pcard${empty ? ' nw-pcard-empty' : ''}${row.status === 'written' ? ' nw-pcard-done' : ''}`,
+    },
     h(
       'div',
       { className: 'nw-pcard-head' },
       h('span', { className: 'nw-pcard-n' }, `第 ${row.chapter} 回`),
       h(Tag, { tone: tone.tone }, tone.label),
     ),
-    h('div', { className: 'nw-pcard-title' }, row.title || h('span', { className: 'nw-pcard-ph' }, '（还没标题）')),
-    h('p', { className: 'nw-pcard-sum' }, row.summary || h('span', { className: 'nw-pcard-ph' }, '这一章发生什么？')),
+    h(
+      'div',
+      { className: 'nw-pcard-title' },
+      row.title || h('span', { className: 'nw-pcard-ph' }, '（还没标题）'),
+    ),
+    h(
+      'p',
+      { className: 'nw-pcard-sum' },
+      row.summary || h('span', { className: 'nw-pcard-ph' }, '这一章发生什么？'),
+    ),
     h(
       'div',
       { className: 'nw-pcard-hook' },
@@ -172,26 +210,36 @@ function PlanTimeline({ volumes, onSend }) {
   return h(
     'div',
     { className: 'nw-ptl' },
-    volumes.map((vol) => h(
-      'div',
-      { className: 'nw-ptl-vol', key: vol.id },
-      h('div', { className: 'nw-ptl-head' }, h('span', null, vol.title), h('span', { className: 'nw-hint' }, `${vol.chapters.length} 章`)),
+    volumes.map((vol) =>
       h(
         'div',
-        { className: 'nw-ptl-rail', style: { width: `${(vol.chapters.length / max) * 100}%` } },
-        vol.chapters.map((row) => h(
-          'button',
-          {
-            type: 'button',
-            key: row.chapter,
-            className: `nw-ptl-dot nw-ptl-${row.status || 'todo'}`,
-            title: `第 ${row.chapter} 回 · ${row.title || '未命名'} · ${(OUTLINE_STATUS[row.status] ?? OUTLINE_STATUS.todo).label}`,
-            onClick: () => onSend(row),
-          },
-        )),
+        { className: 'nw-ptl-vol', key: vol.id },
+        h(
+          'div',
+          { className: 'nw-ptl-head' },
+          h('span', null, vol.title),
+          h('span', { className: 'nw-hint' }, `${vol.chapters.length} 章`),
+        ),
+        h(
+          'div',
+          { className: 'nw-ptl-rail', style: { width: `${(vol.chapters.length / max) * 100}%` } },
+          vol.chapters.map((row) =>
+            h('button', {
+              type: 'button',
+              key: row.chapter,
+              className: `nw-ptl-dot nw-ptl-${row.status || 'todo'}`,
+              title: `第 ${row.chapter} 回 · ${row.title || '未命名'} · ${(OUTLINE_STATUS[row.status] ?? OUTLINE_STATUS.todo).label}`,
+              onClick: () => onSend(row),
+            }),
+          ),
+        ),
       ),
-    )),
-    h('p', { className: 'nw-hint' }, '点是章：灰=未排，琥珀=已有稿，绿=已采纳。点一下直接送去派单。'),
+    ),
+    h(
+      'p',
+      { className: 'nw-hint' },
+      '点是章：灰=未排，琥珀=已有稿，绿=已采纳。点一下直接送去派单。',
+    ),
   )
 }
 
@@ -207,17 +255,25 @@ function FillVolumeBar({ vol, busy, onFill, toast }) {
       'div',
       { className: 'nw-fillbar-main' },
       h('span', { className: 'nw-fillbar-title' }, `本卷还有 ${empty} 章没摘要`),
-      h('span', { className: 'nw-hint' }, '按卷一次派活，比一章一章敲快二十倍；填完仍然可以逐张改。'),
+      h(
+        'span',
+        { className: 'nw-hint' },
+        '按卷一次派活，比一章一章敲快二十倍；填完仍然可以逐张改。',
+      ),
     ),
-    h(Btn, {
-      kind: 'primary',
-      small: true,
-      disabled: busy || !empty,
-      onClick: () => {
-        onFill?.()
-        toast?.(`已派活：让 AI 回填「${vol.title}」${empty} 章的摘要与钩子（演示）`)
+    h(
+      Btn,
+      {
+        kind: 'primary',
+        small: true,
+        disabled: busy || !empty,
+        onClick: () => {
+          onFill?.()
+          toast?.(`已派活：让 AI 回填「${vol.title}」${empty} 章的摘要与钩子（演示）`)
+        },
       },
-    }, busy ? '派活中…' : `✎ AI 填这卷 ${empty} 章`),
+      busy ? '派活中…' : `✎ AI 填这卷 ${empty} 章`,
+    ),
   )
 }
 
@@ -242,7 +298,16 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
   if (res.error) return h(ErrorBox, { error: res.error, onRetry: res.reload })
 
   const current = brief ?? {
-    premise: '', genre: '', audience: '', protagonist: '', goal: '', conflict: '', hook: '', ending: '', volumes: 3, chaptersPerVolume: 20,
+    premise: '',
+    genre: '',
+    audience: '',
+    protagonist: '',
+    goal: '',
+    conflict: '',
+    hook: '',
+    ending: '',
+    volumes: 3,
+    chaptersPerVolume: 20,
   }
 
   const editBrief = (patch) => setBrief({ ...current, ...patch })
@@ -270,7 +335,12 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
       setBrief(out.outline.brief)
       setVolumes(out.outline.volumes ?? [])
       setOpenVol(1)
-      toast(`骨架已生成：${out.outline.volumes.length} 卷 ${(out.outline.volumes[0]?.chapters?.length ?? 0) * out.outline.volumes.length} 章`)
+      // 卷数章数直接用服务端算好的，别在界面上再乘一遍 —— 各卷章数不齐时会算错。
+      const vols = Number(out.volumes) || out.outline.volumes.length
+      const chs =
+        Number(out.chapters) ||
+        out.outline.volumes.reduce((n, v) => n + (v.chapters?.length ?? 0), 0)
+      toast(`骨架已生成：${vols} 卷 ${chs} 章`)
       onRefresh?.()
     } catch (error) {
       toast(error.message)
@@ -292,10 +362,18 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
   // 章节字段改动：先改本地，失焦语义交给「保存骨架」。
   // 每次按键都写盘会让 120 章的骨架变成 120 个 RPC，双击卡顿。
   const editRow = (volIndex, chIndex, patch) => {
-    setVolumes((prev) => prev.map((vol, vi) => (vi !== volIndex ? vol : {
-      ...vol,
-      chapters: vol.chapters.map((row, ci) => (ci !== chIndex ? row : { ...row, ...patch })),
-    })))
+    setVolumes((prev) =>
+      prev.map((vol, vi) =>
+        vi !== volIndex
+          ? vol
+          : {
+              ...vol,
+              chapters: vol.chapters.map((row, ci) =>
+                ci !== chIndex ? row : { ...row, ...patch },
+              ),
+            },
+      ),
+    )
   }
 
   const saveTree = async () => {
@@ -305,7 +383,10 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
 
   const send = (row) => {
     writeLS(LS.orderChapter, String(row.chapter))
-    writeLS(LS.orderIntent, [row.summary, row.hook ? `章末钩子：${row.hook}` : ''].filter(Boolean).join(' · '))
+    writeLS(
+      LS.orderIntent,
+      [row.summary, row.hook ? `章末钩子：${row.hook}` : ''].filter(Boolean).join(' · '),
+    )
     toast(`第 ${row.chapter} 回已送去派单`)
     go('dispatch')
   }
@@ -325,128 +406,187 @@ function PlanPage({ projectId, project, go, toast, onRefresh }) {
     }),
     volumes.length
       ? h(
-        Card,
-        {
-          title: '卷章骨架',
-          extra: h(
-            'div',
-            { className: 'nw-plan-vols' },
-            volumes.map((vol) => h(
-              'button',
-              {
-                type: 'button',
-                key: vol.id,
-                className: `nw-seg-btn${active && active.index === vol.index ? ' on' : ''}`,
-              'aria-pressed': active && active.index === vol.index ? 'true' : 'false',
-                onClick: () => setOpenVol(vol.index),
-              },
-              vol.title,
-              h('span', { className: 'nw-seg-n' }, String(vol.chapters.length)),
-            )),
-          ),
-        },
-        h('p', { className: 'nw-hint' }, '摘要与钩子由 AI 回填（nightwrite_op → outline.save），这里可以直接改；改完按「保存骨架」落盘。'),
-        h(FillVolumeBar, { vol: active, busy, onFill: () => {}, toast }),
-        h(
-          'div',
-          { className: 'nw-plan-viewbar' },
-          h(
-            'div',
-            { className: 'nw-seg' },
-            [
-              { value: 'cards', label: '卡片' },
-              { value: 'list', label: '列表' },
-              { value: 'timeline', label: '时间线' },
-            ].map((item) => h(
-              'button',
-              {
-                type: 'button',
-                key: item.value,
-                className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
-              'aria-pressed': view === item.value ? 'true' : 'false',
-                onClick: () => setView(item.value),
-              },
-              item.label,
-            )),
-          ),
-          h('span', { className: 'nw-hint' }, active ? `${active.chapters.length} 章` : ''),
-        ),
-        active
-          ? (view === 'cards'
-            ? h(
+          Card,
+          {
+            title: '卷章骨架',
+            extra: h(
               'div',
-              { className: 'nw-pcards' },
-              active.chapters.map((row, ci) => h(PlanCard, {
-                key: row.chapter,
-                row,
-                onEdit: (patch) => editRow(volumes.findIndex((v) => v.index === active.index), ci, patch),
-                onOpen: () => setCardOpen({ row, ci }),
-                onSend: () => send(row),
-              })),
-            )
-            : view === 'timeline'
-              ? h(PlanTimeline, { volumes, onSend: send })
-              : h(
-                'div',
-                { className: 'nw-plan-rows' },
-                active.chapters.map((row, ci) => h(PlanRow, {
-                  key: row.chapter,
-                  row,
-                  onEdit: (patch) => editRow(volumes.findIndex((v) => v.index === active.index), ci, patch),
-                  onSend: () => send(row),
-                })),
-              ))
-          : null,
-        h(
-          'div',
-          { className: 'nw-plan-foot' },
-          h('span', { className: 'nw-hint' }, `${volumes.length} 卷 · ${volumes.reduce((n, v) => n + v.chapters.length, 0)} 章`),
+              { className: 'nw-plan-vols' },
+              volumes.map((vol) =>
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    key: vol.id,
+                    className: `nw-seg-btn${active && active.index === vol.index ? ' on' : ''}`,
+                    'aria-pressed': active && active.index === vol.index ? 'true' : 'false',
+                    onClick: () => setOpenVol(vol.index),
+                  },
+                  vol.title,
+                  h('span', { className: 'nw-seg-n' }, String(vol.chapters.length)),
+                ),
+              ),
+            ),
+          },
+          h(
+            'p',
+            { className: 'nw-hint' },
+            '摘要与钩子由 AI 回填（nightwrite_op → outline.save），这里可以直接改；改完按「保存骨架」落盘。',
+          ),
+          h(FillVolumeBar, { vol: active, busy, onFill: () => {}, toast }),
           h(
             'div',
-            { className: 'nw-actions' },
-            h(Btn, { kind: 'ghost', onClick: () => res.reload() }, '丢弃改动'),
-            h(Btn, { kind: 'primary', onClick: saveTree, disabled: busy }, '保存骨架'),
+            { className: 'nw-plan-viewbar' },
+            h(
+              'div',
+              { className: 'nw-seg' },
+              [
+                { value: 'cards', label: '卡片' },
+                { value: 'list', label: '列表' },
+                { value: 'timeline', label: '时间线' },
+              ].map((item) =>
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    key: item.value,
+                    className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
+                    'aria-pressed': view === item.value ? 'true' : 'false',
+                    onClick: () => setView(item.value),
+                  },
+                  item.label,
+                ),
+              ),
+            ),
+            h('span', { className: 'nw-hint' }, active ? `${active.chapters.length} 章` : ''),
           ),
-        ),
-      )
+          active
+            ? view === 'cards'
+              ? h(
+                  'div',
+                  { className: 'nw-pcards' },
+                  active.chapters.map((row, ci) =>
+                    h(PlanCard, {
+                      key: row.chapter,
+                      row,
+                      onEdit: (patch) =>
+                        editRow(
+                          volumes.findIndex((v) => v.index === active.index),
+                          ci,
+                          patch,
+                        ),
+                      onOpen: () => setCardOpen({ row, ci }),
+                      onSend: () => send(row),
+                    }),
+                  ),
+                )
+              : view === 'timeline'
+                ? h(PlanTimeline, { volumes, onSend: send })
+                : h(
+                    'div',
+                    { className: 'nw-plan-rows' },
+                    active.chapters.map((row, ci) =>
+                      h(PlanRow, {
+                        key: row.chapter,
+                        row,
+                        onEdit: (patch) =>
+                          editRow(
+                            volumes.findIndex((v) => v.index === active.index),
+                            ci,
+                            patch,
+                          ),
+                        onSend: () => send(row),
+                      }),
+                    ),
+                  )
+            : null,
+          h(
+            'div',
+            { className: 'nw-plan-foot' },
+            h(
+              'span',
+              { className: 'nw-hint' },
+              `${volumes.length} 卷 · ${volumes.reduce((n, v) => n + v.chapters.length, 0)} 章`,
+            ),
+            h(
+              'div',
+              { className: 'nw-actions' },
+              h(Btn, { kind: 'ghost', onClick: () => res.reload() }, '丢弃改动'),
+              h(Btn, { kind: 'primary', onClick: saveTree, disabled: busy }, '保存骨架'),
+            ),
+          ),
+        )
       : h(
-        Card,
-        { title: '卷章骨架' },
-        h(Empty, null, '还没有骨架。上面填好一句话故事与规模，按「生成骨架」。'),
-      ),
+          Card,
+          { title: '卷章骨架' },
+          h(Empty, null, '还没有骨架。上面填好一句话故事与规模，按「生成骨架」。'),
+        ),
     // 【24 条 #7】点卡片才展开编辑：卡片负责「扫」，弹窗负责「改」，两者不抢空间。
     cardOpen !== null && active
-      ? h(Modal, {
-        title: `编辑第 ${active.chapters[cardOpen].chapter} 回`,
-        onClose: () => setCardOpen(null),
-        footer: h(
-          Fragment,
-          null,
-          h(Btn, { kind: 'ghost', small: true, onClick: () => setCardOpen(null) }, '收起'),
-          h(Btn, {
-            kind: 'primary',
-            small: true,
-            onClick: () => {
-              send(active.chapters[cardOpen])
-              setCardOpen(null)
-            },
-          }, '送去派单'),
-        ),
-      },
-      h(Field, { label: '标题' }, h(Input, {
-        value: active.chapters[cardOpen].title,
-        onChange: (v) => editRow(volumes.findIndex((x) => x.index === active.index), cardOpen, { title: v }),
-      })),
-      h(Field, { label: '一句话摘要' }, h(TextArea, {
-        value: active.chapters[cardOpen].summary,
-        rows: 3,
-        onChange: (v) => editRow(volumes.findIndex((x) => x.index === active.index), cardOpen, { summary: v }),
-      })),
-      h(Field, { label: '章末钩子' }, h(Input, {
-        value: active.chapters[cardOpen].hook,
-        onChange: (v) => editRow(volumes.findIndex((x) => x.index === active.index), cardOpen, { hook: v }),
-      })),
-      )
+      ? h(
+          Modal,
+          {
+            title: `编辑第 ${active.chapters[cardOpen].chapter} 回`,
+            onClose: () => setCardOpen(null),
+            footer: h(
+              Fragment,
+              null,
+              h(Btn, { kind: 'ghost', small: true, onClick: () => setCardOpen(null) }, '收起'),
+              h(
+                Btn,
+                {
+                  kind: 'primary',
+                  small: true,
+                  onClick: () => {
+                    send(active.chapters[cardOpen])
+                    setCardOpen(null)
+                  },
+                },
+                '送去派单',
+              ),
+            ),
+          },
+          h(
+            Field,
+            { label: '标题' },
+            h(Input, {
+              value: active.chapters[cardOpen].title,
+              onChange: (v) =>
+                editRow(
+                  volumes.findIndex((x) => x.index === active.index),
+                  cardOpen,
+                  { title: v },
+                ),
+            }),
+          ),
+          h(
+            Field,
+            { label: '一句话摘要' },
+            h(TextArea, {
+              value: active.chapters[cardOpen].summary,
+              rows: 3,
+              onChange: (v) =>
+                editRow(
+                  volumes.findIndex((x) => x.index === active.index),
+                  cardOpen,
+                  { summary: v },
+                ),
+            }),
+          ),
+          h(
+            Field,
+            { label: '章末钩子' },
+            h(Input, {
+              value: active.chapters[cardOpen].hook,
+              onChange: (v) =>
+                editRow(
+                  volumes.findIndex((x) => x.index === active.index),
+                  cardOpen,
+                  { hook: v },
+                ),
+            }),
+          ),
+        )
       : null,
   )
 }

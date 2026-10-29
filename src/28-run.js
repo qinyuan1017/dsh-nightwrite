@@ -66,33 +66,53 @@ function RunOpenForm({ projectId, onDone, toast }) {
       'div',
       { className: 'nw-actions' },
       h(Btn, { kind: 'primary', small: true, onClick: () => setOpen(true) }, '开一轮'),
-      h('span', { className: 'nw-hint' }, '开了轮才有「停下确认」这一说；不开也能写，但那次写入查不到是哪一轮的。'),
+      h(
+        'span',
+        { className: 'nw-hint' },
+        '开了轮才有「停下确认」这一说；不开也能写，但那次写入查不到是哪一轮的。',
+      ),
     )
   }
 
   return h(
     'div',
     { className: 'nw-run-form' },
-    h(Field, { label: '从第几回开始' }, h(Input, {
-      type: 'number',
-      value: form.chapter,
-      onChange: (v) => setForm({ ...form, chapter: v }),
-      placeholder: '例：5',
-    })),
-    h(Field, { label: '这一轮最多写几章' }, h(Input, {
-      type: 'number',
-      value: form.maxChapters,
-      onChange: (v) => setForm({ ...form, maxChapters: v }),
-    })),
-    h(Field, { label: '备注（为什么开这一轮）' }, h(Input, {
-      value: form.note,
-      onChange: (v) => setForm({ ...form, note: v }),
-      placeholder: '例：把城头这场雨收干净',
-    })),
+    h(
+      Field,
+      { label: '从第几回开始' },
+      h(Input, {
+        type: 'number',
+        value: form.chapter,
+        onChange: (v) => setForm({ ...form, chapter: v }),
+        placeholder: '例：5',
+      }),
+    ),
+    h(
+      Field,
+      { label: '这一轮最多写几章' },
+      h(Input, {
+        type: 'number',
+        value: form.maxChapters,
+        onChange: (v) => setForm({ ...form, maxChapters: v }),
+      }),
+    ),
+    h(
+      Field,
+      { label: '备注（为什么开这一轮）' },
+      h(Input, {
+        value: form.note,
+        onChange: (v) => setForm({ ...form, note: v }),
+        placeholder: '例：把城头这场雨收干净',
+      }),
+    ),
     h(
       'div',
       { className: 'nw-actions' },
-      h(Btn, { small: true, kind: 'primary', onClick: submit, disabled: busy }, busy ? '开轮中…' : '确认开轮'),
+      h(
+        Btn,
+        { small: true, kind: 'primary', onClick: submit, disabled: busy },
+        busy ? '开轮中…' : '确认开轮',
+      ),
       h(Btn, { small: true, kind: 'ghost', onClick: () => setOpen(false), disabled: busy }, '取消'),
     ),
   )
@@ -108,26 +128,38 @@ function RunChapterRow({ row, run, onReview, onClose, busy }) {
     h('span', { className: 'nw-run-ch-w' }, `${fmtWords(Number(row.words) || 0)} 字`),
     h('span', { className: 'nw-run-ch-at' }, String(row.at ?? '').slice(11, 16)),
     done
-      ? h(Tag, { tone: verdict === 'reject' ? 'red' : 'green' }, verdict === 'reject' ? '打回' : '已确认')
+      ? h(
+          Tag,
+          { tone: verdict === 'reject' ? 'red' : 'green' },
+          verdict === 'reject' ? '打回' : '已确认',
+        )
       : h(Tag, { tone: 'amber' }, '等确认'),
     row.note ? h('span', { className: 'nw-hint' }, row.note) : null,
     done
       ? null
       : h(
-        'span',
-        { className: 'nw-run-ch-acts' },
-        h(Btn, {
-          small: true,
-          kind: 'primary',
-          onClick: () => onReview(row.chapter, 'ok'),
-          disabled: busy,
-        }, '确认过'),
-        h(Btn, {
-          small: true,
-          kind: 'ghost',
-          onClick: () => onReview(row.chapter, 'reject'),
-          disabled: busy,
-        }, '打回重写'),
-      ),
+          'span',
+          { className: 'nw-run-ch-acts' },
+          h(
+            Btn,
+            {
+              small: true,
+              kind: 'primary',
+              onClick: () => onReview(row.chapter, 'ok'),
+              disabled: busy,
+            },
+            '确认过',
+          ),
+          h(
+            Btn,
+            {
+              small: true,
+              kind: 'ghost',
+              onClick: () => onReview(row.chapter, 'reject'),
+              disabled: busy,
+            },
+            '打回重写',
+          ),
+        ),
   )
 }

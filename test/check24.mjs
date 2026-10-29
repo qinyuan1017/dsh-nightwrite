@@ -41,7 +41,9 @@ const NAMES = {
   24: '主题第三档「纸」',
 }
 
-const files = readdirSync(srcDir).filter((n) => n.endsWith('.js')).sort()
+const files = readdirSync(srcDir)
+  .filter((n) => n.endsWith('.js'))
+  .sort()
 const hits = new Map()
 for (const file of files) {
   const lines = readFileSync(path.join(srcDir, file), 'utf8').split('\n')
@@ -72,7 +74,10 @@ for (const row of rows) {
     continue
   }
   row.list.forEach((hit, i) => {
-    const head = i === 0 ? `${String(row.n).padStart(4)}  ${row.name.padEnd(24)}  ` : `${' '.repeat(4)}  ${' '.repeat(24)}  `
+    const head =
+      i === 0
+        ? `${String(row.n).padStart(4)}  ${row.name.padEnd(24)}  `
+        : `${' '.repeat(4)}  ${' '.repeat(24)}  `
     console.log(`${head}src/${hit.file}:${hit.line}`)
     if (hit.code) console.log(`${' '.repeat(32)}  ${hit.code.slice(0, 78)}`)
   })
@@ -81,5 +86,7 @@ for (const row of rows) {
 const extra = [...hits.keys()].filter((n) => n < 1 || n > 24)
 if (extra.length) console.log(`\n有 ${extra.length} 个越界编号：${extra.join(', ')}`)
 
-console.log(`\n覆盖 ${24 - bad} / 24 条 · 共 ${[...hits.values()].reduce((a, b) => a + b.length, 0)} 处标记`)
+console.log(
+  `\n覆盖 ${24 - bad} / 24 条 · 共 ${[...hits.values()].reduce((a, b) => a + b.length, 0)} 处标记`,
+)
 process.exit(bad ? 1 : 0)

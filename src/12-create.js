@@ -153,7 +153,12 @@ function validateCreate(form) {
 
   const keys = Object.keys(errors)
   return {
-    ok: keys.length === 0, errors, project, brief, first: keys[0] ?? '', scale,
+    ok: keys.length === 0,
+    errors,
+    project,
+    brief,
+    first: keys[0] ?? '',
+    scale,
   }
 }
 
@@ -247,7 +252,10 @@ function CreateProjectPage({ toast, onDone }) {
       made = await api('project.create', check.project)
     } catch (error) {
       // 服务端拒绝就照原样说出来，不换成「创建失败，请重试」这种把原因吞掉的话。
-      setFailure({ message: createText(error?.message) || '服务端没有说明原因', code: createText(error?.code) })
+      setFailure({
+        message: createText(error?.message) || '服务端没有说明原因',
+        code: createText(error?.code),
+      })
       setNotice('作品没建起来。')
       setBusy(false)
       return
@@ -297,7 +305,10 @@ function CreateProjectPage({ toast, onDone }) {
     h(
       CreateField,
       {
-        id: 'name', label: '书名', error: errors.name, hint: '必填，最多 60 字',
+        id: 'name',
+        label: '书名',
+        error: errors.name,
+        hint: '必填，最多 60 字',
       },
       h(Input, {
         id: 'create-name',
@@ -309,13 +320,17 @@ function CreateProjectPage({ toast, onDone }) {
     h(
       CreateField,
       {
-        id: 'idea', label: '一句话想法', error: errors.idea, hint: '主角是谁、想要什么、最怕什么。写得越具体，后面排单越不像在跟空白说话。',
+        id: 'idea',
+        label: '一句话想法',
+        error: errors.idea,
+        hint: '主角是谁、想要什么、最怕什么。写得越具体，后面排单越不像在跟空白说话。',
       },
       h(TextArea, {
         id: 'create-idea',
         value: form.idea,
         rows: 6,
-        placeholder: '例：元末乱世，一个现代女生穿成村姑，绑定的系统只会发「嫁给朱重八」的任务；她想活下来，又不想真进那座宫。',
+        placeholder:
+          '例：元末乱世，一个现代女生穿成村姑，绑定的系统只会发「嫁给朱重八」的任务；她想活下来，又不想真进那座宫。',
         onChange: set('idea'),
       }),
     ),
@@ -347,7 +362,11 @@ function CreateProjectPage({ toast, onDone }) {
             h('span', { className: 'nw-create-scale-name' }, row.name),
             on ? h(Tag, { tone: 'amber' }, '已选') : null,
           ),
-          h('span', { className: 'nw-create-scale-meta' }, `${row.volumes} 卷 × ${row.perVolume} 章 × ${row.words} 字`),
+          h(
+            'span',
+            { className: 'nw-create-scale-meta' },
+            `${row.volumes} 卷 × ${row.perVolume} 章 × ${row.words} 字`,
+          ),
           h('span', { className: 'nw-create-scale-desc' }, row.desc),
           h('span', { className: 'nw-create-scale-total' }, `约 ${fmtWords(total)} 字`),
         )
@@ -365,40 +384,48 @@ function CreateProjectPage({ toast, onDone }) {
     ),
     more
       ? h(
-        'div',
-        { className: 'nw-create-more-body' },
-        h(
           'div',
-          { className: 'nw-form-grid' },
+          { className: 'nw-create-more-body' },
           h(
-            CreateField,
-            { id: 'genre', label: '题材', error: errors.genre, hint: '例：历史穿越 / 都市异能' },
-            h(Input, {
-              id: 'create-genre', value: form.genre, placeholder: '例：历史穿越', onChange: set('genre'),
-            }),
+            'div',
+            { className: 'nw-form-grid' },
+            h(
+              CreateField,
+              { id: 'genre', label: '题材', error: errors.genre, hint: '例：历史穿越 / 都市异能' },
+              h(Input, {
+                id: 'create-genre',
+                value: form.genre,
+                placeholder: '例：历史穿越',
+                onChange: set('genre'),
+              }),
+            ),
+            h(
+              CreateField,
+              {
+                id: 'protagonist',
+                label: '主角',
+                error: errors.protagonist,
+                hint: '写个名字就够了，人设去人物卡里建',
+              },
+              h(Input, {
+                id: 'create-protagonist',
+                value: form.protagonist,
+                placeholder: '例：林小满，18 岁，嘴硬心软',
+                onChange: set('protagonist'),
+              }),
+            ),
           ),
           h(
             CreateField,
-            { id: 'protagonist', label: '主角', error: errors.protagonist, hint: '写个名字就够了，人设去人物卡里建' },
+            { id: 'hook', label: '开篇钩子', error: errors.hook, hint: '第一句话能不能把人拽住' },
             h(Input, {
-              id: 'create-protagonist',
-              value: form.protagonist,
-              placeholder: '例：林小满，18 岁，嘴硬心软',
-              onChange: set('protagonist'),
+              id: 'create-hook',
+              value: form.hook,
+              placeholder: '例：第一句系统提示就在催婚',
+              onChange: set('hook'),
             }),
           ),
-        ),
-        h(
-          CreateField,
-          { id: 'hook', label: '开篇钩子', error: errors.hook, hint: '第一句话能不能把人拽住' },
-          h(Input, {
-            id: 'create-hook',
-            value: form.hook,
-            placeholder: '例：第一句系统提示就在催婚',
-            onChange: set('hook'),
-          }),
-        ),
-      )
+        )
       : null,
   )
 
@@ -411,7 +438,10 @@ function CreateProjectPage({ toast, onDone }) {
       rows: [
         { key: '书名', text: createText(preview.project.name) || '（还没填）' },
         { key: '想法', text: createText(preview.project.logline) || '（还没填）' },
-        { key: '规模', text: `${scale.name} · ${scale.volumes} 卷 × ${scale.perVolume} 章 = ${planChapters} 章` },
+        {
+          key: '规模',
+          text: `${scale.name} · ${scale.volumes} 卷 × ${scale.perVolume} 章 = ${planChapters} 章`,
+        },
         { key: '每章', text: `${scale.words} 字` },
         { key: '全书预计', text: fmtWords(planWords) },
         { key: '题材', text: createText(preview.project.genre) || '（留空，之后补）' },
@@ -426,9 +456,13 @@ function CreateProjectPage({ toast, onDone }) {
         onChange: setGenerate,
         label: '建完先把全书骨架排好',
       }),
-      h(Hint, null, generate
-        ? `按你选的规模把 ${planChapters} 回一次性建出来，之后在大纲页填标题和钩子。`
-        : '只建作品本身，章回等你在大纲页点「重排大纲」时再生成。'),
+      h(
+        Hint,
+        null,
+        generate
+          ? `按你选的规模把 ${planChapters} 回一次性建出来，之后在大纲页填标题和钩子。`
+          : '只建作品本身，章回等你在大纲页点「重排大纲」时再生成。',
+      ),
     ),
   )
 
@@ -441,7 +475,11 @@ function CreateProjectPage({ toast, onDone }) {
       'div',
       { className: 'nw-create-lead' },
       h('h2', { className: 'nw-create-title' }, '先建一本'),
-      h('p', { className: 'nw-create-sub' }, '三步就够：写什么、怎么排、确认。书名和体量后面都能改。'),
+      h(
+        'p',
+        { className: 'nw-create-sub' },
+        '三步就够：写什么、怎么排、确认。书名和体量后面都能改。',
+      ),
     ),
     h(
       'div',
@@ -460,7 +498,11 @@ function CreateProjectPage({ toast, onDone }) {
     h(
       'div',
       { className: 'nw-create-cols' },
-      h('div', { className: 'nw-create-main' }, h(Card, { title: CREATE_STEPS[step - 1], className: 'nw-create-card' }, body)),
+      h(
+        'div',
+        { className: 'nw-create-main' },
+        h(Card, { title: CREATE_STEPS[step - 1], className: 'nw-create-card' }, body),
+      ),
       h(
         'div',
         { className: 'nw-create-side' },
@@ -481,34 +523,54 @@ function CreateProjectPage({ toast, onDone }) {
         h(
           Card,
           { title: '接下来', className: 'nw-create-card' },
-          h('ul', { className: 'nw-create-steps' },
+          h(
+            'ul',
+            { className: 'nw-create-steps' },
             h('li', null, '建一个作品目录，写入作品元信息'),
             h('li', null, '把这句话写进大纲的方案里'),
             h('li', null, generate ? '按体量把每一回都建出来' : '章回等你在大纲页生成'),
-            h('li', null, '切到这本作品，落在「今天」')),
+            h('li', null, '切到这本作品，落在「今天」'),
+          ),
           h(
             'div',
             { className: 'nw-create-foot' },
             step > 1
-              ? h(Btn, { kind: 'ghost', small: true, disabled: busy, onClick: () => goStep(step - 1) }, '上一步')
+              ? h(
+                  Btn,
+                  { kind: 'ghost', small: true, disabled: busy, onClick: () => goStep(step - 1) },
+                  '上一步',
+                )
               : null,
             step < 3
-              ? h(Btn, { kind: 'primary', className: 'nw-create-next', disabled: busy, onClick: () => goStep(step + 1) }, '下一步')
-              : h(Btn, {
-                kind: 'primary',
-                className: 'nw-create-submit',
-                disabled: busy,
-                onClick: submit,
-              }, busy ? '建书中…' : '建这本'),
+              ? h(
+                  Btn,
+                  {
+                    kind: 'primary',
+                    className: 'nw-create-next',
+                    disabled: busy,
+                    onClick: () => goStep(step + 1),
+                  },
+                  '下一步',
+                )
+              : h(
+                  Btn,
+                  {
+                    kind: 'primary',
+                    className: 'nw-create-submit',
+                    disabled: busy,
+                    onClick: submit,
+                  },
+                  busy ? '建书中…' : '建这本',
+                ),
           ),
           notice ? h('p', { className: 'nw-create-notice' }, notice) : null,
           failure
             ? h(
-              'div',
-              { className: 'nw-error nw-create-fail' },
-              h('span', null, failure.message),
-              failure.code ? h('span', { className: 'nw-create-code' }, failure.code) : null,
-            )
+                'div',
+                { className: 'nw-error nw-create-fail' },
+                h('span', null, failure.message),
+                failure.code ? h('span', { className: 'nw-create-code' }, failure.code) : null,
+              )
             : null,
         ),
       ),

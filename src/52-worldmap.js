@@ -1,4 +1,3 @@
-
 /**
  * 长夜 · 世界地图视图
  *
@@ -51,7 +50,9 @@ function MapView({ projectId, toast }) {
     if (!drag) return
     const point = toCanvas(event)
     if (!point) return
-    setNodes((list) => list.map((node) => (node.id === drag.id ? { ...node, x: point.x, y: point.y } : node)))
+    setNodes((list) =>
+      list.map((node) => (node.id === drag.id ? { ...node, x: point.x, y: point.y } : node)),
+    )
     setDirty(true)
   }
 
@@ -111,12 +112,13 @@ function MapView({ projectId, toast }) {
   const orphan = nodes.filter((node) => node.inLedger === false || node.orphan)
   const nameOf = (id) => byId.get(id)?.name ?? id
 
-  const picker = (value, onChange, placeholder) => h(
-    'select',
-    { className: 'nw-map-select', value, onChange: (event) => onChange(event.target.value) },
-    h('option', { value: '' }, placeholder),
-    ...nodes.map((node) => h('option', { key: node.id, value: node.id }, node.name)),
-  )
+  const picker = (value, onChange, placeholder) =>
+    h(
+      'select',
+      { className: 'nw-map-select', value, onChange: (event) => onChange(event.target.value) },
+      h('option', { value: '' }, placeholder),
+      ...nodes.map((node) => h('option', { key: node.id, value: node.id }, node.name)),
+    )
 
   return h(
     'div',
@@ -124,83 +126,106 @@ function MapView({ projectId, toast }) {
     h(
       'div',
       { className: 'nw-map-bar' },
-      h('span', { className: 'nw-map-hint' }, nodes.length
-        ? `${nodes.length} 个地点${orphan.length ? ` · ${orphan.length} 个账本里已经没有了（画成灰的）` : ''}`
-        : '还没从账本同步过地点'),
+      h(
+        'span',
+        { className: 'nw-map-hint' },
+        nodes.length
+          ? `${nodes.length} 个地点${orphan.length ? ` · ${orphan.length} 个账本里已经没有了（画成灰的）` : ''}`
+          : '还没从账本同步过地点',
+      ),
       h(
         'div',
         { className: 'nw-actions' },
         dirty ? h(Tag, { tone: 'amber' }, '有改动没保存') : null,
         h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: sync }, '从账本同步'),
-        h(Btn, { small: true, kind: 'primary', disabled: busy || !dirty, onClick: save }, '保存位置'),
+        h(
+          Btn,
+          { small: true, kind: 'primary', disabled: busy || !dirty, onClick: save },
+          '保存位置',
+        ),
       ),
     ),
     nodes.length
       ? h(
-        'div',
-        { className: 'nw-map-stage' },
-        h(
-          'svg',
-          {
-            className: 'nw-map-svg',
-            ref: boxRef,
-            viewBox: `0 0 ${canvas.width} ${canvas.height}`,
-            onMouseMove: onMove,
-            onMouseUp: () => setDrag(null),
-            onMouseLeave: () => setDrag(null),
-          },
+          'div',
+          { className: 'nw-map-stage' },
           h(
-            'g',
-            { className: 'nw-map-edges' },
-            ...edges.map((edge) => {
-              const a = byId.get(edge.from)
-              const b = byId.get(edge.to)
-              if (!a || !b) return null
-              return h(
-                'g',
-                { key: `${edge.from}-${edge.to}` },
-                h('line', {
-                  className: `nw-map-edge nw-map-edge-${edge.kind ?? 'road'}`,
-                  x1: a.x, y1: a.y, x2: b.x, y2: b.y,
-                }),
-                edge.label
-                  ? h('text', {
-                    className: 'nw-map-edge-label',
-                    x: (a.x + b.x) / 2,
-                    y: (a.y + b.y) / 2 - 6,
-                    textAnchor: 'middle',
-                  }, edge.label)
-                  : null,
-              )
-            }),
-          ),
-          h(
-            'g',
-            { className: 'nw-map-nodes' },
-            ...nodes.map((node) => {
-              const gone = node.inLedger === false || node.orphan
-              return h(
-                'g',
-                {
-                  key: node.id,
-                  className: `nw-map-node${gone ? ' nw-map-orphan' : ''}${drag?.id === node.id ? ' dragging' : ''}`,
-                  transform: `translate(${node.x},${node.y})`,
-                  onMouseDown: (event) => {
-                    event.preventDefault()
-                    setDrag({ id: node.id })
+            'svg',
+            {
+              className: 'nw-map-svg',
+              ref: boxRef,
+              viewBox: `0 0 ${canvas.width} ${canvas.height}`,
+              onMouseMove: onMove,
+              onMouseUp: () => setDrag(null),
+              onMouseLeave: () => setDrag(null),
+            },
+            h(
+              'g',
+              { className: 'nw-map-edges' },
+              ...edges.map((edge) => {
+                const a = byId.get(edge.from)
+                const b = byId.get(edge.to)
+                if (!a || !b) return null
+                return h(
+                  'g',
+                  { key: `${edge.from}-${edge.to}` },
+                  h('line', {
+                    className: `nw-map-edge nw-map-edge-${edge.kind ?? 'road'}`,
+                    x1: a.x,
+                    y1: a.y,
+                    x2: b.x,
+                    y2: b.y,
+                  }),
+                  edge.label
+                    ? h(
+                        'text',
+                        {
+                          className: 'nw-map-edge-label',
+                          x: (a.x + b.x) / 2,
+                          y: (a.y + b.y) / 2 - 6,
+                          textAnchor: 'middle',
+                        },
+                        edge.label,
+                      )
+                    : null,
+                )
+              }),
+            ),
+            h(
+              'g',
+              { className: 'nw-map-nodes' },
+              ...nodes.map((node) => {
+                const gone = node.inLedger === false || node.orphan
+                return h(
+                  'g',
+                  {
+                    key: node.id,
+                    className: `nw-map-node${gone ? ' nw-map-orphan' : ''}${drag?.id === node.id ? ' dragging' : ''}`,
+                    transform: `translate(${node.x},${node.y})`,
+                    onMouseDown: (event) => {
+                      event.preventDefault()
+                      setDrag({ id: node.id })
+                    },
                   },
-                },
-                h('circle', { className: 'nw-map-dot', r: 9 }),
-                h('text', { className: 'nw-map-name', y: 26, textAnchor: 'middle' }, node.name),
-                node.firstChapter
-                  ? h('text', { className: 'nw-map-ch', y: 40, textAnchor: 'middle' }, `第 ${node.firstChapter} 回`)
-                  : null,
-              )
-            }),
+                  h('circle', { className: 'nw-map-dot', r: 9 }),
+                  h('text', { className: 'nw-map-name', y: 26, textAnchor: 'middle' }, node.name),
+                  node.firstChapter
+                    ? h(
+                        'text',
+                        { className: 'nw-map-ch', y: 40, textAnchor: 'middle' },
+                        `第 ${node.firstChapter} 回`,
+                      )
+                    : null,
+                )
+              }),
+            ),
           ),
+        )
+      : h(
+          Empty,
+          null,
+          '账本「地点」这一类还是空的。先在表格视图里加几个地名，再点「从账本同步」。',
         ),
-      )
-      : h(Empty, null, '账本「地点」这一类还是空的。先在表格视图里加几个地名，再点「从账本同步」。'),
     h(
       'div',
       { className: 'nw-map-link' },
@@ -213,31 +238,47 @@ function MapView({ projectId, toast }) {
         placeholder: '这条路叫什么（可空）',
         onChange: (event) => setLabel(event.target.value),
       }),
-      h(Btn, { small: true, kind: 'ghost', onClick: addEdge, disabled: nodes.length < 2 }, '加连线'),
+      h(
+        Btn,
+        { small: true, kind: 'ghost', onClick: addEdge, disabled: nodes.length < 2 },
+        '加连线',
+      ),
     ),
     edges.length
       ? h(
-        'div',
-        { className: 'nw-map-edgelist' },
-        ...edges.map((edge) => h(
           'div',
-          { key: `${edge.from}-${edge.to}`, className: 'nw-map-edgerow' },
-          h('span', { className: 'nw-map-edgetext' }, `${nameOf(edge.from)} → ${nameOf(edge.to)}${edge.label ? `（${edge.label}）` : ''}`),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'nw-map-edgedel',
-              onClick: () => {
-                setEdges((list) => list.filter((row) => !(row.from === edge.from && row.to === edge.to)))
-                setDirty(true)
-              },
-            },
-            '删',
+          { className: 'nw-map-edgelist' },
+          ...edges.map((edge) =>
+            h(
+              'div',
+              { key: `${edge.from}-${edge.to}`, className: 'nw-map-edgerow' },
+              h(
+                'span',
+                { className: 'nw-map-edgetext' },
+                `${nameOf(edge.from)} → ${nameOf(edge.to)}${edge.label ? `（${edge.label}）` : ''}`,
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'nw-map-edgedel',
+                  onClick: () => {
+                    setEdges((list) =>
+                      list.filter((row) => !(row.from === edge.from && row.to === edge.to)),
+                    )
+                    setDirty(true)
+                  },
+                },
+                '删',
+              ),
+            ),
           ),
-        )),
-      )
+        )
       : null,
-    h(Hint, null, '地图只是帮你记路：坐标和连线都由你自己摆，账本里没有「相邻」这种字段，所以它不会被当成设定校验的依据。'),
+    h(
+      Hint,
+      null,
+      '地图只是帮你记路：坐标和连线都由你自己摆，账本里没有「相邻」这种字段，所以它不会被当成设定校验的依据。',
+    ),
   )
 }

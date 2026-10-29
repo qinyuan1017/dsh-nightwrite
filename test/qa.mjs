@@ -39,9 +39,7 @@ export function getDirty() { return dirty }
 fs.writeFileSync(harnessPath, prefix + footer)
 
 const H = await import(`file://${harnessPath.replace(/\\/g, '/')}`)
-const {
-  captured, mount, all, allCls, allText, countCls, throwsOf, store, PROJECT, resetHooks,
-} = H
+const { captured, mount, all, allCls, allText, countCls, throwsOf, store, PROJECT, resetHooks } = H
 
 const src = fs.readFileSync(path.join(root, 'lib', 'client.js'), 'utf8')
 
@@ -75,7 +73,8 @@ function subtreeText(node) {
   return out.join(' ').replace(/\s+/g, ' ').trim()
 }
 
-const EMOJI_ONLY = /^[\s\u00a0-\u303f\ufe0f\u2190-\u21ff\u2600-\u27bf\ud83c-\udbff\udc00-\udfff←-⇿✀-➿]+$/
+const EMOJI_ONLY =
+  /^[\s\u00a0-\u303f\ufe0f\u2190-\u21ff\u2600-\u27bf\ud83c-\udbff\udc00-\udfff←-⇿✀-➿]+$/
 
 function auditTree(page, tree) {
   const nodes = all(tree)
@@ -92,21 +91,34 @@ function auditTree(page, tree) {
       if (!deep) {
         report('bad', page, '可点但完全没文字', `<${n.tag} class="${n.cls ?? ''}">`)
       } else if (EMOJI_ONLY.test(deep)) {
-        report('warn', page, '可点但只有图标，没有可读名', `<${n.tag} class="${n.cls ?? ''}"> → "${deep}"`)
+        report(
+          'warn',
+          page,
+          '可点但只有图标，没有可读名',
+          `<${n.tag} class="${n.cls ?? ''}"> → "${deep}"`,
+        )
       }
     }
   }
 
   // ── B. 非 button 却挂了 onClick（键盘够不着）──
-  const clickableNonButton = nodes.filter((n) => n.kind === 'el'
-    && typeof (n.props ?? {}).onClick === 'function'
-    && n.tag !== 'button'
-    && n.tag !== 'a'
-    && n.tag !== 'input'
-    && n.tag !== 'select'
-    && n.tag !== 'textarea')
+  const clickableNonButton = nodes.filter(
+    (n) =>
+      n.kind === 'el' &&
+      typeof (n.props ?? {}).onClick === 'function' &&
+      n.tag !== 'button' &&
+      n.tag !== 'a' &&
+      n.tag !== 'input' &&
+      n.tag !== 'select' &&
+      n.tag !== 'textarea',
+  )
   for (const n of clickableNonButton) {
-    report('warn', page, 'div 上挂 onClick（Tab 到不了、回车按不动）', `<${n.tag} class="${n.cls ?? ''}">`)
+    report(
+      'warn',
+      page,
+      'div 上挂 onClick（Tab 到不了、回车按不动）',
+      `<${n.tag} class="${n.cls ?? ''}">`,
+    )
   }
 
   // ── C. 值漏上屏 ──
@@ -117,13 +129,26 @@ function auditTree(page, tree) {
       report('bad', page, '渲染出了原始值', `"${t}"`)
     } else if (/undefined|NaN|\[object Object\]/.test(t)) {
       report('bad', page, '文案里混进了原始值', `"${t.slice(0, 80)}"`)
-    } else if (/^\s*[¥$]\s*$/.test(t) || /:\s*$/.test(t.trim()) && t.trim().length <= 2) {
+    } else if (/^\s*[¥$]\s*$/.test(t) || (/:\s*$/.test(t.trim()) && t.trim().length <= 2)) {
       report('warn', page, '只剩一个符号或冒号', `"${t}"`)
     }
   }
 
   // ── D. 空壳：有好看的类名，里面一个字都没有 ──
-  const SHELLS = ['nw-card', 'nw-hero', 'nw-stat', 'nw-action', 'nw-pcard', 'nw-prop', 'nw-prob', 'nw-issue', 'nw-hist-row', 'nw-scan-row', 'nw-lex-row', 'nw-td-cell']
+  const SHELLS = [
+    'nw-card',
+    'nw-hero',
+    'nw-stat',
+    'nw-action',
+    'nw-pcard',
+    'nw-prop',
+    'nw-prob',
+    'nw-issue',
+    'nw-hist-row',
+    'nw-scan-row',
+    'nw-lex-row',
+    'nw-td-cell',
+  ]
   for (const n of nodes) {
     if (n.kind !== 'el' || typeof n.cls !== 'string') continue
     const hit = n.cls.split(/\s+/).find((c) => SHELLS.includes(c))
@@ -158,9 +183,7 @@ for (const page of PAGES) {
   resetHooks()
   store['nw.page'] = page
   store['nw.project'] = PROJECT.id
-  const tree = H.renderNode
-    ? null
-    : null
+  const tree = H.renderNode ? null : null
   // mount 需要组件；resetHooks 已清空 hook 槽，相当于首次进入
   // eslint-disable-next-line no-await-in-loop
   const mounted = await mount(captured, {})
@@ -199,8 +222,11 @@ for (const page of PAGES) {
       const body = JSON.parse(opt.body)
       op = body.op
       payload = body.payload
-    } catch { /* 不是 JSON 就当空 */ }
-    if (op === 'project.list') return { json: async () => ({ ok: true, value: { projects: [] } }), status: 200 }
+    } catch {
+      /* 不是 JSON 就当空 */
+    }
+    if (op === 'project.list')
+      return { json: async () => ({ ok: true, value: { projects: [] } }), status: 200 }
     return { json: async () => ({ ok: true, value: H.mockValue(op, payload) }), status: 200 }
   }
   global.fetch = emptyFetch
@@ -234,17 +260,24 @@ for (const page of PAGES) {
     // 只挡冒泡不算干活；剥掉之后再问「还剩不剩一次调用」。
     const clean = body.replace(/\b(?:event|e)\.(?:stopPropagation|preventDefault)\(\)/g, '')
     // 但「只挡冒泡」本身就是一种活：浮层的 onClick 拦住点击，不让它冒到遮罩上去关掉自己。
-    if (/\.(?:stopPropagation|preventDefault)\(\)/.test(body) && !/\w+\s*\([^)]/.test(clean)) continue
+    if (/\.(?:stopPropagation|preventDefault)\(\)/.test(body) && !/\w+\s*\([^)]/.test(clean))
+      continue
     if (!/\w\s*\(/.test(clean) && !/\w+\s*\?\.\s*\(/.test(clean)) {
       deadInSrc.push(body.replace(/\s+/g, ' ').slice(0, 100))
     }
   }
   if (deadInSrc.length) {
     // 浮层自己的「别把点击传给我爹」不算假按钮：它爹是遮罩，传上去就把弹窗关了。
-    const realDead = deadInSrc.filter((body) => !/className: 'nw-modal'/.test(body))
+    const realDead = deadInSrc
+      .filter((body) => !/className: 'nw-modal'/.test(body))
       .filter((body) => !/stopPropagation/.test(body) || /nw-modal/.test(body) === false)
     if (realDead.length) {
-      report('warn', 'src', 'onClick 里没有任何动作（点了没反应）', realDead.slice(0, 4).join(' ｜ '))
+      report(
+        'warn',
+        'src',
+        'onClick 里没有任何动作（点了没反应）',
+        realDead.slice(0, 4).join(' ｜ '),
+      )
     }
   }
 }
@@ -253,10 +286,13 @@ for (const page of PAGES) {
 {
   const navCounts = PAGES.map((page) => {
     const t = trees[page]
-    return all(t).filter((n) => n.kind === 'el'
-      && typeof n.cls === 'string'
-      && n.cls.split(/\s+/).includes('nw-dock-btn')
-      && n.cls.split(/\s+/).includes('on')).length
+    return all(t).filter(
+      (n) =>
+        n.kind === 'el' &&
+        typeof n.cls === 'string' &&
+        n.cls.split(/\s+/).includes('nw-dock-btn') &&
+        n.cls.split(/\s+/).includes('on'),
+    ).length
   })
   if (navCounts.some((n) => n !== 1)) {
     report('bad', 'nav', '底栏胶囊高亮不是恰好 1 个', `各页高亮数：${navCounts.join(',')}`)

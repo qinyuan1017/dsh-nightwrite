@@ -17,18 +17,26 @@ const source = files
 const css = fs.readFileSync(path.join(srcDir, '85-css.js'), 'utf8')
 
 // 变量名 `var(--nw-amber)` 也会被正则抓到，它们不是类名，先剥掉。
-const used = new Set((source.replace(/--nw-[a-z0-9-]+/g, '').match(/nw-[a-z0-9-]+/g) ?? []))
+const used = new Set(source.replace(/--nw-[a-z0-9-]+/g, '').match(/nw-[a-z0-9-]+/g) ?? [])
 const defined = new Set((css.match(/\.(nw-[a-z0-9-]+)/g) ?? []).map((hit) => hit.slice(1)))
 
 // 模板前缀片段：拼出来的类名（`nw-tag-${tone}`）本身不会有定义，跳过。
-const PREFIX = /^nw-(bar|dot|tag|stat|score|prop|prob|ptl|heat|para|export|q|theme|debt-dot|dp|lint|lint-cal|map-edge|opinion|health|policy|cost|lamp|run-verdict|today-run)-$/
-const keyframes = new Set((css.match(/@keyframes\s+(nw-[a-z0-9-]+)/g) ?? []).map((hit) => hit.split(/\s+/)[1]))
+const PREFIX =
+  /^nw-(bar|dot|tag|stat|score|prop|prob|ptl|heat|para|export|q|theme|debt-dot|dp|lint|lint-cal|map-edge|opinion|health|policy|cost|lamp|run-verdict|today-run)-$/
+const keyframes = new Set(
+  (css.match(/@keyframes\s+(nw-[a-z0-9-]+)/g) ?? []).map((hit) => hit.split(/\s+/)[1]),
+)
 
 const missing = [...used]
-  .filter((name) => !defined.has(name) && !keyframes.has(name) && !PREFIX.test(name) && name !== 'nw-btn-')
+  .filter(
+    (name) =>
+      !defined.has(name) && !keyframes.has(name) && !PREFIX.test(name) && name !== 'nw-btn-',
+  )
   .sort()
 
-console.log(`用到 ${used.size} 个 nw-* · CSS 定义 ${defined.size} 个 · keyframes ${keyframes.size} 个`)
+console.log(
+  `用到 ${used.size} 个 nw-* · CSS 定义 ${defined.size} 个 · keyframes ${keyframes.size} 个`,
+)
 if (missing.length) {
   console.log(`缺失 ${missing.length} 个：`)
   missing.forEach((name) => console.log(`  ${name}`))

@@ -45,64 +45,94 @@ function TodayRunStrip({ projectId, run, verdict, toast, onChanged }) {
 
   return h(
     'div',
-    { className: `nw-today-run nw-today-run-${VERDICT_TONE[verdict?.level] ?? 'grey'}${blocked ? ' nw-today-run-blocked' : ''}` },
+    {
+      className: `nw-today-run nw-today-run-${VERDICT_TONE[verdict?.level] ?? 'grey'}${blocked ? ' nw-today-run-blocked' : ''}`,
+    },
     h(
       'div',
       { className: 'nw-today-run-line' },
       h('span', { className: 'nw-today-run-dot' }),
       h('span', { className: 'nw-today-run-text' }, verdict?.text || '状态未知'),
+      run ? h('span', { className: 'nw-today-run-count' }, `${used} / ${max} 章`) : null,
       run
-        ? h('span', { className: 'nw-today-run-count' }, `${used} / ${max} 章`)
+        ? h(
+            Tag,
+            { tone: RUN_STATUS_TONE[run.status] ?? 'grey' },
+            RUN_STATUS_LABEL[run.status] ?? run.status,
+          )
         : null,
-      run ? h(Tag, { tone: RUN_STATUS_TONE[run.status] ?? 'grey' }, RUN_STATUS_LABEL[run.status] ?? run.status) : null,
     ),
     // 没开轮：给一个开轮的入口，但把「不开也能写」这件事说明白 ——
     // 以前不说，作者以为必须先开轮，于是宁可不写。
     run
       ? null
       : h(
-        'div',
-        { className: 'nw-today-run-body' },
-        h('p', { className: 'nw-hint' },
-          '不开轮也能写，只是那次写入事后查不到是哪一轮的。开一轮的好处是：交完一章会被要求停下来看一眼。'),
-        h(RunOpenForm, { projectId, onDone: onChanged, toast }),
-      ),
+          'div',
+          { className: 'nw-today-run-body' },
+          h(
+            'p',
+            { className: 'nw-hint' },
+            '不开轮也能写，只是那次写入事后查不到是哪一轮的。开一轮的好处是：交完一章会被要求停下来看一眼。',
+          ),
+          h(RunOpenForm, { projectId, onDone: onChanged, toast }),
+        ),
     // 有轮次且交了稿、还没确认：这是最该被看见的状态，把每章摊开给按钮。
     run && run.status === 'waiting'
       ? h(
-        'div',
-        { className: 'nw-today-run-body' },
-        h('div', { className: 'nw-run-chs' }, (run.chapters ?? []).map((row) => h(RunChapterRow, {
-          key: `${row.chapter}-${row.at}`,
-          row,
-          run,
-          busy,
-          onReview: (chapter, v) => act('run.review', { chapter, verdict: v }, v === 'reject'
-            ? `第 ${chapter} 回已打回，这一轮继续开着`
-            : `第 ${chapter} 回已确认，可以往下写了`),
-        }))),
-        h(
           'div',
-          { className: 'nw-today-run-foot' },
-          h(Field, { label: '收尾备注' }, h(Input, {
-            value: note,
-            onChange: setNote,
-            placeholder: '这一轮写完了什么、留下什么问题',
-          })),
-          h(Btn, {
-            small: true,
-            kind: 'ghost',
-            onClick: () => act('run.close', { note }, '这一轮已收尾'),
-            disabled: busy,
-          }, '收尾关掉'),
-        ),
-      )
+          { className: 'nw-today-run-body' },
+          h(
+            'div',
+            { className: 'nw-run-chs' },
+            (run.chapters ?? []).map((row) =>
+              h(RunChapterRow, {
+                key: `${row.chapter}-${row.at}`,
+                row,
+                run,
+                busy,
+                onReview: (chapter, v) =>
+                  act(
+                    'run.review',
+                    { chapter, verdict: v },
+                    v === 'reject'
+                      ? `第 ${chapter} 回已打回，这一轮继续开着`
+                      : `第 ${chapter} 回已确认，可以往下写了`,
+                  ),
+              }),
+            ),
+          ),
+          h(
+            'div',
+            { className: 'nw-today-run-foot' },
+            h(
+              Field,
+              { label: '收尾备注' },
+              h(Input, {
+                value: note,
+                onChange: setNote,
+                placeholder: '这一轮写完了什么、留下什么问题',
+              }),
+            ),
+            h(
+              Btn,
+              {
+                small: true,
+                kind: 'ghost',
+                onClick: () => act('run.close', { note }, '这一轮已收尾'),
+                disabled: busy,
+              },
+              '收尾关掉',
+            ),
+          ),
+        )
       : null,
   )
 }
 
 function TodayPage({ projectId, project, chapters, go, toast, refreshKey, onRefresh }) {
-  const cur = useAsync(() => api('run.current', { projectId }), [projectId, refreshKey], { skip: !projectId })
+  const cur = useAsync(() => api('run.current', { projectId }), [projectId, refreshKey], {
+    skip: !projectId,
+  })
   const run = cur.data?.run ?? null
   const verdict = cur.data?.verdict ?? null
 

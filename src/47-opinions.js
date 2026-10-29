@@ -13,7 +13,9 @@
  * 冷读：把稿子交给一个没读过设定的人。
  */
 function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
-  const list = useAsync(() => api('coldread.list', { projectId }), [projectId], { skip: !projectId })
+  const list = useAsync(() => api('coldread.list', { projectId }), [projectId], {
+    skip: !projectId,
+  })
   const [scope, setScope] = useState('chapter')
   const [chapter, setChapter] = useState('')
   const [busy, setBusy] = useState(false)
@@ -22,10 +24,14 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
 
   const chapterOptions = (Array.isArray(chapters) ? chapters : [])
     .filter((row) => String(row.status) !== 'rejected')
-    .map((row) => ({ value: String(row.chapter), label: `第 ${row.chapter} 回${row.title ? `「${row.title}」` : ''}` }))
+    .map((row) => ({
+      value: String(row.chapter),
+      label: `第 ${row.chapter} 回${row.title ? `「${row.title}」` : ''}`,
+    }))
 
   useEffect(() => {
-    if (!chapter && chapterOptions.length) setChapter(chapterOptions[chapterOptions.length - 1].value)
+    if (!chapter && chapterOptions.length)
+      setChapter(chapterOptions[chapterOptions.length - 1].value)
   }, [chapterOptions.length])
 
   const prepare = async () => {
@@ -87,7 +93,9 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
         file: pkg?.fileName ?? '',
       })
       setPaste('')
-      toast(`回执已入库：${value.pooled.added} 条进意见池${value.score ? ` · ${value.score} 分` : ''}`)
+      toast(
+        `回执已入库：${value.pooled.added} 条进意见池${value.score ? ` · ${value.score} 分` : ''}`,
+      )
     } catch (error) {
       toast(error.message)
     }
@@ -96,7 +104,11 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
   return h(
     Card,
     { title: '冷读', extra: h(Tag, { tone: 'blue' }, '陌生人视角') },
-    h('p', { className: 'nw-hint' }, '把稿子汇成一份 txt，交给一个没读过任何设定的人一次读完。它不查设定矛盾，只回答一个问题：读到这里，想不想继续看。'),
+    h(
+      'p',
+      { className: 'nw-hint' },
+      '把稿子汇成一份 txt，交给一个没读过任何设定的人一次读完。它不查设定矛盾，只回答一个问题：读到这里，想不想继续看。',
+    ),
     h(
       'div',
       { className: 'nw-cold-form' },
@@ -106,69 +118,93 @@ function ColdReadPanel({ projectId, chapters, toast, onOpenChapter }) {
         [
           { value: 'chapter', label: '单章' },
           { value: 'book', label: '整本' },
-        ].map((item) => h(
-          'button',
-          {
-            type: 'button',
-            key: item.value,
-            className: `nw-seg-btn${scope === item.value ? ' on' : ''}`,
-            'aria-pressed': scope === item.value ? 'true' : 'false',
-            onClick: () => setScope(item.value),
-          },
-          item.label,
-        )),
+        ].map((item) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              key: item.value,
+              className: `nw-seg-btn${scope === item.value ? ' on' : ''}`,
+              'aria-pressed': scope === item.value ? 'true' : 'false',
+              onClick: () => setScope(item.value),
+            },
+            item.label,
+          ),
+        ),
       ),
       scope === 'chapter'
         ? h(Select, {
-          value: chapter,
-          onChange: setChapter,
-          options: chapterOptions.length ? chapterOptions : [{ value: '', label: '（还没有可读的章）' }],
-        })
+            value: chapter,
+            onChange: setChapter,
+            options: chapterOptions.length
+              ? chapterOptions
+              : [{ value: '', label: '（还没有可读的章）' }],
+          })
         : null,
-      h(Btn, { small: true, kind: 'primary', disabled: busy || !projectId, onClick: prepare }, busy ? '正在汇总…' : '生成冷读包'),
+      h(
+        Btn,
+        { small: true, kind: 'primary', disabled: busy || !projectId, onClick: prepare },
+        busy ? '正在汇总…' : '生成冷读包',
+      ),
     ),
     pkg
       ? h(
-        'div',
-        { className: 'nw-cold-pkg' },
-        h('div', { className: 'nw-cold-file' }, `📄 ${pkg.fileName}`),
-        h('div', { className: 'nw-hint' }, `${pkg.chapters.length} 回 · ${pkg.words} 字${pkg.truncated ? '（原文更长，只放了前一部分）' : ''}`),
-        h(
           'div',
-          { className: 'nw-actions' },
-          h(Btn, { small: true, kind: 'ghost', onClick: copyPrompt }, '复制提示词'),
-        ),
-        h('pre', { className: 'nw-cold-prompt' }, pkg.prompt),
-      )
+          { className: 'nw-cold-pkg' },
+          h('div', { className: 'nw-cold-file' }, `📄 ${pkg.fileName}`),
+          h(
+            'div',
+            { className: 'nw-hint' },
+            `${pkg.chapters.length} 回 · ${pkg.words} 字${pkg.truncated ? '（原文更长，只放了前一部分）' : ''}`,
+          ),
+          h(
+            'div',
+            { className: 'nw-actions' },
+            h(Btn, { small: true, kind: 'ghost', onClick: copyPrompt }, '复制提示词'),
+          ),
+          h('pre', { className: 'nw-cold-prompt' }, pkg.prompt),
+        )
       : null,
     h(
       'div',
       { className: 'nw-cold-submit' },
-      h(Field, { label: '把回执粘回来' }, h(TextArea, {
-        value: paste,
-        rows: 4,
-        placeholder: '第 12 回：这里主角的选择不成立，他刚说过不去，下一段又去了。',
-        onChange: setPaste,
-      })),
+      h(
+        Field,
+        { label: '把回执粘回来' },
+        h(TextArea, {
+          value: paste,
+          rows: 4,
+          placeholder: '第 12 回：这里主角的选择不成立，他刚说过不去，下一段又去了。',
+          onChange: setPaste,
+        }),
+      ),
       h(
         'div',
         { className: 'nw-actions' },
         h(Btn, { small: true, kind: 'primary', onClick: submit }, '存进意见池'),
-        h('span', { className: 'nw-hint' }, '以「第N回：」开头的行会被切成一条条意见；带「高光」的记为高光。'),
+        h(
+          'span',
+          { className: 'nw-hint' },
+          '以「第N回：」开头的行会被切成一条条意见；带「高光」的记为高光。',
+        ),
       ),
     ),
     (list.data?.items ?? []).length
       ? h(
-        'details',
-        { className: 'nw-cold-history' },
-        h('summary', null, `生成过的冷读包（${list.data.items.length}）`),
-        ...list.data.items.slice(0, 12).map((row) => h(
-          'div',
-          { className: 'nw-cold-histrow', key: row.name },
-          h('span', { className: 'nw-cold-histname' }, row.name),
-          h('span', { className: 'nw-hint' }, `${(row.bytes / 1024).toFixed(0)} KB`),
-        )),
-      )
+          'details',
+          { className: 'nw-cold-history' },
+          h('summary', null, `生成过的冷读包（${list.data.items.length}）`),
+          ...list.data.items
+            .slice(0, 12)
+            .map((row) =>
+              h(
+                'div',
+                { className: 'nw-cold-histrow', key: row.name },
+                h('span', { className: 'nw-cold-histname' }, row.name),
+                h('span', { className: 'nw-hint' }, `${(row.bytes / 1024).toFixed(0)} KB`),
+              ),
+            ),
+        )
       : null,
   )
 }
@@ -180,7 +216,8 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
   const [status, setStatus] = useState('open')
   const [source, setSource] = useState('')
   const list = useAsync(
-    () => api('opinion.list', { projectId, status: status || undefined, source: source || undefined }),
+    () =>
+      api('opinion.list', { projectId, status: status || undefined, source: source || undefined }),
     [projectId, status, source, refreshKey],
     { skip: !projectId },
   )
@@ -233,10 +270,18 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
         'div',
         { className: 'nw-actions' },
         h('span', { className: 'nw-card-badge' }, `${counts.total}`),
-        h(Btn, { small: true, kind: 'ghost', disabled: collecting, onClick: collect }, collecting ? '拉着…' : '从问题单拉一遍'),
+        h(
+          Btn,
+          { small: true, kind: 'ghost', disabled: collecting, onClick: collect },
+          collecting ? '拉着…' : '从问题单拉一遍',
+        ),
       ),
     },
-    h('p', { className: 'nw-hint' }, '别人说过的、自己记下的、机器扫出来的，都在这里。它只汇总，不替你判断——采纳与否是你的事。'),
+    h(
+      'p',
+      { className: 'nw-hint' },
+      '别人说过的、自己记下的、机器扫出来的，都在这里。它只汇总，不替你判断——采纳与否是你的事。',
+    ),
     h(
       'div',
       { className: 'nw-seg' },
@@ -245,18 +290,20 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
         { value: 'adopted', label: '已采纳' },
         { value: 'dismissed', label: '不改' },
         { value: '', label: '全部' },
-      ].map((item) => h(
-        'button',
-        {
-          type: 'button',
-          key: item.value || 'all',
-          className: `nw-seg-btn${status === item.value ? ' on' : ''}`,
-          'aria-pressed': status === item.value ? 'true' : 'false',
-          onClick: () => setStatus(item.value),
-        },
-        item.label,
-        item.value ? h('span', { className: 'nw-seg-n' }, String(counts[item.value] ?? 0)) : null,
-      )),
+      ].map((item) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            key: item.value || 'all',
+            className: `nw-seg-btn${status === item.value ? ' on' : ''}`,
+            'aria-pressed': status === item.value ? 'true' : 'false',
+            onClick: () => setStatus(item.value),
+          },
+          item.label,
+          item.value ? h('span', { className: 'nw-seg-n' }, String(counts[item.value] ?? 0)) : null,
+        ),
+      ),
     ),
     h(
       'div',
@@ -267,56 +314,82 @@ function OpinionBoard({ projectId, toast, refreshKey, onOpenChapter }) {
         { value: 'lint', label: '机器检测' },
         { value: 'consistency', label: '审校' },
         { value: 'author', label: '自己记的' },
-      ].map((item) => h(
-        'button',
-        {
-          type: 'button',
-          key: item.value || 'all-src',
-          className: `nw-seg-btn${source === item.value ? ' on' : ''}`,
-          onClick: () => setSource(item.value),
-        },
-        item.label,
-      )),
+      ].map((item) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            key: item.value || 'all-src',
+            className: `nw-seg-btn${source === item.value ? ' on' : ''}`,
+            onClick: () => setSource(item.value),
+          },
+          item.label,
+        ),
+      ),
     ),
     rows.length
       ? h(
-        'div',
-        { className: 'nw-opinion-list' },
-        ...rows.map((row) => h(
           'div',
-          { key: row.id, className: `nw-opinion nw-opinion-${row.status}` },
-          h('span', { className: 'nw-opinion-ch' }, `第 ${row.chapter} 回`),
-          h(
-            'span',
-            { className: 'nw-opinion-body' },
-            h('span', { className: 'nw-opinion-text' }, row.text),
-            row.quote
-              ? h('span', { className: 'nw-opinion-quote' }, `「${row.quote}」`)
-              : null,
-            row.resolution
-              ? h('span', { className: 'nw-hint' }, `处理：${row.resolution}`)
-              : null,
+          { className: 'nw-opinion-list' },
+          ...rows.map((row) =>
+            h(
+              'div',
+              { key: row.id, className: `nw-opinion nw-opinion-${row.status}` },
+              h('span', { className: 'nw-opinion-ch' }, `第 ${row.chapter} 回`),
+              h(
+                'span',
+                { className: 'nw-opinion-body' },
+                h('span', { className: 'nw-opinion-text' }, row.text),
+                row.quote ? h('span', { className: 'nw-opinion-quote' }, `「${row.quote}」`) : null,
+                row.resolution
+                  ? h('span', { className: 'nw-hint' }, `处理：${row.resolution}`)
+                  : null,
+              ),
+              h(
+                Tag,
+                { tone: row.kind === 'highlight' ? 'green' : 'grey' },
+                SOURCE_LABEL[row.source] ?? row.source,
+              ),
+              h(
+                'span',
+                { className: 'nw-opinion-acts' },
+                row.chapter && onOpenChapter
+                  ? h(
+                      Btn,
+                      { small: true, kind: 'ghost', onClick: () => onOpenChapter(row.chapter) },
+                      '去看',
+                    )
+                  : null,
+                row.status === 'open'
+                  ? h(
+                      Fragment,
+                      null,
+                      h(
+                        Btn,
+                        { small: true, kind: 'ghost', onClick: () => decide(row, 'adopted') },
+                        '采纳',
+                      ),
+                      h(
+                        Btn,
+                        { small: true, kind: 'ghost', onClick: () => decide(row, 'dismissed') },
+                        '不改',
+                      ),
+                    )
+                  : h(
+                      Btn,
+                      { small: true, kind: 'ghost', onClick: () => decide(row, 'open') },
+                      '重新挂起',
+                    ),
+              ),
+            ),
           ),
-          h(Tag, { tone: row.kind === 'highlight' ? 'green' : 'grey' }, SOURCE_LABEL[row.source] ?? row.source),
-          h(
-            'span',
-            { className: 'nw-opinion-acts' },
-            row.chapter && onOpenChapter
-              ? h(Btn, { small: true, kind: 'ghost', onClick: () => onOpenChapter(row.chapter) }, '去看')
-              : null,
-            row.status === 'open'
-              ? h(
-                Fragment,
-                null,
-                h(Btn, { small: true, kind: 'ghost', onClick: () => decide(row, 'adopted') }, '采纳'),
-                h(Btn, { small: true, kind: 'ghost', onClick: () => decide(row, 'dismissed') }, '不改'),
-              )
-              : h(Btn, { small: true, kind: 'ghost', onClick: () => decide(row, 'open') }, '重新挂起'),
-          ),
-        )),
-      )
-      : h(Empty, null, status === 'open'
-        ? '没有待处理的意见。冷读一份稿子，或者从问题单拉一遍，都会往这里添。'
-        : '这个筛选下没有意见。'),
+        )
+      : h(
+          Empty,
+          null,
+          status === 'open'
+            ? '没有待处理的意见。冷读一份稿子，或者从问题单拉一遍，都会往这里添。'
+            : '这个筛选下没有意见。',
+        ),
   )
 }

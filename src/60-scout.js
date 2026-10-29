@@ -102,48 +102,73 @@ function ScoutHistory({ projectId, toast }) {
   )
   return h(
     Card,
-    { title: '最近干过什么', extra: h('span', { className: 'nw-card-badge' }, `${rows.length} 条`) },
+    {
+      title: '最近干过什么',
+      extra: h('span', { className: 'nw-card-badge' }, `${rows.length} 条`),
+    },
     rows.length
-      ? h('div', { className: 'nw-hist' }, rows.map((row) => h(
-        'div',
-        { className: `nw-hist-row${open === row.id ? ' on' : ''}`, key: row.id },
-        h(
-          'button',
-          {
-            type: 'button',
-            className: 'nw-hist-main',
-            onClick: () => {
-              const next = open === row.id ? '' : row.id
-              setOpen(next)
-              if (next) toast?.(`${row.title} · ${fmtAgo(row.at)}`)
-            },
-          },
-          h('span', { className: 'nw-hist-icon' }, row.icon),
-          h(
-            'span',
-            { className: 'nw-hist-body' },
-            h('span', { className: 'nw-hist-title' }, row.title),
-            h('span', { className: 'nw-hist-sub' }, row.sub),
-          ),
-          h(Tag, { tone: 'grey' }, row.kind),
-          h('span', { className: 'nw-hist-at' }, fmtAgo(row.at)),
-          h('span', { className: 'nw-prop-go' }, open === row.id ? '▾' : '▸'),
-        ),
-        open === row.id
-          ? h(
-            'div',
-            { className: 'nw-hist-detail' },
-            h('p', null, row.sub),
-            h('p', { className: 'nw-hint' }, `发生时间：${row.at || '—'}`),
+      ? h(
+          'div',
+          { className: 'nw-hist' },
+          rows.map((row) =>
             h(
               'div',
-              { className: 'nw-actions' },
-              h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`${row.title} 的产物就在工作区里`) }, '打开产物'),
-              h(Btn, { small: true, kind: 'ghost', onClick: () => toast?.(`再跑一次：${row.kind}`) }, '再跑一次'),
+              { className: `nw-hist-row${open === row.id ? ' on' : ''}`, key: row.id },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'nw-hist-main',
+                  onClick: () => {
+                    const next = open === row.id ? '' : row.id
+                    setOpen(next)
+                    if (next) toast?.(`${row.title} · ${fmtAgo(row.at)}`)
+                  },
+                },
+                h('span', { className: 'nw-hist-icon' }, row.icon),
+                h(
+                  'span',
+                  { className: 'nw-hist-body' },
+                  h('span', { className: 'nw-hist-title' }, row.title),
+                  h('span', { className: 'nw-hist-sub' }, row.sub),
+                ),
+                h(Tag, { tone: 'grey' }, row.kind),
+                h('span', { className: 'nw-hist-at' }, fmtAgo(row.at)),
+                h('span', { className: 'nw-prop-go' }, open === row.id ? '▾' : '▸'),
+              ),
+              open === row.id
+                ? h(
+                    'div',
+                    { className: 'nw-hist-detail' },
+                    h('p', null, row.sub),
+                    h('p', { className: 'nw-hint' }, `发生时间：${row.at || '—'}`),
+                    h(
+                      'div',
+                      { className: 'nw-actions' },
+                      h(
+                        Btn,
+                        {
+                          small: true,
+                          kind: 'ghost',
+                          onClick: () => toast?.(`${row.title} 的产物就在工作区里`),
+                        },
+                        '打开产物',
+                      ),
+                      h(
+                        Btn,
+                        {
+                          small: true,
+                          kind: 'ghost',
+                          onClick: () => toast?.(`再跑一次：${row.kind}`),
+                        },
+                        '再跑一次',
+                      ),
+                    ),
+                  )
+                : null,
             ),
-          )
-          : null,
-      )))
+          ),
+        )
       : h(Empty, null, '还没跑过拆文或扫榜。下面的「拆一本书」「扫一次榜」跑完就会出现在这里。'),
   )
 }
@@ -160,11 +185,9 @@ function ScanTable({ projectId, toast }) {
   }, [sca.data])
   // scan.list 只回索引（平台 / 时间 / 条数），表格要的是榜单的每一行，
   // 所以拿到最新那次的 id 之后还得再取一次全文 —— 不然表格永远是空的。
-  const one = useAsync(
-    () => api('scan.get', { projectId, id: latestId }),
-    [projectId, latestId],
-    { skip: !projectId || !latestId },
-  )
+  const one = useAsync(() => api('scan.get', { projectId, id: latestId }), [projectId, latestId], {
+    skip: !projectId || !latestId,
+  })
   const latest = latestId ? one.data : null
   const cols = [
     { key: 'rank', label: '#', num: true },
@@ -188,7 +211,8 @@ function ScanTable({ projectId, toast }) {
     }))
     const weight = (row) => {
       if (sortKey === 'rank') return row.rank
-      if (sortKey === 'collect') return parseFloat(String(row.collect)) * (/万/.test(row.collect) ? 10000 : 1)
+      if (sortKey === 'collect')
+        return parseFloat(String(row.collect)) * (/万/.test(row.collect) ? 10000 : 1)
       if (sortKey === 'trend') return parseInt(String(row.trend).replace(/[^-\d]/g, ''), 10) || 0
       return String(row[sortKey])
     }
@@ -205,81 +229,103 @@ function ScanTable({ projectId, toast }) {
     Card,
     {
       title: '扫榜结果',
-      extra: h('div', { className: 'nw-actions' },
-        latest ? h(Tag, { tone: 'blue' }, `${latest.platform || '榜单'} · ${fmtAgo(latest.createdAt)}`) : null,
-        h(Btn, {
-          small: true,
-          kind: 'ghost',
-          disabled: !rows.length,
-          onClick: () => {
-            if (!rows.length) return
-            const head = cols.map((col) => col.label).join(',')
-            const body = rows.map((row) => cols.map((col) => `"${String(row[col.key] ?? '')}"`).join(',')).join('\n')
-            const blob = `${head}\n${body}`
-            try {
-              const url = URL.createObjectURL(new Blob([blob], { type: 'text/csv' }))
-              const a = document.createElement('a')
-              a.href = url
-              a.download = `扫榜-${latest?.platform || '榜单'}-${Date.now()}.csv`
-              a.click()
-              URL.revokeObjectURL(url)
-              toast?.('已导出 CSV')
-            } catch {
-              toast?.('导出失败，用复制吧')
-            }
+      extra: h(
+        'div',
+        { className: 'nw-actions' },
+        latest
+          ? h(Tag, { tone: 'blue' }, `${latest.platform || '榜单'} · ${fmtAgo(latest.createdAt)}`)
+          : null,
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'ghost',
+            disabled: !rows.length,
+            onClick: () => {
+              if (!rows.length) return
+              const head = cols.map((col) => col.label).join(',')
+              const body = rows
+                .map((row) => cols.map((col) => `"${String(row[col.key] ?? '')}"`).join(','))
+                .join('\n')
+              const blob = `${head}\n${body}`
+              try {
+                const url = URL.createObjectURL(new Blob([blob], { type: 'text/csv' }))
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `扫榜-${latest?.platform || '榜单'}-${Date.now()}.csv`
+                a.click()
+                URL.revokeObjectURL(url)
+                toast?.('已导出 CSV')
+              } catch {
+                toast?.('导出失败，用复制吧')
+              }
+            },
           },
-        }, '导出 CSV')),
+          '导出 CSV',
+        ),
+      ),
     },
     rows.length
       ? h(
-        'div',
-        { className: 'nw-scan' },
-        h(
           'div',
-          { className: 'nw-scan-head' },
-          cols.map((col) => h(
-            'button',
-            {
-              type: 'button',
-              key: col.key,
-              className: `nw-scan-th${sortKey === col.key ? ' on' : ''}`,
-              onClick: () => {
-                if (sortKey === col.key) setAsc(!asc)
-                else {
-                  setSortKey(col.key)
-                  setAsc(true)
-                }
-                toast?.(`按「${col.label}」${sortKey === col.key && asc ? '降序' : '升序'}排序`)
+          { className: 'nw-scan' },
+          h(
+            'div',
+            { className: 'nw-scan-head' },
+            cols.map((col) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  key: col.key,
+                  className: `nw-scan-th${sortKey === col.key ? ' on' : ''}`,
+                  onClick: () => {
+                    if (sortKey === col.key) setAsc(!asc)
+                    else {
+                      setSortKey(col.key)
+                      setAsc(true)
+                    }
+                    toast?.(`按「${col.label}」${sortKey === col.key && asc ? '降序' : '升序'}排序`)
+                  },
+                },
+                col.label,
+                sortKey === col.key ? (asc ? ' ↑' : ' ↓') : '',
+              ),
+            ),
+          ),
+          rows.map((row) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'nw-scan-row',
+                key: `${row.rank}-${row.book}`,
+                onClick: () =>
+                  toast?.(
+                    `《${row.book}》· ${row.platform} · ${row.genre} · 收藏 ${row.collect} · 钩子：${row.hook}`,
+                  ),
               },
-            },
-            col.label,
-            sortKey === col.key ? (asc ? ' ↑' : ' ↓') : '',
-          )),
-        ),
-        rows.map((row) => h(
-          'button',
-          {
-            type: 'button',
-            className: 'nw-scan-row',
-            key: `${row.rank}-${row.book}`,
-            onClick: () => toast?.(`《${row.book}》· ${row.platform} · ${row.genre} · 收藏 ${row.collect} · 钩子：${row.hook}`),
-          },
-          h('span', { className: 'nw-scan-td nw-scan-rank' }, String(row.rank)),
-          h('span', { className: 'nw-scan-td' }, row.platform),
-          h('span', { className: 'nw-scan-td nw-scan-book' }, row.book),
-          h('span', { className: 'nw-scan-td' }, h(Tag, { tone: 'grey' }, row.genre || '—')),
-          h('span', { className: 'nw-scan-td nw-scan-num' }, row.collect || '—'),
-          h('span', { className: 'nw-scan-td nw-scan-hook' }, row.hook || '—'),
-          h('span', { className: `nw-scan-td nw-scan-trend${/↓/.test(row.trend) ? ' down' : /↑/.test(row.trend) ? ' up' : ''}` }, row.trend || '—'),
-        )),
-      )
+              h('span', { className: 'nw-scan-td nw-scan-rank' }, String(row.rank)),
+              h('span', { className: 'nw-scan-td' }, row.platform),
+              h('span', { className: 'nw-scan-td nw-scan-book' }, row.book),
+              h('span', { className: 'nw-scan-td' }, h(Tag, { tone: 'grey' }, row.genre || '—')),
+              h('span', { className: 'nw-scan-td nw-scan-num' }, row.collect || '—'),
+              h('span', { className: 'nw-scan-td nw-scan-hook' }, row.hook || '—'),
+              h(
+                'span',
+                {
+                  className: `nw-scan-td nw-scan-trend${/↓/.test(row.trend) ? ' down' : /↑/.test(row.trend) ? ' up' : ''}`,
+                },
+                row.trend || '—',
+              ),
+            ),
+          ),
+        )
       : h(Empty, null, '还没有扫过榜。把榜单文本粘到下面的「扫榜」里，跑完表格就出来了。'),
   )
 }
 
-function ScoutPage({
-  projectId, project, toast, onRefresh,
-}) {
+function ScoutPage({ projectId, project, toast, onRefresh }) {
   const [pick, setPick] = useState(null)
   const [detail, setDetail] = useState('')
 
@@ -304,22 +350,45 @@ function ScoutPage({
   return h(
     'div',
     { className: 'nw-page nw-scout' },
-    h('p', { className: 'nw-scout-lead' }, '这四件事由本机已安装的 oh-story 技能承担。长夜只负责把任务说清楚，然后交给对话里的 agent。'),
+    h(
+      'p',
+      { className: 'nw-scout-lead' },
+      '这四件事由本机已安装的 oh-story 技能承担。长夜只负责把任务说清楚，然后交给对话里的 agent。',
+    ),
     h(
       'div',
       { className: 'nw-scout-grid' },
-      SCOUT_CASES.map((item) => h(
-        'section',
-        { className: 'nw-scout-card', key: item.id },
-        h('div', { className: 'nw-scout-head' }, h('span', { className: 'nw-scout-icon' }, item.icon), h('h3', null, item.name)),
-        h('p', { className: 'nw-scout-desc' }, item.desc),
-        h('div', { className: 'nw-scout-meta' },
-          h(Tag, { tone: 'teal' }, item.skill),
-          h('span', { className: 'nw-hint' }, item.need)),
-        // 四张卡各有一个「组装指令」，读屏念四下同名的按钮分不清点的是哪个。
-        // 名字里带上这一格做什么，才认得出。
-        h(Btn, { kind: 'ghost', small: true, onClick: () => launch(item), title: `${item.name}：${item.desc}` }, `组装指令 · ${item.name}`),
-      )),
+      SCOUT_CASES.map((item) =>
+        h(
+          'section',
+          { className: 'nw-scout-card', key: item.id },
+          h(
+            'div',
+            { className: 'nw-scout-head' },
+            h('span', { className: 'nw-scout-icon' }, item.icon),
+            h('h3', null, item.name),
+          ),
+          h('p', { className: 'nw-scout-desc' }, item.desc),
+          h(
+            'div',
+            { className: 'nw-scout-meta' },
+            h(Tag, { tone: 'teal' }, item.skill),
+            h('span', { className: 'nw-hint' }, item.need),
+          ),
+          // 四张卡各有一个「组装指令」，读屏念四下同名的按钮分不清点的是哪个。
+          // 名字里带上这一格做什么，才认得出。
+          h(
+            Btn,
+            {
+              kind: 'ghost',
+              small: true,
+              onClick: () => launch(item),
+              title: `${item.name}：${item.desc}`,
+            },
+            `组装指令 · ${item.name}`,
+          ),
+        ),
+      ),
     ),
     // 【24 条 #21】最近干过什么：点完就忘是现在的毛病。
     h(ScoutHistory, { projectId, toast }),
@@ -333,26 +402,34 @@ function ScoutPage({
     h(ScanBoard, { projectId, toast }),
     pick
       ? h(
-        Modal,
-        {
-          title: `交给 ${pick.name}`,
-          onClose: () => setPick(null),
-          footer: h(
-            Fragment,
-            null,
-            h(Btn, { kind: 'ghost', small: true, onClick: () => setPick(null) }, '关掉'),
-            h(Btn, { kind: 'primary', small: true, onClick: () => copy(command) }, '复制指令'),
+          Modal,
+          {
+            title: `交给 ${pick.name}`,
+            onClose: () => setPick(null),
+            footer: h(
+              Fragment,
+              null,
+              h(Btn, { kind: 'ghost', small: true, onClick: () => setPick(null) }, '关掉'),
+              h(Btn, { kind: 'primary', small: true, onClick: () => copy(command) }, '复制指令'),
+            ),
+          },
+          h(
+            Field,
+            { label: pick.need },
+            h(TextArea, {
+              value: detail,
+              rows: 5,
+              onChange: setDetail,
+              placeholder: '把具体要查 / 要拆的东西写在这里',
+            }),
           ),
-        },
-        h(Field, { label: pick.need }, h(TextArea, {
-          value: detail,
-          rows: 5,
-          onChange: setDetail,
-          placeholder: '把具体要查 / 要拆的东西写在这里',
-        })),
-        h(Field, { label: '将发出的指令' }, h('pre', { className: 'nw-cmd' }, command)),
-        h('p', { className: 'nw-hint' }, '复制后粘到对话里。技能会自己读 SOP、自己派角色、把结果落回工作区。'),
-      )
+          h(Field, { label: '将发出的指令' }, h('pre', { className: 'nw-cmd' }, command)),
+          h(
+            'p',
+            { className: 'nw-hint' },
+            '复制后粘到对话里。技能会自己读 SOP、自己派角色、把结果落回工作区。',
+          ),
+        )
       : null,
   )
 }

@@ -86,6 +86,18 @@ const NIGHTWRITE_CSS = `
 .nw-principle-mark{flex:none;color:var(--nw-amber)}
 .nw-principle-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nw-principle-tog{flex:none;color:var(--nw-fg-3);font-size:10.5px}
+/* 分场景的写作原则：一行一个场景，左边场景名右边删除。
+   做成竖排而不是表格 —— 一条原则就是一整句，挤进表格列里会换行成三行。 */
+.nw-princ{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.nw-princ-row{border:1px solid var(--nw-line);border-radius:8px;padding:8px;background:var(--nw-bg-1)}
+.nw-princ-head{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.nw-princ-head .nw-input{flex:1;min-width:0}
+.nw-princ-x{
+  flex:none;width:24px;height:24px;line-height:1;border:1px solid var(--nw-line);
+  border-radius:6px;background:transparent;color:var(--nw-fg-3);
+  font:inherit;font-size:14px;cursor:pointer;
+}
+.nw-princ-x:hover{border-color:var(--nw-red);color:var(--nw-red)}
 
 
 /* ── 通用控件 ── */
@@ -774,6 +786,21 @@ const NIGHTWRITE_CSS = `
 }
 .nw-role-duty{grid-column:1 / -1;font-size:11.5px;color:var(--nw-fg-3);line-height:1.5}
 .nw-role-foot{grid-column:1 / -1;display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+/* 收起态：一排小方块，只留名字和「派单」标记。
+   11 个岗位铺成职责卡要半屏，可它一天点不到三次 —— 派单页真正天天动的是指令单和队列。 */
+.nw-role-grid-compact{grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:5px}
+.nw-role-grid-compact .nw-role{
+  display:flex;align-items:center;gap:4px;justify-content:center;
+  padding:5px 8px;border-radius:999px;font-size:12px;
+}
+.nw-role-grid-compact .nw-role-name{font-size:12px;font-weight:600}
+.nw-role-on{border-color:var(--nw-amber);background:var(--nw-amber-soft)}
+.nw-role-more{
+  display:block;width:100%;margin-top:6px;padding:4px;
+  border:0;background:transparent;color:var(--nw-fg-3);
+  font:inherit;font-size:11px;cursor:pointer;text-align:center;
+}
+.nw-role-more:hover{color:var(--nw-amber)}
 
 .nw-dp-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .nw-dp{

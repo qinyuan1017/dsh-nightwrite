@@ -36,7 +36,9 @@ function BookExport({ projectId, project, toast }) {
         try {
           const data = await res.json()
           message = data?.error?.message || message
-        } catch { /* 非 JSON 就用默认文案 */ }
+        } catch {
+          /* 非 JSON 就用默认文案 */
+        }
         throw new Error(message)
       }
       const blob = await res.blob()
@@ -53,7 +55,9 @@ function BookExport({ projectId, project, toast }) {
       a.click()
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 4000)
-      toast(`已生成 ${chapters} 回 · ${words} 字${Number(skipped) ? `（跳过 ${skipped} 回）` : ''} · ${(blob.size / 1024).toFixed(0)} KB`)
+      toast(
+        `已生成 ${chapters} 回 · ${words} 字${Number(skipped) ? `（跳过 ${skipped} 回）` : ''} · ${(blob.size / 1024).toFixed(0)} KB`,
+      )
     } catch (error) {
       toast(error.message)
     } finally {
@@ -64,22 +68,28 @@ function BookExport({ projectId, project, toast }) {
   return h(
     Card,
     { title: '导出成书', extra: h(Tag, { tone: 'green' }, '真文件') },
-    h('p', { className: 'nw-hint' }, '把已写的章拼成一本完整的书。和上面的「导出全部数据」不同：那个给自己备份目录，这个给读者。'),
+    h(
+      'p',
+      { className: 'nw-hint' },
+      '把已写的章拼成一本完整的书。和上面的「导出全部数据」不同：那个给自己备份目录，这个给读者。',
+    ),
     h(
       'div',
       { className: 'nw-book-formats' },
-      formats.map((item) => h(
-        'button',
-        {
-          type: 'button',
-          key: item.value,
-          className: `nw-book-format${format === item.value ? ' on' : ''}`,
-          'aria-pressed': format === item.value ? 'true' : 'false',
-          onClick: () => setFormat(item.value),
-        },
-        h('span', { className: 'nw-book-format-name' }, item.label),
-        h('span', { className: 'nw-book-format-hint' }, item.hint),
-      )),
+      formats.map((item) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            key: item.value,
+            className: `nw-book-format${format === item.value ? ' on' : ''}`,
+            'aria-pressed': format === item.value ? 'true' : 'false',
+            onClick: () => setFormat(item.value),
+          },
+          h('span', { className: 'nw-book-format-name' }, item.label),
+          h('span', { className: 'nw-book-format-hint' }, item.hint),
+        ),
+      ),
     ),
     h(
       'div',
@@ -94,9 +104,17 @@ function BookExport({ projectId, project, toast }) {
         }),
         h('span', null, '跳过被否掉的章'),
       ),
-      h(Btn, { kind: 'primary', disabled: !projectId || busy, onClick: run }, busy ? '正在拼…' : '📖 生成并下载'),
+      h(
+        Btn,
+        { kind: 'primary', disabled: !projectId || busy, onClick: run },
+        busy ? '正在拼…' : '📖 生成并下载',
+      ),
     ),
-    h(Hint, null, '章名取正文首行（形如「第X回 标题」），不会在正文里重复一遍。EPUB 自带目录页；DOCX 用宋体、首行缩进、1.5 倍行距。'),
+    h(
+      Hint,
+      null,
+      '章名取正文首行（形如「第X回 标题」），不会在正文里重复一遍。EPUB 自带目录页；DOCX 用宋体、首行缩进、1.5 倍行距。',
+    ),
   )
 }
 
@@ -135,22 +153,30 @@ function UpdateCard({ toast }) {
     h(KV, {
       rows: [
         { key: '当前版本', text: installed, mono: true },
-        { key: 'npm 最新版', text: state ? (state.latest || '查不到') : '还没查', mono: true },
+        { key: 'npm 最新版', text: state ? state.latest || '查不到' : '还没查', mono: true },
         { key: '差多少', text: state ? (state.error ? '—' : state.behind) : '—' },
       ],
     }),
-    state?.error
-      ? h('p', { className: 'nw-update-err' }, state.error)
-      : null,
+    state?.error ? h('p', { className: 'nw-update-err' }, state.error) : null,
     h(
       'div',
       { className: 'nw-actions' },
-      h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: () => run(false) }, busy ? '查着…' : '查一下'),
-      h(Btn, { small: true, kind: 'ghost', disabled: busy, onClick: () => run(true) }, '强制刷新（跳过缓存）'),
-      state?.hasUpdate
-        ? h(Tag, { tone: 'amber' }, `可升到 ${state.latest}`)
-        : null,
+      h(
+        Btn,
+        { small: true, kind: 'ghost', disabled: busy, onClick: () => run(false) },
+        busy ? '查着…' : '查一下',
+      ),
+      h(
+        Btn,
+        { small: true, kind: 'ghost', disabled: busy, onClick: () => run(true) },
+        '强制刷新（跳过缓存）',
+      ),
+      state?.hasUpdate ? h(Tag, { tone: 'amber' }, `可升到 ${state.latest}`) : null,
     ),
-    h(Hint, null, '只查不改：长夜是本地开发版，升级方式是改完源码再同步到 profile，不需要 npm install。查询结果缓存 6 小时，查不到也缓存 10 分钟，免得每开一次设置页都卡一下。'),
+    h(
+      Hint,
+      null,
+      '只查不改：长夜是本地开发版，升级方式是改完源码再同步到 profile，不需要 npm install。查询结果缓存 6 小时，查不到也缓存 10 分钟，免得每开一次设置页都卡一下。',
+    ),
   )
 }

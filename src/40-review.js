@@ -29,35 +29,52 @@ function ReviewList({ chapters, gate, onOpen, selected }) {
       h('span', null, '问题'),
     ),
     chapters.length
-      ? chapters.map((row) => h(
-        'button',
-        {
-          type: 'button',
-          key: row.chapter,
-          className: `nw-rv-row${selected === row.chapter ? ' on' : ''}`,
-          onClick: () => onOpen(row.chapter),
-        },
-        h('span', { className: 'nw-rv-n' }, row.chapter),
-        h('span', { className: 'nw-rv-title' }, row.title || ''),
-        h('span', null, h(Tag, { tone: STATUS_TONE[row.status] || 'grey' }, STATUS_LABEL[row.status] || row.status)),
-        h('span', { className: 'nw-rv-words' }, row.words),
-        h('span', null, h(ScoreBar, { score: row.score, gate })),
-        h(
-          'span',
-          { className: 'nw-rv-issues' },
-          row.issues ? h(Tag, { tone: 'amber' }, `${row.issues}`) : h('span', { className: 'nw-hint' }, '—'),
-          row.violations ? h(Tag, { tone: 'red' }, `违规 ${row.violations}`) : null,
-        ),
-      ))
+      ? chapters.map((row) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              key: row.chapter,
+              className: `nw-rv-row${selected === row.chapter ? ' on' : ''}`,
+              onClick: () => onOpen(row.chapter),
+            },
+            h('span', { className: 'nw-rv-n' }, row.chapter),
+            h('span', { className: 'nw-rv-title' }, row.title || ''),
+            h(
+              'span',
+              null,
+              h(
+                Tag,
+                { tone: STATUS_TONE[row.status] || 'grey' },
+                STATUS_LABEL[row.status] || row.status,
+              ),
+            ),
+            h('span', { className: 'nw-rv-words' }, row.words),
+            h('span', null, h(ScoreBar, { score: row.score, gate })),
+            h(
+              'span',
+              { className: 'nw-rv-issues' },
+              row.issues
+                ? h(Tag, { tone: 'amber' }, `${row.issues}`)
+                : h('span', { className: 'nw-hint' }, '—'),
+              row.violations ? h(Tag, { tone: 'red' }, `违规 ${row.violations}`) : null,
+            ),
+          ),
+        )
       : h(Empty, null, '还没有章节。去派单页排一单。'),
   )
 }
 
-function IssueRow({
-  issue, index, active, onPick,
-}) {
+function IssueRow({ issue, index, active, onPick }) {
   const tone = issue.type === 'ai-style' ? 'amber' : issue.type === 'logic' ? 'red' : 'grey'
-  const label = issue.type === 'ai-style' ? 'AI 味' : issue.type === 'logic' ? '逻辑' : issue.type === 'pace' ? '节奏' : '其他'
+  const label =
+    issue.type === 'ai-style'
+      ? 'AI 味'
+      : issue.type === 'logic'
+        ? '逻辑'
+        : issue.type === 'pace'
+          ? '节奏'
+          : '其他'
   return h(
     'button',
     {
@@ -80,13 +97,31 @@ function IssueRow({
 }
 
 function ReviewDetail({
-  projectId, chapter, chapters, project, gate, onClose, onChanged, toast, onNav,
+  projectId,
+  chapter,
+  chapters,
+  project,
+  gate,
+  onClose,
+  onChanged,
+  toast,
+  onNav,
 }) {
-  const ch = useAsync(() => api('chapter.get', { projectId, chapter }), [projectId, chapter], { skip: !projectId || !chapter })
+  const ch = useAsync(() => api('chapter.get', { projectId, chapter }), [projectId, chapter], {
+    skip: !projectId || !chapter,
+  })
   // 彩带的真值：服务端扫词表，不是前端按段序号染色。
-  const style = useAsync(() => api('chapter.aistyle', { projectId, chapter }), [projectId, chapter], { skip: !projectId || !chapter })
+  const style = useAsync(
+    () => api('chapter.aistyle', { projectId, chapter }),
+    [projectId, chapter],
+    { skip: !projectId || !chapter },
+  )
   // 历史版本 / 回收站也得能看见，否则「留底」等于没留。
-  const hist = useAsync(() => api('chapter.history', { projectId, chapter }), [projectId, chapter], { skip: !projectId || !chapter })
+  const hist = useAsync(
+    () => api('chapter.history', { projectId, chapter }),
+    [projectId, chapter],
+    { skip: !projectId || !chapter },
+  )
   // 【QA-1】撤销/重做：受控 textarea 会把浏览器原生撤销栈冲掉，所以自己留快照。
   // 600ms 内的连续输入合并成一步，免得退一句要按一百下。
   const editor = useUndoText('')
@@ -137,7 +172,10 @@ function ReviewDetail({
     const at = Number(raw)
     if (!Number.isFinite(at) || at < 0) return
     const bodyNow = String(ch.data?.text ?? '')
-    const list = bodyNow.split(/\n+/).map((row) => row.trim()).filter(Boolean)
+    const list = bodyNow
+      .split(/\n+/)
+      .map((row) => row.trim())
+      .filter(Boolean)
     if (at >= list.length) return
     setMode('doc')
     setPara(at)
@@ -168,13 +206,19 @@ function ReviewDetail({
   const issues = Array.isArray(meta.issues) ? meta.issues : []
   const violations = Array.isArray(meta.violations) ? meta.violations : []
   const scores = meta.scores || {
-    reader: null, logic: null, aiStyle: null, rhythm: null,
+    reader: null,
+    logic: null,
+    aiStyle: null,
+    rhythm: null,
   }
 
   // 正文为空就是空。以前这里塞 12 段演示文字，彩带和段视图看着很热闹，
   // 但作者会以为自己写了一章；空章就该老实说「还没有正文」。
   const body = String(text || '')
-  const paras = String(body).split(/\n+/).map((row) => row.trim()).filter(Boolean)
+  const paras = String(body)
+    .split(/\n+/)
+    .map((row) => row.trim())
+    .filter(Boolean)
 
   const save = async (opts = {}) => {
     const silent = opts.silent === true
@@ -228,10 +272,23 @@ function ReviewDetail({
   const act = async (action) => {
     setBusy(true)
     try {
-      await api('review.action', { projectId, action, chapter, worldState: meta.worldStateHint ?? '' })
+      await api('review.action', {
+        projectId,
+        action,
+        chapter,
+        worldState: meta.worldStateHint ?? '',
+      })
       ch.reload()
       onChanged?.()
-      toast(action === 'accept' ? '已采纳' : action === 'rerun' ? '已重新入队' : action === 'manual' ? '已转人工修' : '已废弃')
+      toast(
+        action === 'accept'
+          ? '已采纳'
+          : action === 'rerun'
+            ? '已重新入队'
+            : action === 'manual'
+              ? '已转人工修'
+              : '已废弃',
+      )
     } catch (error) {
       toast(error.message)
     } finally {
@@ -326,100 +383,155 @@ function ReviewDetail({
     h(
       'div',
       { className: 'nw-rv-detail-head' },
-      h('div', null,
+      h(
+        'div',
+        null,
         h('h3', null, `第 ${chapter} 回`),
-        h('span', { className: 'nw-hint' },
-          `${liveWords}${plan ? ` / ${plan}` : ''} 字${dirty ? ' · 未保存' : ''} · ${STATUS_LABEL[meta.status] || meta.status || '草稿'} · 共 ${paras.length} 段`)),
+        h(
+          'span',
+          { className: 'nw-hint' },
+          `${liveWords}${plan ? ` / ${plan}` : ''} 字${dirty ? ' · 未保存' : ''} · ${STATUS_LABEL[meta.status] || meta.status || '草稿'} · 共 ${paras.length} 段`,
+        ),
+      ),
       h(
         'div',
         { className: 'nw-actions' },
         // 【12 条 #2】自动保存状态要说出来：作者得知道「不用管，它自己会存」。
-        h('span', { className: `nw-hint nw-save-state${dirty ? ' nw-dirty' : ''}` },
+        h(
+          'span',
+          { className: `nw-hint nw-save-state${dirty ? ' nw-dirty' : ''}` },
           dirty
-            ? (autosave ? '改动未保存 · 4 秒后自动存' : '改动未保存')
-            : (savedAt ? `已保存 ${savedAt}` : '已保存')),
+            ? autosave
+              ? '改动未保存 · 4 秒后自动存'
+              : '改动未保存'
+            : savedAt
+              ? `已保存 ${savedAt}`
+              : '已保存',
+        ),
         // 【24 条 #15】键盘提示直接印在按钮上，不然没人知道有快捷键。
         readMode ? null : h('span', { className: 'nw-hint nw-keys' }, 'J/K 换章 · A 采纳 · R 废弃'),
-        h(Btn, { small: true, kind: 'ghost', onClick: () => onNav?.(-1), title: '上一章（K）' }, 'K ←'),
-        h(Btn, { small: true, kind: 'ghost', onClick: () => onNav?.(1), title: '下一章（J）' }, 'J →'),
+        h(
+          Btn,
+          { small: true, kind: 'ghost', onClick: () => onNav?.(-1), title: '上一章（K）' },
+          'K ←',
+        ),
+        h(
+          Btn,
+          { small: true, kind: 'ghost', onClick: () => onNav?.(1), title: '下一章（J）' },
+          'J →',
+        ),
         // 【12 条 #11】阅读模式：只留正文，把两侧全收起来。
-        h(Btn, {
-          small: true,
-          kind: readMode ? 'primary' : 'ghost',
-          onClick: () => {
-            const next = !readMode
-            setReadMode(next)
-            writeLS(LS.readMode, next ? '1' : '0')
+        h(
+          Btn,
+          {
+            small: true,
+            kind: readMode ? 'primary' : 'ghost',
+            onClick: () => {
+              const next = !readMode
+              setReadMode(next)
+              writeLS(LS.readMode, next ? '1' : '0')
+            },
+            title: '只看正文',
           },
-          title: '只看正文',
-        }, readMode ? '退出阅读' : '📖 阅读模式'),
+          readMode ? '退出阅读' : '📖 阅读模式',
+        ),
         // 【12 条 #3】章节重排：章号就是文件名，插入只能在两章之间挪。
-        h(Btn, {
-          small: true,
-          kind: 'ghost',
-          disabled: busy,
-          title: '在这一章前面插一个空章，这一章及其后各退一位',
-          onClick: async () => {
-            if (busy) return
-            const at = Math.max(1, chapter)
-            if (!window.confirm(`在第 ${at} 回前面插一个空章？\n从第 ${at} 回起每章号都 +1，历史版本一起搬。`)) return
-            setBusy(true)
-            try {
-              const info = await api('chapter.insert', { projectId, at })
-              onChanged?.()
-              toast(`已插入第 ${info.chapter} 回${info.shifted ? `，${info.shifted} 章各退一位` : ''}`)
-            } catch (error) {
-              toast(error.message)
-            } finally {
-              setBusy(false)
-            }
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'ghost',
+            disabled: busy,
+            title: '在这一章前面插一个空章，这一章及其后各退一位',
+            onClick: async () => {
+              if (busy) return
+              const at = Math.max(1, chapter)
+              if (
+                !window.confirm(
+                  `在第 ${at} 回前面插一个空章？\n从第 ${at} 回起每章号都 +1，历史版本一起搬。`,
+                )
+              )
+                return
+              setBusy(true)
+              try {
+                const info = await api('chapter.insert', { projectId, at })
+                onChanged?.()
+                toast(
+                  `已插入第 ${info.chapter} 回${info.shifted ? `，${info.shifted} 章各退一位` : ''}`,
+                )
+              } catch (error) {
+                toast(error.message)
+              } finally {
+                setBusy(false)
+              }
+            },
           },
-        }, '＋ 在此插章'),
-        h(Btn, {
-          small: true,
-          kind: 'ghost',
-          disabled: busy,
-          title: '把这一章挪到前面去，途经各章顺移',
-          onClick: async () => {
-            if (busy) return
-            const to = Math.max(1, chapter - 1)
-            if (to === chapter) return
-            setBusy(true)
-            try {
-              await api('chapter.move', { projectId, from: chapter, to })
-              onChanged?.()
-              toast(`已挪到第 ${to} 回 · 原来的第 ${to} 回顺移到第 ${to + 1} 回`)
-              onNav?.(-1)
-            } catch (error) {
-              toast(error.message)
-            } finally {
-              setBusy(false)
-            }
+          '＋ 在此插章',
+        ),
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'ghost',
+            disabled: busy,
+            title: '把这一章挪到前面去，途经各章顺移',
+            onClick: async () => {
+              if (busy) return
+              const to = Math.max(1, chapter - 1)
+              if (to === chapter) return
+              setBusy(true)
+              try {
+                await api('chapter.move', { projectId, from: chapter, to })
+                onChanged?.()
+                toast(`已挪到第 ${to} 回 · 原来的第 ${to} 回顺移到第 ${to + 1} 回`)
+                onNav?.(-1)
+              } catch (error) {
+                toast(error.message)
+              } finally {
+                setBusy(false)
+              }
+            },
           },
-        }, '↑ 上移一章'),
-        h(Btn, {
-          small: true,
-          kind: 'ghost',
-          disabled: busy,
-          title: '把这一章挪到后面去，途经各章顺移',
-          onClick: async () => {
-            if (busy) return
-            const to = chapter + 1
-            setBusy(true)
-            try {
-              await api('chapter.move', { projectId, from: chapter, to })
-              onChanged?.()
-              toast(`已挪到第 ${to} 回 · 原来的第 ${to} 回顺移到第 ${to - 1} 回`)
-              onNav?.(1)
-            } catch (error) {
-              toast(error.message)
-            } finally {
-              setBusy(false)
-            }
+          '↑ 上移一章',
+        ),
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'ghost',
+            disabled: busy,
+            title: '把这一章挪到后面去，途经各章顺移',
+            onClick: async () => {
+              if (busy) return
+              const to = chapter + 1
+              setBusy(true)
+              try {
+                await api('chapter.move', { projectId, from: chapter, to })
+                onChanged?.()
+                toast(`已挪到第 ${to} 回 · 原来的第 ${to} 回顺移到第 ${to - 1} 回`)
+                onNav?.(1)
+              } catch (error) {
+                toast(error.message)
+              } finally {
+                setBusy(false)
+              }
+            },
           },
-        }, '↓ 下移一章'),
+          '↓ 下移一章',
+        ),
         readMode ? null : h(Btn, { small: true, kind: 'ghost', onClick: onClose }, '← 返回列表'),
-        readMode ? null : h(Btn, { small: true, kind: dirty ? 'primary' : 'ghost', onClick: () => save(), disabled: busy || !dirty }, dirty ? '保存修改' : '已保存'),
+        readMode
+          ? null
+          : h(
+              Btn,
+              {
+                small: true,
+                kind: dirty ? 'primary' : 'ghost',
+                onClick: () => save(),
+                disabled: busy || !dirty,
+              },
+              dirty ? '保存修改' : '已保存',
+            ),
       ),
     ),
     h(
@@ -437,66 +549,80 @@ function ReviewDetail({
             [
               { value: 'doc', label: '段落视图' },
               { value: 'edit', label: '编辑正文' },
-            ].map((item) => h(
-              'button',
-              {
-                type: 'button',
-                key: item.value,
-                className: `nw-seg-btn${mode === item.value ? ' on' : ''}`,
-              'aria-pressed': mode === item.value ? 'true' : 'false',
-                onClick: () => setMode(item.value),
-              },
-              item.label,
-            )),
+            ].map((item) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  key: item.value,
+                  className: `nw-seg-btn${mode === item.value ? ' on' : ''}`,
+                  'aria-pressed': mode === item.value ? 'true' : 'false',
+                  onClick: () => setMode(item.value),
+                },
+                item.label,
+              ),
+            ),
           ),
           // 【QA-1】撤销 / 重做放在工具栏上，不用记快捷键也能找得到。
           // 不在编辑模式时点它会先把编辑器打开 —— 否则按钮看起来像坏了。
           h(
             'div',
             { className: 'nw-rv-undo' },
-            h(Btn, {
-              small: true,
-              kind: 'ghost',
-              className: 'nw-undo-btn',
-              disabled: !editor.canUndo && mode === 'edit',
-              title: '撤销上一步（Ctrl+Z）',
-              'aria-label': '撤销',
-              onClick: () => {
-                if (mode !== 'edit') {
-                  setMode('edit')
-                  toast('已切到编辑正文，再按一次撤销')
-                  return
-                }
-                if (editor.undo()) {
-                  setDirty(true)
-                  toast(`已撤销一步 · 还能再退 ${Math.max(0, editor.steps - 1)} 步`)
-                } else {
-                  toast('没有可撤销的了')
-                }
+            h(
+              Btn,
+              {
+                small: true,
+                kind: 'ghost',
+                className: 'nw-undo-btn',
+                disabled: !editor.canUndo && mode === 'edit',
+                title: '撤销上一步（Ctrl+Z）',
+                'aria-label': '撤销',
+                onClick: () => {
+                  if (mode !== 'edit') {
+                    setMode('edit')
+                    toast('已切到编辑正文，再按一次撤销')
+                    return
+                  }
+                  if (editor.undo()) {
+                    setDirty(true)
+                    toast(`已撤销一步 · 还能再退 ${Math.max(0, editor.steps - 1)} 步`)
+                  } else {
+                    toast('没有可撤销的了')
+                  }
+                },
               },
-            }, '↶ 撤销'),
-            h(Btn, {
-              small: true,
-              kind: 'ghost',
-              className: 'nw-redo-btn',
-              disabled: !editor.canRedo && mode === 'edit',
-              title: '重做（Ctrl+Shift+Z）',
-              'aria-label': '重做',
-              onClick: () => {
-                if (mode !== 'edit') {
-                  setMode('edit')
-                  toast('已切到编辑正文，再按一次重做')
-                  return
-                }
-                if (editor.redo()) {
-                  setDirty(true)
-                  toast('已重做一步')
-                } else {
-                  toast('没有可重做的了')
-                }
+              '↶ 撤销',
+            ),
+            h(
+              Btn,
+              {
+                small: true,
+                kind: 'ghost',
+                className: 'nw-redo-btn',
+                disabled: !editor.canRedo && mode === 'edit',
+                title: '重做（Ctrl+Shift+Z）',
+                'aria-label': '重做',
+                onClick: () => {
+                  if (mode !== 'edit') {
+                    setMode('edit')
+                    toast('已切到编辑正文，再按一次重做')
+                    return
+                  }
+                  if (editor.redo()) {
+                    setDirty(true)
+                    toast('已重做一步')
+                  } else {
+                    toast('没有可重做的了')
+                  }
+                },
               },
-            }, '↷ 重做'),
-            h('span', { className: 'nw-undo-n', title: '撤销栈深度' }, mode === 'edit' ? `${editor.steps} 步可退` : '未在编辑'),
+              '↷ 重做',
+            ),
+            h(
+              'span',
+              { className: 'nw-undo-n', title: '撤销栈深度' },
+              mode === 'edit' ? `${editor.steps} 步可退` : '未在编辑',
+            ),
           ),
           quotePick
             ? h('span', { className: 'nw-rv-pick' }, `盯住：${quotePick.text}`)
@@ -504,14 +630,15 @@ function ReviewDetail({
         ),
         // 【24 条 #13】正文右侧彩带：每段一格，红=AI 味重、橙=节奏拖、绿=好段。点格子滚过去。
         // 颜色来自 chapter.aistyle 扫词表的真命中（style.data.aiHits），不是按段序号染色。
-        h('div', { className: 'nw-heat' },
+        h(
+          'div',
+          { className: 'nw-heat' },
           h('span', { className: 'nw-heat-title' }, '段'),
           h(
             'div',
             { className: 'nw-heat-track' },
-            paras.map((item, index) => h(
-              'button',
-              {
+            paras.map((item, index) =>
+              h('button', {
                 type: 'button',
                 key: index,
                 className: `nw-heat-cell nw-heat-${heatTone(item, index, style.data?.hits, issues)}${para === index ? ' on' : ''}`,
@@ -520,15 +647,20 @@ function ReviewDetail({
                 onClick: () => {
                   setPara(index)
                   const node = paraRefs.current[index]
-                  if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'smooth' })
+                  if (node && node.scrollIntoView)
+                    node.scrollIntoView({ block: 'center', behavior: 'smooth' })
                   if (mode === 'edit') setMode('doc')
-                  const hitsHere = (style.data?.hits ?? []).filter((row) => Number(row.para) === index)
-                  toast(hitsHere.length
-                    ? `第 ${index + 1} 段 · 命中「${hitsHere[0].pattern}」：${hitsHere[0].hint}`
-                    : `第 ${index + 1} 段 · ${heatTone(item, index, style.data?.hits, issues) === 'warn' ? '节奏拖' : '好段'}`)
+                  const hitsHere = (style.data?.hits ?? []).filter(
+                    (row) => Number(row.para) === index,
+                  )
+                  toast(
+                    hitsHere.length
+                      ? `第 ${index + 1} 段 · 命中「${hitsHere[0].pattern}」：${hitsHere[0].hint}`
+                      : `第 ${index + 1} 段 · ${heatTone(item, index, style.data?.hits, issues) === 'warn' ? '节奏拖' : '好段'}`,
+                  )
                 },
-              },
-            )),
+              }),
+            ),
           ),
           h(
             'div',
@@ -538,201 +670,295 @@ function ReviewDetail({
             h('span', { className: 'nw-heat-key nw-heat-bad' }, 'AI 味'),
             // 密度是「每千字命中数」：长短章才能横着比。
             style.data
-              ? h('span', { className: 'nw-heat-density' }, `AI 味 ${style.data.density ?? 0}/千字 · 词表 ${style.data.lexicon ?? 0} 条`)
+              ? h(
+                  'span',
+                  { className: 'nw-heat-density' },
+                  `AI 味 ${style.data.density ?? 0}/千字 · 词表 ${style.data.lexicon ?? 0} 条`,
+                )
               : null,
           ),
         ),
         mode === 'edit'
           ? h(TextArea, {
-            value: text,
-            rows: 26,
-            onChange: (v) => {
-              setText(v)
-              setDirty(true)
-            },
-          })
-          : h(
-            'div',
-            { className: 'nw-para-list' },
-            paras.length ? paras.map((item, index) => h(
-              // 段落本身就是按钮：以前是 <p onClick>，Tab 走不到、回车按不动，
-              // 键盘用户完全用不了「点段落定位」这条主路径。
-              'button',
-              {
-                type: 'button',
-                key: index,
-                ref: (node) => { paraRefs.current[index] = node },
-                className: `nw-para nw-para-${heatTone(item, index, style.data?.hits, issues)}${para === index ? ' nw-para-on' : ''}`,
-                'aria-pressed': para === index ? 'true' : 'false',
-                'aria-label': `第 ${index + 1} 段${para === index ? '（已选中）' : ''}`,
-                onClick: () => setPara(index),
+              value: text,
+              rows: 26,
+              onChange: (v) => {
+                setText(v)
+                setDirty(true)
               },
-              h('span', { className: 'nw-para-n' }, String(index + 1)),
-              item,
-            )) : h('p', { className: 'nw-hint nw-para-empty' },
-              '这一章还没有正文。切到「编辑」写，或者在正文页摊开读写。'),
-          ),
+            })
+          : h(
+              'div',
+              { className: 'nw-para-list' },
+              paras.length
+                ? paras.map((item, index) =>
+                    h(
+                      // 段落本身就是按钮：以前是 <p onClick>，Tab 走不到、回车按不动，
+                      // 键盘用户完全用不了「点段落定位」这条主路径。
+                      'button',
+                      {
+                        type: 'button',
+                        key: index,
+                        ref: (node) => {
+                          paraRefs.current[index] = node
+                        },
+                        className: `nw-para nw-para-${heatTone(item, index, style.data?.hits, issues)}${para === index ? ' nw-para-on' : ''}`,
+                        'aria-pressed': para === index ? 'true' : 'false',
+                        'aria-label': `第 ${index + 1} 段${para === index ? '（已选中）' : ''}`,
+                        onClick: () => setPara(index),
+                      },
+                      h('span', { className: 'nw-para-n' }, String(index + 1)),
+                      item,
+                    ),
+                  )
+                : h(
+                    'p',
+                    { className: 'nw-hint nw-para-empty' },
+                    '这一章还没有正文。切到「编辑」写，或者在正文页摊开读写。',
+                  ),
+            ),
         h(
           'div',
           { className: 'nw-rv-acts' },
-          h(Btn, { kind: 'primary', onClick: () => act('accept'), disabled: busy }, '✓ 通过并采纳 (A)'),
+          h(
+            Btn,
+            { kind: 'primary', onClick: () => act('accept'), disabled: busy },
+            '✓ 通过并采纳 (A)',
+          ),
           h(Btn, { kind: 'ghost', onClick: () => act('rerun'), disabled: busy }, '↻ 打回 · 重跑'),
-          h(Btn, { kind: 'ghost', onClick: () => act('manual'), disabled: busy }, '✋ 打回 · 人工修'),
+          h(
+            Btn,
+            { kind: 'ghost', onClick: () => act('manual'), disabled: busy },
+            '✋ 打回 · 人工修',
+          ),
           h(Btn, { kind: 'danger', onClick: () => act('reject'), disabled: busy }, '✕ 废弃 (R)'),
         ),
       ),
       // 【12 条 #11】阅读模式把整个右侧栏收起来：只看正文。
-      readMode ? null : h(
-        'div',
-        { className: 'nw-rv-side' },
-        h(
-          Card,
-          { title: '评分明细' },
-          h(
+      readMode
+        ? null
+        : h(
             'div',
-            { className: 'nw-score-grid' },
-            [
-              ['阅读', scores.reader],
-              ['逻辑', scores.logic],
-              ['AI 味', scores.aiStyle],
-              ['节奏', scores.rhythm],
-            ].map(([label, value]) => h(
-              'span',
-              { className: 'nw-score-cell', key: label },
-              h('em', null, value ?? '—'),
-              h('span', null, label),
-            )),
+            { className: 'nw-rv-side' },
+            h(
+              Card,
+              { title: '评分明细' },
+              h(
+                'div',
+                { className: 'nw-score-grid' },
+                [
+                  ['阅读', scores.reader],
+                  ['逻辑', scores.logic],
+                  ['AI 味', scores.aiStyle],
+                  ['节奏', scores.rhythm],
+                ].map(([label, value]) =>
+                  h(
+                    'span',
+                    { className: 'nw-score-cell', key: label },
+                    h('em', null, value ?? '—'),
+                    h('span', null, label),
+                  ),
+                ),
+              ),
+              h(
+                'div',
+                { className: 'nw-score-total' },
+                h('span', null, '总分'),
+                h(ScoreBar, { score: meta.score ?? 0, gate }),
+              ),
+            ),
+            h(
+              Card,
+              {
+                title: '问题清单',
+                extra: h('span', { className: 'nw-card-badge' }, `${issues.length}`),
+              },
+              issues.length
+                ? h(
+                    'div',
+                    { className: 'nw-issues' },
+                    issues.map((issue, index) =>
+                      h(IssueRow, {
+                        issue,
+                        index,
+                        key: index,
+                        active: quotePick === issue,
+                        onPick: pickIssue,
+                      }),
+                    ),
+                  )
+                : h(Empty, null, '没有问题。'),
+            ),
+            h(
+              Card,
+              {
+                title: '违规清单',
+                extra: h('span', { className: 'nw-card-badge' }, `${violations.length}`),
+              },
+              violations.length
+                ? h(
+                    'div',
+                    { className: 'nw-issues' },
+                    violations.map((row, index) =>
+                      h(
+                        'div',
+                        { className: 'nw-issue nw-issue-violation', key: index },
+                        h('span', { className: 'nw-issue-n' }, String(index + 1).padStart(2, '0')),
+                        h(Tag, { tone: 'red' }, '硬规则'),
+                        h(
+                          'span',
+                          { className: 'nw-issue-body' },
+                          h(
+                            'span',
+                            { className: 'nw-issue-text' },
+                            row.text ?? row.rule ?? String(row),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : h(Empty, null, '没有违规。'),
+            ),
+            h(
+              Card,
+              {
+                title: '历史版本',
+                extra: h(
+                  'span',
+                  { className: 'nw-card-badge' },
+                  `${hist.data?.versions?.length ?? 0}`,
+                ),
+              },
+              h(
+                'div',
+                { className: 'nw-hist-ver' },
+                h(
+                  'p',
+                  { className: 'nw-hint' },
+                  hist.data?.versions?.length
+                    ? `每次覆盖前自动留底，保留最近 ${hist.data?.keep ?? 20} 版。回滚本身也会留底，滚错了还能滚回来。`
+                    : '还没有历史版本 —— 第一次覆盖这章之后才有。',
+                ),
+                (hist.data?.versions ?? []).slice(0, 8).map((row) =>
+                  h(
+                    'div',
+                    { className: 'nw-ver-row', key: row.name },
+                    h(
+                      'span',
+                      { className: 'nw-ver-at' },
+                      String(row.at ?? '')
+                        .replace('T', ' ')
+                        .slice(0, 15),
+                    ),
+                    h('span', { className: 'nw-ver-w' }, `${row.words} 字`),
+                    h(
+                      Btn,
+                      {
+                        small: true,
+                        kind: 'ghost',
+                        onClick: async () => {
+                          if (busy) return
+                          setBusy(true)
+                          try {
+                            await api('chapter.restore', { projectId, chapter, name: row.name })
+                            ch.reload()
+                            hist.reload()
+                            setDirty(false)
+                            onChanged?.()
+                            toast(`已回到 ${String(row.at ?? '').slice(0, 15)} 那一版`)
+                          } catch (error) {
+                            toast(error.message)
+                          } finally {
+                            setBusy(false)
+                          }
+                        },
+                      },
+                      '回到这一版',
+                    ),
+                  ),
+                ),
+                // 回滚前的当前稿也在历史里，所以才敢给这个按钮。
+                hist.data?.versions?.length
+                  ? h('p', { className: 'nw-hint' }, '回滚后可再从列表里选回原来那版。')
+                  : null,
+              ),
+            ),
+            h(
+              Card,
+              { title: '上下文审计' },
+              meta.contextAudit
+                ? h('pre', { className: 'nw-audit' }, String(meta.contextAudit))
+                : h(Empty, null, '这一章没留下上下文审计记录。'),
+            ),
+            // 【第 1 批】文风校验面板住在右栏：改稿时眼睛盯着正文，
+            // 命中清单要能同屏看到，切出去看报告等于不做。
+            // 传 body 而不是 text：正文还没进编辑器时（刚打开、还没改）也得校，
+            // 否则「打开这一章」看到的是空白面板，等于没做。
+            // 章级体检住在校验面板上方：先回答「这段还是不是文」，再谈文笔。
+            // 顺序反了的话，模型跑偏的稿子会先给你 28 条文笔建议，白费。
+            readMode
+              ? null
+              : h(ChapterHealth, {
+                  projectId,
+                  chapter,
+                  text: body,
+                  toast,
+                  onJumpPara: (index) => {
+                    setMode('doc')
+                    setPara(Number(index) || 0)
+                    const node = paraRefs.current[Number(index) || 0]
+                    if (node && node.scrollIntoView)
+                      node.scrollIntoView({ block: 'center', behavior: 'smooth' })
+                  },
+                }),
+            readMode
+              ? null
+              : h(LintPanel, {
+                  projectId,
+                  chapter,
+                  text: body,
+                  toast,
+                  onJump: (hit) => {
+                    // 点命中行 = 跳到那一段并点亮，和「点问题」同一套坐标。
+                    setMode('doc')
+                    setPara(Number(hit.para) || 0)
+                    const node = paraRefs.current[Number(hit.para) || 0]
+                    if (node && node.scrollIntoView)
+                      node.scrollIntoView({ block: 'center', behavior: 'smooth' })
+                  },
+                }),
+            // 【阶段 C】本书阈值。放在校验面板正下方：先看到命中，再问「凭什么按这个标准判我」。
+            // 阅读模式下也不藏——它是设置，不是干扰。
+            h(LintCalibration, {
+              projectId,
+              toast,
+              onDone: () => {
+                if (typeof onChanged === 'function') onChanged()
+              },
+            }),
           ),
-          h('div', { className: 'nw-score-total' }, h('span', null, '总分'), h(ScoreBar, { score: meta.score ?? 0, gate })),
-        ),
-        h(
-          Card,
-          { title: '问题清单', extra: h('span', { className: 'nw-card-badge' }, `${issues.length}`) },
-          issues.length
-            ? h('div', { className: 'nw-issues' }, issues.map((issue, index) => h(IssueRow, {
-              issue, index, key: index, active: quotePick === issue, onPick: pickIssue,
-            })))
-            : h(Empty, null, '没有问题。'),
-        ),
-        h(
-          Card,
-          { title: '违规清单', extra: h('span', { className: 'nw-card-badge' }, `${violations.length}`) },
-          violations.length
-            ? h('div', { className: 'nw-issues' }, violations.map((row, index) => h(
-              'div',
-              { className: 'nw-issue nw-issue-violation', key: index },
-              h('span', { className: 'nw-issue-n' }, String(index + 1).padStart(2, '0')),
-              h(Tag, { tone: 'red' }, '硬规则'),
-              h('span', { className: 'nw-issue-body' }, h('span', { className: 'nw-issue-text' }, row.text ?? row.rule ?? String(row))),
-            )))
-            : h(Empty, null, '没有违规。'),
-        ),
-        h(
-          Card,
-          { title: '历史版本', extra: h('span', { className: 'nw-card-badge' }, `${hist.data?.versions?.length ?? 0}`) },
-          h('div', { className: 'nw-hist-ver' },
-            h('p', { className: 'nw-hint' }, hist.data?.versions?.length
-              ? `每次覆盖前自动留底，保留最近 ${hist.data?.keep ?? 20} 版。回滚本身也会留底，滚错了还能滚回来。`
-              : '还没有历史版本 —— 第一次覆盖这章之后才有。'),
-            (hist.data?.versions ?? []).slice(0, 8).map((row) => h(
-              'div',
-              { className: 'nw-ver-row', key: row.name },
-              h('span', { className: 'nw-ver-at' }, String(row.at ?? '').replace('T', ' ').slice(0, 15)),
-              h('span', { className: 'nw-ver-w' }, `${row.words} 字`),
-              h(Btn, {
-                small: true,
-                kind: 'ghost',
-                onClick: async () => {
-                  if (busy) return
-                  setBusy(true)
-                  try {
-                    await api('chapter.restore', { projectId, chapter, name: row.name })
-                    ch.reload()
-                    hist.reload()
-                    setDirty(false)
-                    onChanged?.()
-                    toast(`已回到 ${String(row.at ?? '').slice(0, 15)} 那一版`)
-                  } catch (error) {
-                    toast(error.message)
-                  } finally {
-                    setBusy(false)
-                  }
-                },
-              }, '回到这一版'),
-            )),
-            // 回滚前的当前稿也在历史里，所以才敢给这个按钮。
-            hist.data?.versions?.length
-              ? h('p', { className: 'nw-hint' }, '回滚后可再从列表里选回原来那版。')
-              : null,
-          ),
-        ),
-        h(
-          Card,
-          { title: '上下文审计' },
-          meta.contextAudit
-            ? h('pre', { className: 'nw-audit' }, String(meta.contextAudit))
-            : h(Empty, null, '这一章没留下上下文审计记录。'),
-        ),
-        // 【第 1 批】文风校验面板住在右栏：改稿时眼睛盯着正文，
-        // 命中清单要能同屏看到，切出去看报告等于不做。
-        // 传 body 而不是 text：正文还没进编辑器时（刚打开、还没改）也得校，
-        // 否则「打开这一章」看到的是空白面板，等于没做。
-        // 章级体检住在校验面板上方：先回答「这段还是不是文」，再谈文笔。
-        // 顺序反了的话，模型跑偏的稿子会先给你 28 条文笔建议，白费。
-        readMode ? null : h(ChapterHealth, {
-          projectId,
-          chapter,
-          text: body,
-          toast,
-          onJumpPara: (index) => {
-            setMode('doc')
-            setPara(Number(index) || 0)
-            const node = paraRefs.current[Number(index) || 0]
-            if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'smooth' })
-          },
-        }),
-        readMode ? null : h(LintPanel, {
-          projectId,
-          chapter,
-          text: body,
-          toast,
-          onJump: (hit) => {
-            // 点命中行 = 跳到那一段并点亮，和「点问题」同一套坐标。
-            setMode('doc')
-            setPara(Number(hit.para) || 0)
-            const node = paraRefs.current[Number(hit.para) || 0]
-            if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'smooth' })
-          },
-        }),
-        // 【阶段 C】本书阈值。放在校验面板正下方：先看到命中，再问「凭什么按这个标准判我」。
-        // 阅读模式下也不藏——它是设置，不是干扰。
-        h(LintCalibration, {
-          projectId,
-          toast,
-          onDone: () => { if (typeof onChanged === 'function') onChanged() },
-        }),
-      ),
     ),
 
     // 硬拦弹窗：存不进去时挡在面前，不能让人以为存好了。
     blocked
       ? h(LintBlockModal, {
-        error: blocked,
-        onClose: () => setBlocked(null),
-        onFix: (hit) => {
-          setBlocked(null)
-          setMode('doc')
-          if (hit && Number.isFinite(hit.para)) {
-            setPara(Number(hit.para))
-            const node = paraRefs.current[Number(hit.para)]
-            if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'smooth' })
-          }
-        },
-        onForce: () => {
-          setBlocked(null)
-          save({ force: true })
-        },
-      })
+          error: blocked,
+          onClose: () => setBlocked(null),
+          onFix: (hit) => {
+            setBlocked(null)
+            setMode('doc')
+            if (hit && Number.isFinite(hit.para)) {
+              setPara(Number(hit.para))
+              const node = paraRefs.current[Number(hit.para)]
+              if (node && node.scrollIntoView)
+                node.scrollIntoView({ block: 'center', behavior: 'smooth' })
+            }
+          },
+          onForce: () => {
+            setBlocked(null)
+            save({ force: true })
+          },
+        })
       : null,
   )
 }
@@ -757,7 +983,9 @@ function VersionsPanel({ projectId, chapters, toast, onOpenChapter }) {
   // 章列表里可能还没有这一章（刚删过），落到第一张上，别让 select 空着。
   const current = list.some((row) => Number(row.chapter) === Number(chapter))
     ? Number(chapter)
-    : (list.length ? Number(list[0].chapter) : 0)
+    : list.length
+      ? Number(list[0].chapter)
+      : 0
 
   const hist = useAsync(
     () => api('chapter.history', { projectId, chapter: current }),
@@ -800,13 +1028,20 @@ function VersionsPanel({ projectId, chapters, toast, onOpenChapter }) {
       { className: 'nw-vers-bar' },
       h(Select, {
         value: String(current),
-        onChange: (v) => { setChapter(Number(v) || 0); setPick('') },
+        onChange: (v) => {
+          setChapter(Number(v) || 0)
+          setPick('')
+        },
         options: list.map((row) => ({
           value: String(row.chapter),
           label: `第 ${row.chapter} 回 · ${fmtWords(Number(row.words) || 0)} 字`,
         })),
       }),
-      h(Btn, { small: true, kind: 'ghost', onClick: () => onOpenChapter?.(current) }, '去验收这一回'),
+      h(
+        Btn,
+        { small: true, kind: 'ghost', onClick: () => onOpenChapter?.(current) },
+        '去验收这一回',
+      ),
       h('span', { className: 'nw-hint' }, `每次覆盖前自动留底，保留最近 ${keep} 版。`),
     ),
     hist.loading && !hist.data
@@ -815,38 +1050,60 @@ function VersionsPanel({ projectId, chapters, toast, onOpenChapter }) {
         ? h(ErrorBox, { error: hist.error, onRetry: hist.reload })
         : versions.length
           ? h(
-            'div',
-            { className: 'nw-vers-list' },
-            versions.map((row) => h(
               'div',
-              { className: `nw-vers-row${pick === row.name ? ' on' : ''}`, key: row.name },
-              h('button', {
-                type: 'button',
-                className: 'nw-vers-main',
-                onClick: () => setPick(pick === row.name ? '' : row.name),
-              },
-              h('span', { className: 'nw-vers-at' }, String(row.at ?? '').replace('T', ' ').slice(0, 16)),
-              h('span', { className: 'nw-vers-w' }, `${fmtWords(Number(row.words) || 0)} 字`),
-              h('span', { className: 'nw-vers-name' }, row.name)),
-              h(Btn, {
-                small: true,
-                kind: 'ghost',
-                disabled: busy,
-                onClick: () => restore(row.name),
-              }, '回到这一版'),
-            )),
-          )
+              { className: 'nw-vers-list' },
+              versions.map((row) =>
+                h(
+                  'div',
+                  { className: `nw-vers-row${pick === row.name ? ' on' : ''}`, key: row.name },
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'nw-vers-main',
+                      onClick: () => setPick(pick === row.name ? '' : row.name),
+                    },
+                    h(
+                      'span',
+                      { className: 'nw-vers-at' },
+                      String(row.at ?? '')
+                        .replace('T', ' ')
+                        .slice(0, 16),
+                    ),
+                    h('span', { className: 'nw-vers-w' }, `${fmtWords(Number(row.words) || 0)} 字`),
+                    h('span', { className: 'nw-vers-name' }, row.name),
+                  ),
+                  h(
+                    Btn,
+                    {
+                      small: true,
+                      kind: 'ghost',
+                      disabled: busy,
+                      onClick: () => restore(row.name),
+                    },
+                    '回到这一版',
+                  ),
+                ),
+              ),
+            )
           : h(Empty, null, '这一回还没改过。第一次覆盖正文之后才会开始留底。'),
     pick
       ? h(
-        Card,
-        { title: `${pick} 的原文`, extra: h('span', { className: 'nw-card-badge' }, `${fmtWords(Number(one.data?.words) || 0)} 字`) },
-        one.loading && !one.data
-          ? h(Loading, null)
-          : one.error
-            ? h(ErrorBox, { error: one.error, onRetry: one.reload })
-            : h('pre', { className: 'nw-vers-text' }, String(one.data?.text ?? '')),
-      )
+          Card,
+          {
+            title: `${pick} 的原文`,
+            extra: h(
+              'span',
+              { className: 'nw-card-badge' },
+              `${fmtWords(Number(one.data?.words) || 0)} 字`,
+            ),
+          },
+          one.loading && !one.data
+            ? h(Loading, null)
+            : one.error
+              ? h(ErrorBox, { error: one.error, onRetry: one.reload })
+              : h('pre', { className: 'nw-vers-text' }, String(one.data?.text ?? '')),
+        )
       : null,
   )
 }
@@ -870,7 +1127,9 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
     writeLS('nw.rvview', next)
   }
   // 读者视角的两个视图也记住上次看的那个，理由同上。
-  const [readerView, setReaderViewState] = useState(() => (readLS('nw.rvreader', 'coldread') === 'opinions' ? 'opinions' : 'coldread'))
+  const [readerView, setReaderViewState] = useState(() =>
+    readLS('nw.rvreader', 'coldread') === 'opinions' ? 'opinions' : 'coldread',
+  )
   const setReaderView = (next) => {
     setReaderViewState(next)
     writeLS('nw.rvreader', next)
@@ -938,66 +1197,82 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
       h(
         'div',
         { className: 'nw-seg' },
-        TABS.map((item) => h(
-          'button',
-          {
-            type: 'button',
-            key: item.value,
-            className: `nw-seg-btn${tab === item.value ? ' on' : ''}`,
-              'aria-pressed': tab === item.value ? 'true' : 'false',
-            onClick: () => {
-              setTab(item.value)
-              setOpenState(null)
-            },
-          },
-          `${item.icon} ${item.label}`,
-        )),
-      ),
-      tab === 'chapters' && !open
-        ? h(
-          'div',
-          { className: 'nw-seg' },
-          VIEWS.map((item) => h(
+        TABS.map((item) =>
+          h(
             'button',
             {
               type: 'button',
               key: item.value,
-              className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
-              'aria-pressed': view === item.value ? 'true' : 'false',
-              onClick: () => setView(item.value),
+              className: `nw-seg-btn${tab === item.value ? ' on' : ''}`,
+              'aria-pressed': tab === item.value ? 'true' : 'false',
+              onClick: () => {
+                setTab(item.value)
+                setOpenState(null)
+              },
             },
-            item.label,
-          )),
-        )
+            `${item.icon} ${item.label}`,
+          ),
+        ),
+      ),
+      tab === 'chapters' && !open
+        ? h(
+            'div',
+            { className: 'nw-seg' },
+            VIEWS.map((item) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  key: item.value,
+                  className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
+                  'aria-pressed': view === item.value ? 'true' : 'false',
+                  onClick: () => setView(item.value),
+                },
+                item.label,
+              ),
+            ),
+          )
         : null,
       // 筛子只对「稿子」这一视图有意义 —— 提案和问题单自带状态分档，
       // 再来一排「待验收 / 已采纳 / 低分 / 全部」只会让人以为筛错了。
       tab === 'chapters' && !open && view === 'list'
         ? h(
-          'div',
-          { className: 'nw-seg' },
-          FILTERS.map((item) => h(
-            'button',
-            {
-              type: 'button',
-              key: item.value,
-              className: `nw-seg-btn${filter === item.value ? ' on' : ''}`,
-              'aria-pressed': filter === item.value ? 'true' : 'false',
-              onClick: () => setFilter(item.value),
-            },
-            item.label,
-            h('span', { className: 'nw-seg-n' }, String(
-              item.value === 'all' ? chapters.length
-                : item.value === 'low' ? lowCount
-                  : chapters.filter((row) => row.status === item.value).length,
-            )),
-          )),
-        )
+            'div',
+            { className: 'nw-seg' },
+            FILTERS.map((item) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  key: item.value,
+                  className: `nw-seg-btn${filter === item.value ? ' on' : ''}`,
+                  'aria-pressed': filter === item.value ? 'true' : 'false',
+                  onClick: () => setFilter(item.value),
+                },
+                item.label,
+                h(
+                  'span',
+                  { className: 'nw-seg-n' },
+                  String(
+                    item.value === 'all'
+                      ? chapters.length
+                      : item.value === 'low'
+                        ? lowCount
+                        : chapters.filter((row) => row.status === item.value).length,
+                  ),
+                ),
+              ),
+            ),
+          )
         : null,
     ),
-    h('span', { className: 'nw-hint' }, tab === 'chapters' && !open
-      ? `质检门槛 ${gate} 分 · 共 ${chapters.length} 章 · ${pending} 章等你拍板`
-      : `质检门槛 ${gate} 分`),
+    h(
+      'span',
+      { className: 'nw-hint' },
+      tab === 'chapters' && !open
+        ? `质检门槛 ${gate} 分 · 共 ${chapters.length} 章 · ${pending} 章等你拍板`
+        : `质检门槛 ${gate} 分`,
+    ),
   )
 
   // 读者视角：冷读和意见池共用一屏，顶上一个小开关。
@@ -1009,74 +1284,96 @@ function ReviewPage({ projectId, chapters, project, toast, onRefresh, refreshKey
     h(
       'div',
       { className: 'nw-seg' },
-      [{ value: 'coldread', label: '冷读' }, { value: 'opinions', label: '意见池' }].map((item) => h(
-        'button',
-        {
-          type: 'button',
-          key: item.value,
-          className: `nw-seg-btn${readerView === item.value ? ' on' : ''}`,
-          'aria-pressed': readerView === item.value ? 'true' : 'false',
-          onClick: () => setReaderView(item.value),
-        },
-        item.label,
-      )),
+      [
+        { value: 'coldread', label: '冷读' },
+        { value: 'opinions', label: '意见池' },
+      ].map((item) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            key: item.value,
+            className: `nw-seg-btn${readerView === item.value ? ' on' : ''}`,
+            'aria-pressed': readerView === item.value ? 'true' : 'false',
+            onClick: () => setReaderView(item.value),
+          },
+          item.label,
+        ),
+      ),
     ),
     readerView === 'coldread'
       ? h(ColdReadPanel, {
-        projectId,
-        chapters,
-        toast,
-        onOpenChapter: (chapter) => { setTab('chapters'); setView('list'); setOpenState(chapter) },
-      })
-      : h(OpinionBoard, {
-        projectId,
-        toast,
-        refreshKey,
-        onOpenChapter: (chapter) => { setTab('chapters'); setView('list'); setOpenState(chapter) },
-      }),
-  )
-
-  const body = tab === 'reader'
-    ? readerBody
-    : tab === 'versions'
-      ? h(VersionsPanel, {
-        projectId,
-        chapters,
-        toast,
-        onOpenChapter: (chapter) => { setTab('chapters'); setView('list'); setOpenState(chapter) },
-      })
-      : tab === 'chapters' && view === 'proposals'
-    ? h(ProposalBoard, { projectId, gate, toast, onRefresh, refreshKey })
-    : tab === 'chapters' && view === 'problems'
-      ? h(ProblemBoard, {
-        projectId, gate, toast, onRefresh, refreshKey,
-        onOpenChapter: (chapter) => {
-          setView('list')
-          setOpenState(chapter)
-        },
-      })
-      : (open
-        ? h(ReviewDetail, {
           projectId,
-          project,
-          chapter: open,
-          gate,
-          onClose: () => setOpenState(null),
-          onChanged: onRefresh,
+          chapters,
           toast,
-          // 【24 条 #15】J/K 换章：按当前筛选后的顺序走，不是全书的顺序。
-          onNav: (step) => {
-            const list = rows.length ? rows : chapters
-            const at = list.findIndex((row) => Number(row.chapter) === Number(open))
-            const next = list[at + step]
-            if (!next) {
-              toast(step > 0 ? '已经是最后一章了' : '已经是第一章了')
-              return
-            }
-            setOpenState(Number(next.chapter))
+          onOpenChapter: (chapter) => {
+            setTab('chapters')
+            setView('list')
+            setOpenState(chapter)
           },
         })
-        : h(ReviewList, { chapters: rows, gate, onOpen: setOpenState, selected: open }))
+      : h(OpinionBoard, {
+          projectId,
+          toast,
+          refreshKey,
+          onOpenChapter: (chapter) => {
+            setTab('chapters')
+            setView('list')
+            setOpenState(chapter)
+          },
+        }),
+  )
+
+  const body =
+    tab === 'reader'
+      ? readerBody
+      : tab === 'versions'
+        ? h(VersionsPanel, {
+            projectId,
+            chapters,
+            toast,
+            onOpenChapter: (chapter) => {
+              setTab('chapters')
+              setView('list')
+              setOpenState(chapter)
+            },
+          })
+        : tab === 'chapters' && view === 'proposals'
+          ? h(ProposalBoard, { projectId, gate, toast, onRefresh, refreshKey })
+          : tab === 'chapters' && view === 'problems'
+            ? h(ProblemBoard, {
+                projectId,
+                gate,
+                toast,
+                onRefresh,
+                refreshKey,
+                onOpenChapter: (chapter) => {
+                  setView('list')
+                  setOpenState(chapter)
+                },
+              })
+            : open
+              ? h(ReviewDetail, {
+                  projectId,
+                  project,
+                  chapter: open,
+                  gate,
+                  onClose: () => setOpenState(null),
+                  onChanged: onRefresh,
+                  toast,
+                  // 【24 条 #15】J/K 换章：按当前筛选后的顺序走，不是全书的顺序。
+                  onNav: (step) => {
+                    const list = rows.length ? rows : chapters
+                    const at = list.findIndex((row) => Number(row.chapter) === Number(open))
+                    const next = list[at + step]
+                    if (!next) {
+                      toast(step > 0 ? '已经是最后一章了' : '已经是第一章了')
+                      return
+                    }
+                    setOpenState(Number(next.chapter))
+                  },
+                })
+              : h(ReviewList, { chapters: rows, gate, onOpen: setOpenState, selected: open })
 
   return h('div', { className: 'nw-page nw-review' }, head, body)
 }

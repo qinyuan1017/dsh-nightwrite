@@ -594,7 +594,7 @@ export function apply(ctx: unknown, config?: NightwriteConfig): void
  * @op queue.remove — write／projectId 必填；handleRpc 读到的字段：id
  * @op review.action — write／projectId 必填；handleRpc 读到的字段：action, chapter
  * @op outline.save — write／projectId 必填；handleRpc 读到的字段：outline, patch
- * @op outline.generate — write／projectId 必填；handleRpc 读到的字段：—
+ * @op outline.generate — write／projectId 必填；handleRpc 读到的字段：brief
  * @op map.sync — write／projectId 必填；handleRpc 读到的字段：—
  * @op map.save — write／projectId 必填；handleRpc 读到的字段：—
  * @op map.explain — write／projectId 必填；handleRpc 读到的字段：from, to

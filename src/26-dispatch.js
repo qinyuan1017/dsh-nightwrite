@@ -15,9 +15,7 @@
  * 没有做成 tab：这几段是流水线，前一步的输出是后一步的输入。做成 tab 之后
  * 「排队列」和「派人去写」之间就多了一次点击，而这一页本来是要一口气走完的。
  */
-function DispatchPage({
-  projectId, project, chapters, go, toast, onRefresh, refreshKey,
-}) {
+function DispatchPage({ projectId, project, chapters, go, toast, onRefresh, refreshKey }) {
   if (!projectId) return h(Empty, null, '还没有作品。建一本就能派单。')
   return h(
     'div',
@@ -26,16 +24,29 @@ function DispatchPage({
       'div',
       { className: 'nw-dispatch-lead' },
       h('h2', null, '派单'),
-      h('p', { className: 'nw-hint' },
-        '先写一张指令单说清这一章要什么，再看谁去写、写完回了什么。'),
+      h(
+        'p',
+        { className: 'nw-hint' },
+        '先写一张指令单说清这一章要什么，再看谁去写、写完回了什么。',
+      ),
     ),
     // 指令单 + 队列
     h(StudioPage, {
-      projectId, project, chapters, go, toast, onRefresh, bare: true,
+      projectId,
+      project,
+      chapters,
+      go,
+      toast,
+      onRefresh,
+      bare: true,
     }),
     // 岗位 + 工单 + 任务包
     h(PipelinePage, {
-      projectId, project, toast, onRefresh, refreshKey,
+      projectId,
+      project,
+      toast,
+      onRefresh,
+      refreshKey,
     }),
   )
 }

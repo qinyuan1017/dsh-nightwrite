@@ -41,7 +41,8 @@ async function collectFiles(dir, out = []) {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
       // 历史版本/回收站里的稿子是同一批内容的重复样本，会把密度算歪
-      if (entry.name === 'history' || entry.name === '.trash' || entry.name === 'node_modules') continue
+      if (entry.name === 'history' || entry.name === '.trash' || entry.name === 'node_modules')
+        continue
       await collectFiles(full, out)
     } else if (entry.isFile() && CORPUS_EXT.has(path.extname(entry.name).toLowerCase())) {
       // 备份文件不算
@@ -53,8 +54,8 @@ async function collectFiles(dir, out = []) {
 }
 
 function defaultCorpus() {
-  const root = process.env.NIGHTWRITE_ROOT
-    || path.join(os.homedir(), '.dsh', 'data', 'dsh-nightwrite')
+  const root =
+    process.env.NIGHTWRITE_ROOT || path.join(os.homedir(), '.dsh', 'data', 'dsh-nightwrite')
   return root
 }
 
@@ -104,23 +105,31 @@ const PROBES = {
   'meta-notice': '【提示】读者会喜欢这里。',
   'period-stutter': '他走了。他停了。他看了看。他坐下。他站起。他说。他笑。',
   'long-paragraph': '字'.repeat(260),
-  'micro-action-tic': '他点了点头。他摇了摇头。他皱了皱眉。他叹了口气。他深吸一口气。他抿了抿嘴。他捏了捏眉心。他揉了揉太阳穴。',
+  'micro-action-tic':
+    '他点了点头。他摇了摇头。他皱了皱眉。他叹了口气。他深吸一口气。他抿了抿嘴。他捏了捏眉心。他揉了揉太阳穴。',
   'stock-reaction': '心中一凛，瞳孔一缩，倒吸一口凉气，心中一凛，瞳孔一缩。',
   'action-list': '他先抬手，然后转身，接着迈步，最后停下，又回头。',
-  'abstract-summary': '一种说不出的感觉。难以言喻的滋味。莫名的烦躁。说不清道不明的情绪。无法形容的失落。',
-  'cliche-density': '空气仿佛凝固。时间静止。万籁俱寂。鸦雀无声。落针可闻。目光如炬。气势如虹。嘴角勾起。眼底闪过。' + '不由得。不由自主。'.repeat(3),
+  'abstract-summary':
+    '一种说不出的感觉。难以言喻的滋味。莫名的烦躁。说不清道不明的情绪。无法形容的失落。',
+  'cliche-density':
+    '空气仿佛凝固。时间静止。万籁俱寂。鸦雀无声。落针可闻。目光如炬。气势如虹。嘴角勾起。眼底闪过。' +
+    '不由得。不由自主。'.repeat(3),
   'metaphor-density': '像风一样，像雨一样，像刀一样，像火一样。',
-  'quote-emphasis': '所谓“成功”，所谓“努力”，所谓“命运”，所谓“选择”，所谓“爱”，所谓“恨”，所谓“生”，所谓“死”，所谓“光”，所谓“暗”，所谓“真”，所谓“假”。',
+  'quote-emphasis':
+    '所谓“成功”，所谓“努力”，所谓“命运”，所谓“选择”，所谓“爱”，所谓“恨”，所谓“生”，所谓“死”，所谓“光”，所谓“暗”，所谓“真”，所谓“假”。',
   'low-connective': '天亮了。他起身。推门。外面很冷。他缩手。回屋。'.repeat(30),
   'whitespace-mess': '他走了。   她来了。\n\n\n\n他又走了。',
   'reasoning-chain': '因为天下大雨，所以他没出门，于是他在家读书，因此他考中了。',
   'punctuation-mess': '他说！！真的吗？？不可能！！！',
-  'formulaic-parallel': '他要权力，要地位，要名声，要财富，要一切；他要权力，要地位，要名声，要财富，要一切；他要权力，要地位，要名声，要财富，要一切。',
-  overcompressed: '他，走了，然后，她，来了，接着，他，坐下，最后，他，沉默了，很久，很久，没有，说话，一直，等到，天黑。',
+  'formulaic-parallel':
+    '他要权力，要地位，要名声，要财富，要一切；他要权力，要地位，要名声，要财富，要一切；他要权力，要地位，要名声，要财富，要一切。',
+  overcompressed:
+    '他，走了，然后，她，来了，接着，他，坐下，最后，他，沉默了，很久，很久，没有，说话，一直，等到，天黑。',
   'degenerate-placeholder': '此处省略三千字。以下省略。待补。TODO。',
   'degenerate-punct-tail': '他走了----------------',
   'degenerate-repeat-punct': '他走了！！！！！！！！！！',
-  'degenerate-repeat-sent': '他把碗放下，抬头看了眼灰蒙蒙的天。\n他把碗放下，抬头看了眼灰蒙蒙的天。\n他把碗放下，抬头看了眼灰蒙蒙的天。',
+  'degenerate-repeat-sent':
+    '他把碗放下，抬头看了眼灰蒙蒙的天。\n他把碗放下，抬头看了眼灰蒙蒙的天。\n他把碗放下，抬头看了眼灰蒙蒙的天。',
 }
 
 function probeAlive(rule) {
@@ -138,7 +147,9 @@ async function main() {
   const json = args.includes('--json')
   const minIdx = args.indexOf('--min')
   const minChapters = minIdx >= 0 ? Number(args[minIdx + 1]) || 0 : 0
-  const positional = args.filter((a, i) => !a.startsWith('--') && !(minIdx >= 0 && i === minIdx + 1))
+  const positional = args.filter(
+    (a, i) => !a.startsWith('--') && !(minIdx >= 0 && i === minIdx + 1),
+  )
   const dir = positional[0] || defaultCorpus()
 
   const files = await collectFiles(dir)
@@ -221,13 +232,15 @@ async function main() {
       const alive = probeAlive(rule)
       if (alive === null) {
         verdict = 'NO-PROBE'
-        suggest = '样本里 0 命中，且这条规则没有探针文本可自检 → 补一条探针，否则无法判断是干净还是写坏了。'
+        suggest =
+          '样本里 0 命中，且这条规则没有探针文本可自检 → 补一条探针，否则无法判断是干净还是写坏了。'
       } else if (alive) {
         // 探针能命中 = 正则没问题 = 样本确实干净
         verdict = rule.severity === 'blocking' ? 'CLEAN' : 'SILENT'
-        suggest = rule.severity === 'blocking'
-          ? '探针能命中、样本 0 命中——硬拦在干净稿上本就该是 0，这条正常。'
-          : `探针能命中、但 ${chapters} 章真实稿子里 0 次。提示规则不说话就等于没写：要么这个毛病在中文网文里本来就罕见，要么阈值定得离谱。先确认它值不值得留。`
+        suggest =
+          rule.severity === 'blocking'
+            ? '探针能命中、样本 0 命中——硬拦在干净稿上本就该是 0，这条正常。'
+            : `探针能命中、但 ${chapters} 章真实稿子里 0 次。提示规则不说话就等于没写：要么这个毛病在中文网文里本来就罕见，要么阈值定得离谱。先确认它值不值得留。`
       } else {
         verdict = 'BROKEN'
         suggest = '探针文本本该命中却 0 命中 → 这条规则的正则写坏了，不是稿子的问题。'
@@ -254,7 +267,7 @@ async function main() {
       chaptersHit: acc.chaptersHit,
       coverage: round(coverage, 3),
       hits: acc.hits,
-      perKiloAvg: round(totalChars ? (acc.hits / (totalChars / 1000)) : 0, 3),
+      perKiloAvg: round(totalChars ? acc.hits / (totalChars / 1000) : 0, 3),
       p50: round(p50),
       p90: round(p90),
       p99: round(p99),
@@ -265,7 +278,16 @@ async function main() {
   }
 
   // 排序：会咬人的排前面。CLEAN 是正常状态，沉到最后。
-  const order = { BROKEN: 0, 'TOO-LOOSE': 1, NOISY: 2, 'TOO-STRICT': 3, SILENT: 4, 'NO-PROBE': 5, OK: 6, CLEAN: 7 }
+  const order = {
+    BROKEN: 0,
+    'TOO-LOOSE': 1,
+    NOISY: 2,
+    'TOO-STRICT': 3,
+    SILENT: 4,
+    'NO-PROBE': 5,
+    OK: 6,
+    CLEAN: 7,
+  }
   rows.sort((a, b) => (order[a.verdict] ?? 9) - (order[b.verdict] ?? 9) || b.coverage - a.coverage)
 
   const summary = {
@@ -276,7 +298,8 @@ async function main() {
     blocking: lint.RULES.filter((r) => r.severity === 'blocking').length,
     advisory: lint.RULES.filter((r) => r.severity !== 'blocking').length,
     // 需要动手的：正则坏了、硬拦太松、阈值吵。CLEAN/SILENT/OK 都不算问题。
-    problems: rows.filter((r) => ['BROKEN', 'TOO-LOOSE', 'NOISY', 'TOO-STRICT'].includes(r.verdict)).length,
+    problems: rows.filter((r) => ['BROKEN', 'TOO-LOOSE', 'NOISY', 'TOO-STRICT'].includes(r.verdict))
+      .length,
     silent: rows.filter((r) => r.verdict === 'SILENT').length,
     clean: rows.filter((r) => r.verdict === 'CLEAN').length,
     parseErrors,
@@ -306,8 +329,12 @@ async function main() {
     console.log(`\n有 ${bad.length} 条要改：`)
     for (const row of bad) {
       console.log(`\n[${row.verdict}] ${row.id} · ${row.label}`)
-      console.log(`  档位 ${row.severity}/${row.review}　阈值 ${row.threshold ?? '—'}${row.field !== '—' ? ` (${row.field})` : ''}`)
-      console.log(`  命中 ${row.chaptersHit}/${chapters} 章（覆盖 ${Math.round(row.coverage * 100)}%）　每千字 ${row.perKiloAvg}`)
+      console.log(
+        `  档位 ${row.severity}/${row.review}　阈值 ${row.threshold ?? '—'}${row.field !== '—' ? ` (${row.field})` : ''}`,
+      )
+      console.log(
+        `  命中 ${row.chaptersHit}/${chapters} 章（覆盖 ${Math.round(row.coverage * 100)}%）　每千字 ${row.perKiloAvg}`,
+      )
       console.log(`  分位 p50 ${row.p50} / p90 ${row.p90} / p99 ${row.p99} / max ${row.max}`)
       console.log(`  建议：${row.suggest}`)
     }

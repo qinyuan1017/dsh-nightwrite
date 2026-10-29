@@ -244,13 +244,27 @@ async function sendDispatch(dir, payload = {}, ctx = {}, options = {}) {
   if (payload.dryRun) return { dryRun: true, prompt, ticket }
 
   const controller = ctx?.get?.('sessionController')
-  if (!controller || (typeof controller.prompt !== 'function' && typeof controller.create !== 'function')) {
+  if (
+    !controller ||
+    (typeof controller.prompt !== 'function' && typeof controller.create !== 'function')
+  ) {
     await dispatch.markDeliveryFailed(dir, id, '宿主未提供会话服务（sessionController）')
     invalid('宿主未提供会话服务（sessionController），无法把派单发到对话')
   }
 
-  const isTarget = (row) => Boolean(row) && row.origin !== 'subagent' && !row.parentSessionId && row.agentAvailable !== false
-  const listOf = (listed) => (Array.isArray(listed) ? listed : (Array.isArray(listed?.items) ? listed.items : (Array.isArray(listed?.sessions) ? listed.sessions : [])))
+  const isTarget = (row) =>
+    Boolean(row) &&
+    row.origin !== 'subagent' &&
+    !row.parentSessionId &&
+    row.agentAvailable !== false
+  const listOf = (listed) =>
+    Array.isArray(listed)
+      ? listed
+      : Array.isArray(listed?.items)
+        ? listed.items
+        : Array.isArray(listed?.sessions)
+          ? listed.sessions
+          : []
 
   let sessionId = String(payload.sessionId ?? ticket.sessionId ?? '').trim()
   let created = false
@@ -268,7 +282,9 @@ async function sendDispatch(dir, payload = {}, ctx = {}, options = {}) {
     const listed = await controller.list({}, AbortSignal.timeout(15000)).catch(() => null)
     const items = listOf(listed).filter(isTarget)
     const workspacePath = String(payload.workspacePath ?? '').trim()
-    const sameCwd = workspacePath ? items.filter((row) => !row.cwd || String(row.cwd) === workspacePath) : items
+    const sameCwd = workspacePath
+      ? items.filter((row) => !row.cwd || String(row.cwd) === workspacePath)
+      : items
     candidates = (sameCwd.length ? sameCwd : items)
       .slice()
       .sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')))
@@ -311,7 +327,10 @@ async function sendDispatch(dir, payload = {}, ctx = {}, options = {}) {
       }))
       await run.dispose()
       const text = Array.isArray(output?.output)
-        ? output.output.map((block) => (block?.type === 'text' ? block.text : '')).join('\n').trim()
+        ? output.output
+            .map((block) => (block?.type === 'text' ? block.text : ''))
+            .join('\n')
+            .trim()
         : ''
       let settled = null
       if (text) {
@@ -332,7 +351,7 @@ async function sendDispatch(dir, payload = {}, ctx = {}, options = {}) {
         stopReason: output?.stopReason ?? '',
         diagnostic: output?.diagnostic ?? '',
         report: text,
-        ticket: settled ?? await dispatch.getDispatch(dir, id),
+        ticket: settled ?? (await dispatch.getDispatch(dir, id)),
         prompt,
       }
     } catch (error) {
@@ -362,14 +381,19 @@ async function sendDispatch(dir, payload = {}, ctx = {}, options = {}) {
  */
 async function sendToSession(dir, id, payload, ctx, ticket, prompt, handoff) {
   const { controller, sessionId, candidates, createSession } = handoff
-  const requestId = globalThis.crypto?.randomUUID?.() ?? `nw-${Date.now()}-${Math.random().toString(16).slice(2)}`
-  const deliver = (target) => controller.prompt({
-    requestId,
-    sessionId: target,
-    mode: 'queue',
-    content: [{ type: 'text', text: prompt }],
-    clientTimeZone: 'Asia/Shanghai',
-  }, AbortSignal.timeout(20000))
+  const requestId =
+    globalThis.crypto?.randomUUID?.() ?? `nw-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  const deliver = (target) =>
+    controller.prompt(
+      {
+        requestId,
+        sessionId: target,
+        mode: 'queue',
+        content: [{ type: 'text', text: prompt }],
+        clientTimeZone: 'Asia/Shanghai',
+      },
+      AbortSignal.timeout(20000),
+    )
 
   const failures = []
   const queue = [sessionId, ...candidates.filter((one) => one !== sessionId)]
@@ -501,10 +525,17 @@ async function handleRpcCore(op, payload, ctx, options, root) {
       }
       let meta
       try {
-        meta = await store.saveChapter(root, projectId, payload.chapter, payload.text, payload.meta ?? {}, {
-          expectRev: payload.expectRev,
-          by: String(payload.by ?? ''),
-        })
+        meta = await store.saveChapter(
+          root,
+          projectId,
+          payload.chapter,
+          payload.text,
+          payload.meta ?? {},
+          {
+            expectRev: payload.expectRev,
+            by: String(payload.by ?? ''),
+          },
+        )
       } catch (error) {
         if (error?.code === 'conflict') {
           throw new RpcError(error.message, 'conflict', error.details ?? null)
@@ -668,7 +699,15 @@ async function handleRpcCore(op, payload, ctx, options, root) {
 
     case 'review.action': {
       const projectId = needProjectId(payload)
-      return { meta: await store.reviewAction(root, projectId, String(payload.action ?? ''), payload.chapter, payload) }
+      return {
+        meta: await store.reviewAction(
+          root,
+          projectId,
+          String(payload.action ?? ''),
+          payload.chapter,
+          payload,
+        ),
+      }
     }
 
     // ── 大纲 ────────────────────────────────────────────────
@@ -679,12 +718,35 @@ async function handleRpcCore(op, payload, ctx, options, root) {
 
     case 'outline.save': {
       const projectId = needProjectId(payload)
-      return { outline: await store.saveOutline(root, projectId, payload.outline ?? payload.patch ?? payload) }
+      return {
+        outline: await store.saveOutline(
+          root,
+          projectId,
+          payload.outline ?? payload.patch ?? payload,
+        ),
+      }
     }
 
     case 'outline.generate': {
       const projectId = needProjectId(payload)
-      return { outline: await store.generateOutline(root, projectId, payload) }
+      // brief 只认对象。传字符串 / 数组不报错也不乱写：当成「不改方案，只按现有 brief 重铺骨架」，
+      // 由 store 的 normalizeBrief 兜住 —— 作者手滑一次不该把整份骨架冲掉。
+      const brief =
+        payload.brief && typeof payload.brief === 'object' && !Array.isArray(payload.brief)
+          ? payload.brief
+          : undefined
+      const outline = await store.generateOutline(root, projectId, brief ? { brief } : {})
+      const chapters = outline.volumes.reduce((n, vol) => n + (vol.chapters?.length ?? 0), 0)
+      // 回信封比回整份 outline 多三样：几卷、几章、每一回的意图索引。
+      // 界面靠它们直接报「生成了 X 卷 Y 章」，不用自己再数一遍数组。
+      return {
+        outline,
+        brief: outline.brief,
+        volumes: outline.volumes.length,
+        chapters,
+        intents: store.outlineIntents(outline),
+        file: 'outline.json',
+      }
     }
 
     case 'outline.intent': {
@@ -905,7 +967,11 @@ async function handleRpcCore(op, payload, ctx, options, root) {
         ...result,
         chapter,
         custom: customHits,
-        lexicon: { total: lexicon.items.length, custom: custom.length, disabled: lexicon.disabled.length },
+        lexicon: {
+          total: lexicon.items.length,
+          custom: custom.length,
+          disabled: lexicon.disabled.length,
+        },
       }
     }
 
@@ -964,11 +1030,16 @@ async function handleRpcCore(op, payload, ctx, options, root) {
         chapters: Number(payload.chapters) || 0,
         chapterWords: Number(payload.chapterWords) || 0,
         model: String(payload.model ?? ''),
-        contextFactor: payload.contextFactor === undefined ? undefined : Number(payload.contextFactor),
+        contextFactor:
+          payload.contextFactor === undefined ? undefined : Number(payload.contextFactor),
       })
     }
     case 'usage.models': {
-      return { prices: usage.DEFAULT_PRICES, charsPerToken: usage.CHARS_PER_TOKEN, models: Object.keys(usage.DEFAULT_PRICES) }
+      return {
+        prices: usage.DEFAULT_PRICES,
+        charsPerToken: usage.CHARS_PER_TOKEN,
+        models: Object.keys(usage.DEFAULT_PRICES),
+      }
     }
 
     // 派单能力自检：宿主支不支持 spawn、哪个岗位派下去它有什么工具。
@@ -995,21 +1066,25 @@ async function handleRpcCore(op, payload, ctx, options, root) {
         })
       }
       // 分数与结论本身也留一条：下次想知道「三个月前冷读给几分」有据可查
-      const summary = await opinions.saveOpinion(root, projectId, {
-        chapter: Number(items[0]?.chapter ?? payload.chapter ?? 0) || 0,
-        para: 0,
-        source: 'coldread',
-        role: 'nightwrite-reader-proxy',
-        kind: 'note',
-        status: 'open',
-        severity: 'note',
-        text: `冷读结论：${Number.isFinite(score) ? `${score} 分` : '未给分'}${verdict ? ` · ${verdict}` : ''}${pkg ? `（${pkg}）` : ''}`,
-        createdBy: 'coldread',
-      }).catch(() => null)
+      const summary = await opinions
+        .saveOpinion(root, projectId, {
+          chapter: Number(items[0]?.chapter ?? payload.chapter ?? 0) || 0,
+          para: 0,
+          source: 'coldread',
+          role: 'nightwrite-reader-proxy',
+          kind: 'note',
+          status: 'open',
+          severity: 'note',
+          text: `冷读结论：${Number.isFinite(score) ? `${score} 分` : '未给分'}${verdict ? ` · ${verdict}` : ''}${pkg ? `（${pkg}）` : ''}`,
+          createdBy: 'coldread',
+        })
+        .catch(() => null)
       return {
         score: Number.isFinite(score) ? score : null,
         verdict,
-        pooled: pooled ? { added: pooled.added, skipped: pooled.skipped.length } : { added: 0, skipped: 0 },
+        pooled: pooled
+          ? { added: pooled.added, skipped: pooled.skipped.length }
+          : { added: 0, skipped: 0 },
         summary: summary?.item ?? null,
         counts: (await opinions.listOpinions(root, projectId)).counts,
       }
@@ -1029,7 +1104,8 @@ async function handleRpcCore(op, payload, ctx, options, root) {
     case 'proposal.decide': {
       const projectId = needProjectId(payload)
       const action = String(payload.action ?? '').trim()
-      if (action !== 'accept' && action !== 'reject') invalid('proposal.decide 的 action 只能是 accept / reject')
+      if (action !== 'accept' && action !== 'reject')
+        invalid('proposal.decide 的 action 只能是 accept / reject')
       return store.decideProposal(root, projectId, String(payload.id ?? ''), action, payload)
     }
 
@@ -1056,7 +1132,12 @@ async function handleRpcCore(op, payload, ctx, options, root) {
 
     case 'problem.resolve': {
       const projectId = needProjectId(payload)
-      return store.resolveProblem(root, projectId, String(payload.id ?? ''), String(payload.status ?? 'fixed'))
+      return store.resolveProblem(
+        root,
+        projectId,
+        String(payload.id ?? ''),
+        String(payload.status ?? 'fixed'),
+      )
     }
 
     case 'problem.remove': {
@@ -1174,9 +1255,10 @@ async function handleRpcCore(op, payload, ctx, options, root) {
       return {
         ...result,
         chapter,
-        verdict: result.total === 0
-          ? '没看出模型跑偏的迹象，可以继续写下一章。'
-          : `有 ${result.total} 处像是模型跑偏了（复读/截断/占位语）。这类问题逐句修不好，直接重跑这一章更省事。`,
+        verdict:
+          result.total === 0
+            ? '没看出模型跑偏的迹象，可以继续写下一章。'
+            : `有 ${result.total} 处像是模型跑偏了（复读/截断/占位语）。这类问题逐句修不好，直接重跑这一章更省事。`,
       }
     }
 
@@ -1206,18 +1288,22 @@ async function handleRpcCore(op, payload, ctx, options, root) {
       const got = await store.getChapter(root, projectId, chapter)
       const body = payload.text !== undefined ? String(payload.text ?? '') : String(got?.text ?? '')
       const outline = await store.getOutline(root, projectId)
-      const vol = (outline?.volumes ?? []).find((v) => (v.chapters ?? []).some((c) => Number(c.chapter) === chapter))
+      const vol = (outline?.volumes ?? []).find((v) =>
+        (v.chapters ?? []).some((c) => Number(c.chapter) === chapter),
+      )
       const node = vol ? (vol.chapters ?? []).find((c) => Number(c.chapter) === chapter) : null
       const parts = node ? [node.title, node.summary, node.hook].filter(Boolean) : []
       const result = outlinecopy.findOutlineCopy(body, parts, { minChars: payload.minChars })
-      return { chapter, ...result, verdict: outlinecopy.judge(result, { warnChars: payload.warnChars }) }
+      return {
+        chapter,
+        ...result,
+        verdict: outlinecopy.judge(result, { warnChars: payload.warnChars }),
+      }
     }
 
     case 'wordcount.check': {
       // 字数口径单点：界面「实时字数」和章节清单都走这里，避免两处各算一套。
-      const text = payload.text !== undefined
-        ? String(payload.text ?? '')
-        : ''
+      const text = payload.text !== undefined ? String(payload.text ?? '') : ''
       if (!text && payload.projectId && payload.chapter) {
         const projectId = needProjectId(payload)
         const got = await store.getChapter(root, projectId, Number(payload.chapter))
@@ -1228,9 +1314,7 @@ async function handleRpcCore(op, payload, ctx, options, root) {
 
     case 'lint.check': {
       // 两种入参：直接给 text，或给 projectId+chapter 读盘上的正文。
-      const text = payload.text !== undefined
-        ? String(payload.text ?? '')
-        : ''
+      const text = payload.text !== undefined ? String(payload.text ?? '') : ''
       let body = text
       let chapter = Number(payload.chapter ?? 0) || 0
       if (!body && payload.projectId && chapter) {
@@ -1241,7 +1325,8 @@ async function handleRpcCore(op, payload, ctx, options, root) {
       }
       // 这本书量过就用它自己的阈值；没量过就走全局。
       // 手动传 thresholds 优先级最高，方便界面「试试别的阈值会怎样」。
-      let thresholds = payload.thresholds && typeof payload.thresholds === 'object' ? payload.thresholds : null
+      let thresholds =
+        payload.thresholds && typeof payload.thresholds === 'object' ? payload.thresholds : null
       if (!thresholds && payload.projectId && payload.useCalibration !== false) {
         try {
           const own = await store.getCalibration(root, needProjectId(payload))
@@ -1375,9 +1460,10 @@ function sendJson(res, status, value) {
 }
 
 function sendError(res, error) {
-  const code = error instanceof RpcError || error instanceof store.StoreError
-    ? error.code ?? 'invalid'
-    : 'internal'
+  const code =
+    error instanceof RpcError || error instanceof store.StoreError
+      ? (error.code ?? 'invalid')
+      : 'internal'
   const message = error instanceof Error ? error.message : String(error)
   const details = error instanceof RpcError ? error.details : null
   const body = { ok: false, error: { code, message } }
@@ -1443,7 +1529,10 @@ export function createHandler(ctx = {}, options = {}) {
     const connection = options.connection ?? ctx?.get?.('connection')
     const rejection = guard(req, connection)
     if (rejection !== undefined) {
-      res.writeHead(rejection, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' })
+      res.writeHead(rejection, {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': 'no-store',
+      })
       res.end(rejection === 401 ? 'unauthorized' : 'forbidden')
       return
     }
@@ -1465,7 +1554,9 @@ export function createHandler(ctx = {}, options = {}) {
       // /book 是「把正文排成一本书」（给人读）。两者不共用一条路由，
       // 因为前者要目录结构，后者要的是干净的章节顺序与元信息。
       const projectId = String(url.searchParams.get('projectId') ?? '').trim()
-      const format = String(url.searchParams.get('format') ?? 'txt').trim().toLowerCase()
+      const format = String(url.searchParams.get('format') ?? 'txt')
+        .trim()
+        .toLowerCase()
       // 默认跳过被否掉的章：作者判它不算数，就不该出现在交出去的书里。
       // 想连否掉的草稿一起带走，传 skipRejected=0。
       const skipRejected = String(url.searchParams.get('skipRejected') ?? '1') !== '0'
@@ -1484,7 +1575,12 @@ export function createHandler(ctx = {}, options = {}) {
           if (skipRejected && String(row.status ?? '') === 'rejected') continue
           try {
             const got = await store.getChapter(root, projectId, row.chapter)
-            chapters.push({ chapter: row.chapter, title: row.title, status: row.status, text: got?.text ?? '' })
+            chapters.push({
+              chapter: row.chapter,
+              title: row.title,
+              status: row.status,
+              text: got?.text ?? '',
+            })
           } catch {
             // 单章读不出来不该让整本导不出——跳过并在头里记数
           }
@@ -1514,7 +1610,10 @@ export function createHandler(ctx = {}, options = {}) {
         return
       }
       try {
-        const { dir, files, count } = await store.collectProjectFiles(options.root ?? store.defaultRoot(), projectId)
+        const { dir, files, count } = await store.collectProjectFiles(
+          options.root ?? store.defaultRoot(),
+          projectId,
+        )
         const buffer = buildZip(files, { prefix: projectId })
         const name = `${projectId}-${new Date().toISOString().slice(0, 10)}.zip`
         res.writeHead(200, {
@@ -1532,12 +1631,18 @@ export function createHandler(ctx = {}, options = {}) {
       return
     }
     if (req.method !== 'POST') {
-      sendJson(res, 405, { ok: false, error: { code: 'invalid', message: `只支持 POST ${ROUTE}（GET /ping 与 /export 除外）` } })
+      sendJson(res, 405, {
+        ok: false,
+        error: { code: 'invalid', message: `只支持 POST ${ROUTE}（GET /ping 与 /export 除外）` },
+      })
       return
     }
     const contentType = String(req.headers?.['content-type'] ?? '').toLowerCase()
     if (!contentType.startsWith('application/json')) {
-      sendJson(res, 415, { ok: false, error: { code: 'invalid', message: 'content-type 必须是 application/json' } })
+      sendJson(res, 415, {
+        ok: false,
+        error: { code: 'invalid', message: 'content-type 必须是 application/json' },
+      })
       return
     }
     // 先看 Content-Length：声明就超了，把剩下的字节读干净再回 413。
@@ -1547,7 +1652,10 @@ export function createHandler(ctx = {}, options = {}) {
     if (Number.isFinite(declared) && declared > maxBody()) {
       await drain(req)
       res.setHeader('connection', 'close')
-      sendJson(res, 413, { ok: false, error: { code: 'invalid', message: `请求体超过 ${mbText(maxBody())}` } })
+      sendJson(res, 413, {
+        ok: false,
+        error: { code: 'invalid', message: `请求体超过 ${mbText(maxBody())}` },
+      })
       return
     }
     try {
@@ -1567,13 +1675,17 @@ export function createHandler(ctx = {}, options = {}) {
 }
 
 function safeSerialize(value) {
-  return JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (char) => ({
-    '<': '\\u003c',
-    '>': '\\u003e',
-    '&': '\\u0026',
-    '\u2028': '\\u2028',
-    '\u2029': '\\u2029',
-  }[char]))
+  return JSON.stringify(value).replace(
+    /[<>&\u2028\u2029]/g,
+    (char) =>
+      ({
+        '<': '\\u003c',
+        '>': '\\u003e',
+        '&': '\\u0026',
+        '\u2028': '\\u2028',
+        '\u2029': '\\u2029',
+      })[char],
+  )
 }
 
 /** 把 window.__NIGHTWRITE_BOOT__ 插到 </head> 前（幂等） */
@@ -1620,15 +1732,18 @@ export function mountRoute(ctx) {
 
     const effect = c.effect ?? ctx.effect
     if (typeof effect === 'function') {
-      effect(() => () => {
-        for (const dispose of disposers) {
-          try {
-            dispose()
-          } catch {
-            /* 已清理 */
+      effect(
+        () => () => {
+          for (const dispose of disposers) {
+            try {
+              dispose()
+            } catch {
+              /* 已清理 */
+            }
           }
-        }
-      }, 'nightwrite: route')
+        },
+        'nightwrite: route',
+      )
     }
   })
 }
@@ -1641,7 +1756,8 @@ const TOOL_DESCRIPTION = [
   '',
   '四个阶段各有一个入口：',
   '· 出方案：outline.get 看当前骨架；outline.save 整份写回（brief + volumes，每章 title/summary/hook）；',
-  '  outline.generate 按 brief 的 volumes × chaptersPerVolume 机械铺出骨架位置（不会替你编故事）；',
+  '  outline.generate 按 brief 的 volumes × chaptersPerVolume 机械铺出骨架位置（不会替你编故事），',
+  '  回信封带 volumes / chapters / intents / file，与界面「生成骨架」按钮同一份 outline.json；',
   '  outline.intent 取某一回该写成什么（意图 + 钩子），下笔前先调它。',
   '· 写正文：queue.add 排一章；chapter.get 取上一章尾巴续上；chapter.save 写回（纯文本，首行「第X回 标题」）。',
   '· 提改动：proposal.save 提 before/after（before 必须是正文里的逐字原文，对不上会被整条拒掉），',
@@ -1693,16 +1809,18 @@ export function createTool(root, pluginCtx = null) {
     description: TOOL_DESCRIPTION,
     parameters: {
       op: { type: 'string', required: true, description: `操作名，取值：${RPC_OPS.join(', ')}` },
-      payload: { type: 'object', description: '操作参数（projectId 必填，除 project.list / project.create / ping）' },
+      payload: {
+        type: 'object',
+        description: '操作参数（projectId 必填，除 project.list / project.create / ping）',
+      },
     },
     async execute(args = {}, exec = undefined) {
       // exec.agent 是「当前这个活着的父代理」。派子代理必须拿到它：
       // 宿主 startActivation 会校验 parent 就是 agents 注册表里那个实例。
-      const value = await handleRpc(
-        { op: args.op, payload: args.payload ?? {} },
-        pluginCtx ?? {},
-        { root, parent: exec?.agent },
-      )
+      const value = await handleRpc({ op: args.op, payload: args.payload ?? {} }, pluginCtx ?? {}, {
+        root,
+        parent: exec?.agent,
+      })
       return value
     },
   }
@@ -1713,7 +1831,9 @@ const DISPATCH_TOOL_DESCRIPTION = [
   '当用户说「派给架构师」「让审校查一下这一章」「叫读者代理看看」「开一轮审校」时用这个工具。',
   '',
   'role 取下列之一（带中文名，方便对上用户说法）：',
-  ...dispatch.roleCatalog().map((row) => `· ${row.id}（${row.label}）—— ${row.duty}；放行条件：${row.gate}`),
+  ...dispatch
+    .roleCatalog()
+    .map((row) => `· ${row.id}（${row.label}）—— ${row.duty}；放行条件：${row.gate}`),
   '',
   '参数：projectId 必填；task 写清「要它做什么」，不要写「你是某某」这种角色描述（手册里已经有了）；',
   'chapter 填章号（做某一章的事就填）；materials 可以贴正文片段或账本条目。',
@@ -1728,19 +1848,31 @@ export function createDispatchTool(root, pluginCtx = null) {
     description: DISPATCH_TOOL_DESCRIPTION,
     parameters: {
       projectId: { type: 'string', required: true, description: '作品 id（project.list 可取）' },
-      role: { type: 'string', required: true, description: `岗位 id，取值：${dispatch.ROLE_IDS.join(', ')}` },
-      task: { type: 'string', required: true, description: '要它做什么（一句话到一段话，写清交付物）' },
+      role: {
+        type: 'string',
+        required: true,
+        description: `岗位 id，取值：${dispatch.ROLE_IDS.join(', ')}`,
+      },
+      task: {
+        type: 'string',
+        required: true,
+        description: '要它做什么（一句话到一段话，写清交付物）',
+      },
       chapter: { type: 'number', description: '章号，做某一章的事时填' },
       materials: { type: 'string', description: '附带给它的材料：正文片段、账本条目、审校意见等' },
       extra: { type: 'object', description: '任务包额外材料（键值对，落盘到 pack 目录）' },
-      pack: { type: 'boolean', description: 'false = 不落材料包，材料直接写进任务书（不推荐，长书会撑爆）' },
+      pack: {
+        type: 'boolean',
+        description: 'false = 不落材料包，材料直接写进任务书（不推荐，长书会撑爆）',
+      },
       dryRun: { type: 'boolean', description: 'true = 只生成任务书不投递，用来预览' },
       send: { type: 'boolean', description: 'false = 只开票不投递（留档，之后可在界面点发送）' },
       sessionId: { type: 'string', description: '投递到哪个对话；不填则自动挑最近的普通会话' },
       workspaceId: { type: 'string', description: '没有可用会话时新建会话需要的工作区 id' },
       spawn: {
         type: 'string',
-        description: '\'auto\' 或 true = 优先派独立子代理（推荐）；\'only\' = 派不了就报错，不退回会话；不填 = 老路写会话',
+        description:
+          "'auto' 或 true = 优先派独立子代理（推荐）；'only' = 派不了就报错，不退回会话；不填 = 老路写会话",
       },
     },
     async execute(args = {}, exec = undefined) {
@@ -1769,7 +1901,11 @@ export function createDispatchTool(root, pluginCtx = null) {
         chapter: args.chapter,
       })
       if (args.send === false) {
-        return { ticket, sent: false, prompt: dispatch.buildDispatchPrompt(ticket, { repoRoot: REPO_ROOT }) }
+        return {
+          ticket,
+          sent: false,
+          prompt: dispatch.buildDispatchPrompt(ticket, { repoRoot: REPO_ROOT }),
+        }
       }
       return sendDispatch(
         dir,

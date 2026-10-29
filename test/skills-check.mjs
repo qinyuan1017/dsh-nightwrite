@@ -5,19 +5,43 @@ const ROOT = path.join(process.cwd(), 'skills')
 const REQUIRED = ['## 执行步骤', '## 输入', '## 输出格式', '## 检查清单', '## 禁止事项']
 
 const EXPECTED = [
-  'nightwrite-plan-novel','nightwrite-write-chapter','nightwrite-continuity-pass','nightwrite-de-ai-style',
-  'nightwrite-story-bible','nightwrite-revision-pass','nightwrite-style-distillation','nightwrite-quality-rubric',
-  'nightwrite-chapter-hook','nightwrite-dialogue-voice','nightwrite-foreshadow-ledger','nightwrite-character-state',
-  'nightwrite-context-memory','nightwrite-worldbuilding-bible','nightwrite-beat-sheet','nightwrite-character-arc',
-  'nightwrite-reader-persona','nightwrite-reader-report','nightwrite-drop-off-check','nightwrite-engagement-curve',
-  'nightwrite-comment-simulation','nightwrite-paywall-check','nightwrite-emotional-payoff','nightwrite-reader-question',
+  'nightwrite-plan-novel',
+  'nightwrite-write-chapter',
+  'nightwrite-continuity-pass',
+  'nightwrite-de-ai-style',
+  'nightwrite-story-bible',
+  'nightwrite-revision-pass',
+  'nightwrite-style-distillation',
+  'nightwrite-quality-rubric',
+  'nightwrite-chapter-hook',
+  'nightwrite-dialogue-voice',
+  'nightwrite-foreshadow-ledger',
+  'nightwrite-character-state',
+  'nightwrite-context-memory',
+  'nightwrite-worldbuilding-bible',
+  'nightwrite-beat-sheet',
+  'nightwrite-character-arc',
+  'nightwrite-reader-persona',
+  'nightwrite-reader-report',
+  'nightwrite-drop-off-check',
+  'nightwrite-engagement-curve',
+  'nightwrite-comment-simulation',
+  'nightwrite-paywall-check',
+  'nightwrite-emotional-payoff',
+  'nightwrite-reader-question',
   'nightwrite-reader-panel',
 ]
 
-let pass = 0, fail = 0
+let pass = 0,
+  fail = 0
 const rows = []
 function ok(name, cond, detail = '') {
-  if (cond) { pass += 1 } else { fail += 1; rows.push(`FAIL ${name}${detail ? ' — ' + detail : ''}`) }
+  if (cond) {
+    pass += 1
+  } else {
+    fail += 1
+    rows.push(`FAIL ${name}${detail ? ' — ' + detail : ''}`)
+  }
 }
 
 ok('技能总数 25', EXPECTED.length === 25, String(EXPECTED.length))
@@ -38,9 +62,15 @@ for (const skill of EXPECTED) {
     const nameVal = (body.match(/^name:\s*(\S+)/m) || [])[1]
     ok(`${skill} name 与目录名一致`, nameVal === skill, `name=${nameVal}`)
     const descBlock = body.match(/^description:\s*\|?\s*\n([\s\S]*)$/m)
-    ok(`${skill} frontmatter.description 存在且非空`, !!descBlock && descBlock[1].trim().length > 40)
+    ok(
+      `${skill} frontmatter.description 存在且非空`,
+      !!descBlock && descBlock[1].trim().length > 40,
+    )
     ok(`${skill} description 含触发词`, !!descBlock && /触发词/.test(descBlock[1]))
-    ok(`${skill} description 含「不要用」边界`, !!descBlock && /不要用|不许用|不要/.test(descBlock[1]))
+    ok(
+      `${skill} description 含「不要用」边界`,
+      !!descBlock && /不要用|不许用|不要/.test(descBlock[1]),
+    )
   }
 
   // 五个小节
@@ -50,23 +80,39 @@ for (const skill of EXPECTED) {
 
   // 禁止事项非空
   const banIdx = text.indexOf('## 禁止事项')
-  ok(`${skill} 禁止事项有内容`, banIdx > 0 && text.slice(banIdx).split('\n').filter((l) => l.trim().startsWith('- ')).length >= 4)
+  ok(
+    `${skill} 禁止事项有内容`,
+    banIdx > 0 &&
+      text
+        .slice(banIdx)
+        .split('\n')
+        .filter((l) => l.trim().startsWith('- ')).length >= 4,
+  )
 
   // 检查清单项数
   const chkIdx = text.indexOf('## 检查清单')
   const chkEnd = text.indexOf('## 禁止事项')
-  const boxes = text.slice(chkIdx, chkEnd).split('\n').filter((l) => l.trim().startsWith('- [ ]')).length
+  const boxes = text
+    .slice(chkIdx, chkEnd)
+    .split('\n')
+    .filter((l) => l.trim().startsWith('- [ ]')).length
   ok(`${skill} 检查清单 ≥6 项`, boxes >= 6, `实际 ${boxes}`)
 
   // 越权边界说明
-  ok(`${skill} 提到 nightwrite_op 或对应数据接口`, /nightwrite_op|ledger\.|chapter\.|outline\.|project\.|aistyle\./.test(text))
+  ok(
+    `${skill} 提到 nightwrite_op 或对应数据接口`,
+    /nightwrite_op|ledger\.|chapter\.|outline\.|project\.|aistyle\./.test(text),
+  )
 }
 
 // 交叉边界：每个技能都要声明「不做什么」
-ok('全部 25 个都有「不负责/不许」类边界句', EXPECTED.every((s) => {
-  const t = fs.readFileSync(path.join(ROOT, s, 'SKILL.md'), 'utf8')
-  return /不负责|不许|不要用/.test(t)
-}))
+ok(
+  '全部 25 个都有「不负责/不许」类边界句',
+  EXPECTED.every((s) => {
+    const t = fs.readFileSync(path.join(ROOT, s, 'SKILL.md'), 'utf8')
+    return /不负责|不许|不要用/.test(t)
+  }),
+)
 
 console.log(rows.join('\n'))
 console.log(`\n${pass} 过 / ${fail} 不过 · 共 ${pass + fail} 项 · 技能 ${EXPECTED.length} 个`)

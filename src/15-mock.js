@@ -26,31 +26,95 @@ const MOCK = {
   // 默认不显示，所以它不会骗人；留着是为了让人知道这两块长什么样。
   proposalsDemo: [
     {
-      id: 'demo-p1', chapter: 3, title: '删掉重复的「仿佛」', kind: 'rewrite', status: 'pending',
+      id: 'demo-p1',
+      chapter: 3,
+      title: '删掉重复的「仿佛」',
+      kind: 'rewrite',
+      status: 'pending',
       summary: '同一段里出现三次「仿佛」，AI 味重，建议删两处、改一处比喻。',
       diffs: [
-        { before: '雨声仿佛在耳边，仿佛很近，又仿佛很远。', after: '雨声在耳边，很近，又很远。', why: '连用三个「仿佛」是典型 AI 排比' },
-        { before: '她仿佛听见有人在喊她。', after: '她听见有人喊她。', why: '不确定语气削弱紧张感' },
+        {
+          before: '雨声仿佛在耳边，仿佛很近，又仿佛很远。',
+          after: '雨声在耳边，很近，又很远。',
+          why: '连用三个「仿佛」是典型 AI 排比',
+        },
+        {
+          before: '她仿佛听见有人在喊她。',
+          after: '她听见有人喊她。',
+          why: '不确定语气削弱紧张感',
+        },
       ],
     },
     {
-      id: 'demo-p2', chapter: 3, title: '把雨声改到段首', kind: 'patch', status: 'pending',
+      id: 'demo-p2',
+      chapter: 3,
+      title: '把雨声改到段首',
+      kind: 'patch',
+      status: 'pending',
       summary: '环境音提前，先给读者耳朵，再给画面。',
-      diffs: [{ before: '朱砂把伞往上抬了抬，雨珠顺着伞骨滑到袖口。', after: '雨珠顺着伞骨滑到袖口。朱砂把伞往上抬了抬。', why: '先声后人，开局更有代入' }],
+      diffs: [
+        {
+          before: '朱砂把伞往上抬了抬，雨珠顺着伞骨滑到袖口。',
+          after: '雨珠顺着伞骨滑到袖口。朱砂把伞往上抬了抬。',
+          why: '先声后人，开局更有代入',
+        },
+      ],
     },
     {
-      id: 'demo-p3', chapter: 5, title: '重写章末钩子', kind: 'patch', status: 'pending',
+      id: 'demo-p3',
+      chapter: 5,
+      title: '重写章末钩子',
+      kind: 'patch',
+      status: 'pending',
       summary: '现在的结尾把话说完了，读者没有翻页的理由。',
-      diffs: [{ before: '她转身走进雨里，再没有回头。', after: '她转身走进雨里。身后那人忽然喊了一声她的名字——喊得极轻。', why: '留一个未答的问题' }],
+      diffs: [
+        {
+          before: '她转身走进雨里，再没有回头。',
+          after: '她转身走进雨里。身后那人忽然喊了一声她的名字——喊得极轻。',
+          why: '留一个未答的问题',
+        },
+      ],
     },
   ],
 
   // 问题单：同理的演示行。
   problemsDemo: [
-    { id: 'demo-q1', chapter: 3, type: 'ai-style', severity: 'major', status: 'open', text: '连续三段都用「仿佛」，AI 味重', quote: '雨声仿佛在耳边' },
-    { id: 'demo-q2', chapter: 3, type: 'logic', severity: 'critical', status: 'open', text: '第 2 回说她没带伞，这一回伞从哪来的', quote: '朱砂把伞往上抬了抬' },
-    { id: 'demo-q3', chapter: 5, type: 'style', severity: 'minor', status: 'open', text: '「灵力」和「真气」混用，设定里只该有一个', quote: '金丹三层的灵力' },
-    { id: 'demo-q4', chapter: 7, type: 'other', severity: 'note', status: 'fixed', text: '章末少一个空行', quote: '' },
+    {
+      id: 'demo-q1',
+      chapter: 3,
+      type: 'ai-style',
+      severity: 'major',
+      status: 'open',
+      text: '连续三段都用「仿佛」，AI 味重',
+      quote: '雨声仿佛在耳边',
+    },
+    {
+      id: 'demo-q2',
+      chapter: 3,
+      type: 'logic',
+      severity: 'critical',
+      status: 'open',
+      text: '第 2 回说她没带伞，这一回伞从哪来的',
+      quote: '朱砂把伞往上抬了抬',
+    },
+    {
+      id: 'demo-q3',
+      chapter: 5,
+      type: 'style',
+      severity: 'minor',
+      status: 'open',
+      text: '「灵力」和「真气」混用，设定里只该有一个',
+      quote: '金丹三层的灵力',
+    },
+    {
+      id: 'demo-q4',
+      chapter: 7,
+      type: 'other',
+      severity: 'note',
+      status: 'fixed',
+      text: '章末少一个空行',
+      quote: '',
+    },
   ],
 }
 
@@ -78,13 +142,13 @@ function StatusLamp({ toast, run, verdict, project, chapters, go }) {
   const level = verdict?.level ?? (live ? 'green' : 'red')
 
   const text = !live
-    ? (run ? '这一轮已经停了' : '没开一轮')
+    ? run
+      ? '这一轮已经停了'
+      : '没开一轮'
     : run.status === 'waiting'
       ? `第 ${chapter} 回等确认`
       : `正在写第 ${chapter} 回`
-  const sub = target > 0
-    ? `${words}/${target} 字`
-    : `${done}/${max || '—'} 章`
+  const sub = target > 0 ? `${words}/${target} 字` : `${done}/${max || '—'} 章`
 
   return h(
     'button',
@@ -121,23 +185,32 @@ function DayBars({ days, target, toast }) {
       'div',
       { className: 'nw-days-head' },
       h('span', null, '近两周'),
-      h('span', { className: 'nw-hint' }, `达标 ${days.filter((row) => row.w >= target).length} 天 · 断更 ${days.filter((row) => row.w === 0).length} 天`),
+      h(
+        'span',
+        { className: 'nw-hint' },
+        `达标 ${days.filter((row) => row.w >= target).length} 天 · 断更 ${days.filter((row) => row.w === 0).length} 天`,
+      ),
     ),
     h(
       'div',
       { className: 'nw-days-bars' },
-      days.map((row) => h(
-        'button',
-        {
-          type: 'button',
-          key: row.d,
-          className: `nw-day${row.w === 0 ? ' nw-day-off' : row.w >= target ? ' nw-day-ok' : ''}`,
-          onClick: () => toast?.(`${row.d}：${row.w === 0 ? '没写' : `${row.w} 字`}`),
-          title: `${row.d} · ${row.w} 字`,
-        },
-        h('span', { className: 'nw-day-fill', style: { height: `${Math.max(4, (row.w / peak) * 100)}%` } }),
-        h('span', { className: 'nw-day-label' }, row.d.slice(3)),
-      )),
+      days.map((row) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            key: row.d,
+            className: `nw-day${row.w === 0 ? ' nw-day-off' : row.w >= target ? ' nw-day-ok' : ''}`,
+            onClick: () => toast?.(`${row.d}：${row.w === 0 ? '没写' : `${row.w} 字`}`),
+            title: `${row.d} · ${row.w} 字`,
+          },
+          h('span', {
+            className: 'nw-day-fill',
+            style: { height: `${Math.max(4, (row.w / peak) * 100)}%` },
+          }),
+          h('span', { className: 'nw-day-label' }, row.d.slice(3)),
+        ),
+      ),
     ),
     h('div', { className: 'nw-days-rule' }, h('span', null, `目标 ${target} 字/天`)),
   )
@@ -149,40 +222,64 @@ function ProgressTrack({ progress, volumes, toast }) {
   const pct = Math.min(100, (progress.words / progress.target) * 100)
   // 卷是可选输入：没大纲、或大纲还没生成时是空数组。
   // 以前这里直接 volumes[0].name，空数组会当场抛错把整页打白。
-  const vols = Array.isArray(volumes) && volumes.length
-    ? volumes
-    : [{ name: '全书', chapters: Math.max(1, Number(progress.total) || 1), done: Number(progress.chapter) || 0 }]
+  const vols =
+    Array.isArray(volumes) && volumes.length
+      ? volumes
+      : [
+          {
+            name: '全书',
+            chapters: Math.max(1, Number(progress.total) || 1),
+            done: Number(progress.chapter) || 0,
+          },
+        ]
   return h(
     'div',
     { className: 'nw-progress' },
     h(
       'div',
       { className: 'nw-progress-head' },
-      h('span', { className: 'nw-progress-num' }, `${fmtWords(progress.words)} / ${fmtWords(progress.target)} 字`),
-      h('span', { className: 'nw-progress-meta' }, `第 ${progress.chapter}/${progress.total} 回 · ${String(vols[0].name).split(' · ')[0]}`),
+      h(
+        'span',
+        { className: 'nw-progress-num' },
+        `${fmtWords(progress.words)} / ${fmtWords(progress.target)} 字`,
+      ),
+      h(
+        'span',
+        { className: 'nw-progress-meta' },
+        `第 ${progress.chapter}/${progress.total} 回 · ${String(vols[0].name).split(' · ')[0]}`,
+      ),
     ),
     h(
       'div',
       { className: 'nw-progress-track' },
-      vols.map((vol, index) => h(
-        'button',
-        {
-          type: 'button',
-          key: vol.name,
-          className: 'nw-progress-vol',
-          style: { flexGrow: vol.chapters },
-          onClick: () => toast?.(`${vol.name}：${vol.done}/${vol.chapters} 章已采纳`),
-          title: `${vol.name} · ${vol.done}/${vol.chapters}`,
-        },
-        h('span', { className: 'nw-progress-fill', style: { width: `${(vol.done / vol.chapters) * 100}%` } }),
-        index ? h('span', { className: 'nw-progress-sep' }) : null,
-        h('span', { className: 'nw-progress-name' }, vol.name.split(' · ')[1] || vol.name),
-      )),
+      vols.map((vol, index) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            key: vol.name,
+            className: 'nw-progress-vol',
+            style: { flexGrow: vol.chapters },
+            onClick: () => toast?.(`${vol.name}：${vol.done}/${vol.chapters} 章已采纳`),
+            title: `${vol.name} · ${vol.done}/${vol.chapters}`,
+          },
+          h('span', {
+            className: 'nw-progress-fill',
+            style: { width: `${(vol.done / vol.chapters) * 100}%` },
+          }),
+          index ? h('span', { className: 'nw-progress-sep' }) : null,
+          h('span', { className: 'nw-progress-name' }, vol.name.split(' · ')[1] || vol.name),
+        ),
+      ),
     ),
     h(
       'div',
       { className: 'nw-progress-foot' },
-      h('span', { className: 'nw-hint' }, `已完成 ${pct.toFixed(1)}% · 剩余约 ${Math.max(0, progress.total - progress.chapter)} 回`),
+      h(
+        'span',
+        { className: 'nw-hint' },
+        `已完成 ${pct.toFixed(1)}% · 剩余约 ${Math.max(0, progress.total - progress.chapter)} 回`,
+      ),
     ),
   )
 }
@@ -269,7 +366,10 @@ function CommandPalette({ projectId, onClose, go, toast }) {
   }, [hits, commands])
 
   // 光标只能停在可执行行上，跳过小标题。
-  const runnable = useMemo(() => rows.map((row, index) => (row.type === 'heading' ? -1 : index)).filter((i) => i >= 0), [rows])
+  const runnable = useMemo(
+    () => rows.map((row, index) => (row.type === 'heading' ? -1 : index)).filter((i) => i >= 0),
+    [rows],
+  )
 
   const runCmd = (item) => {
     if (!item) return
@@ -325,9 +425,10 @@ function CommandPalette({ projectId, onClose, go, toast }) {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault()
           const at = runnable.indexOf(cursor)
-          const next = event.key === 'ArrowDown'
-            ? runnable[Math.min(runnable.length - 1, Math.max(0, at) + (at < 0 ? 0 : 1))]
-            : runnable[Math.max(0, (at < 0 ? runnable.length : at) - 1)]
+          const next =
+            event.key === 'ArrowDown'
+              ? runnable[Math.min(runnable.length - 1, Math.max(0, at) + (at < 0 ? 0 : 1))]
+              : runnable[Math.max(0, (at < 0 ? runnable.length : at) - 1)]
           if (next !== undefined && next >= 0) setCursor(next)
         } else if (event.key === 'Enter') {
           event.preventDefault()
@@ -337,49 +438,71 @@ function CommandPalette({ projectId, onClose, go, toast }) {
     }),
     q.trim()
       ? h(
-        'div',
-        { className: 'nw-cmdk-scope' },
-        ['all', 'chapters', 'ledger', 'outline'].map((key) => h(
-          'button',
-          {
-            type: 'button',
-            key,
-            className: `nw-seg-btn${scope === key ? ' on' : ''}`,
-              'aria-pressed': scope === key ? 'true' : 'false',
-            onClick: () => setScope(key),
-          },
-          { all: '全部', chapters: '正文', ledger: '账本', outline: '大纲' }[key],
-        )),
-        searching ? h('span', { className: 'nw-hint' }, '搜索中…') : null,
-        truncated ? h('span', { className: 'nw-hint' }, '命中太多，只显示前 20 条') : null,
-      )
+          'div',
+          { className: 'nw-cmdk-scope' },
+          ['all', 'chapters', 'ledger', 'outline'].map((key) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                key,
+                className: `nw-seg-btn${scope === key ? ' on' : ''}`,
+                'aria-pressed': scope === key ? 'true' : 'false',
+                onClick: () => setScope(key),
+              },
+              { all: '全部', chapters: '正文', ledger: '账本', outline: '大纲' }[key],
+            ),
+          ),
+          searching ? h('span', { className: 'nw-hint' }, '搜索中…') : null,
+          truncated ? h('span', { className: 'nw-hint' }, '命中太多，只显示前 20 条') : null,
+        )
       : null,
     h(
       'div',
       { className: 'nw-cmdk-list' },
       rows.length
-        ? rows.map((row, index) => (row.type === 'heading'
-          ? h('div', { className: 'nw-cmdk-head', key: `h${index}` }, row.text)
-          : h(
-            'button',
-            {
-              type: 'button',
-              key: row.type === 'cmd' ? `c-${row.item.id}` : `s-${row.hit.kind}-${index}`,
-              className: `nw-cmdk-row${index === cursor ? ' on' : ''}${row.type === 'hit' ? ' nw-cmdk-hit' : ''}`,
-              onMouseEnter: () => setCursor(index),
-              onClick: () => run(row),
-            },
-            h('span', { className: 'nw-cmdk-icon' }, row.type === 'cmd' ? row.item.icon : (row.hit.kind === 'ledger' ? '📒' : row.hit.kind === 'outline' ? '📐' : '📄')),
-            h('span', { className: 'nw-cmdk-label' }, row.type === 'cmd'
-              ? row.item.label
-              : (row.hit.kind === 'chapter'
-                // 【12 条 #9】服务端现在回所有命中，还带 nth/count。
-                // 只显示「第 N 段」看不出这句在这章里出现了几次，补上「第 2/8 处」。
-                ? `第 ${row.hit.chapter} 回 · 第 ${(Number(row.hit.para) || 0) + 1} 段${Number(row.hit.count) > 1 ? ` · 第 ${row.hit.nth}/${row.hit.count} 处` : ''}`
-                : row.hit.title)),
-            h('span', { className: 'nw-cmdk-hint' }, row.type === 'cmd' ? row.item.hint : String(row.hit.quote ?? '').slice(0, 60)),
-            h('span', { className: 'nw-cmdk-go' }, '↵'),
-          )))
+        ? rows.map((row, index) =>
+            row.type === 'heading'
+              ? h('div', { className: 'nw-cmdk-head', key: `h${index}` }, row.text)
+              : h(
+                  'button',
+                  {
+                    type: 'button',
+                    key: row.type === 'cmd' ? `c-${row.item.id}` : `s-${row.hit.kind}-${index}`,
+                    className: `nw-cmdk-row${index === cursor ? ' on' : ''}${row.type === 'hit' ? ' nw-cmdk-hit' : ''}`,
+                    onMouseEnter: () => setCursor(index),
+                    onClick: () => run(row),
+                  },
+                  h(
+                    'span',
+                    { className: 'nw-cmdk-icon' },
+                    row.type === 'cmd'
+                      ? row.item.icon
+                      : row.hit.kind === 'ledger'
+                        ? '📒'
+                        : row.hit.kind === 'outline'
+                          ? '📐'
+                          : '📄',
+                  ),
+                  h(
+                    'span',
+                    { className: 'nw-cmdk-label' },
+                    row.type === 'cmd'
+                      ? row.item.label
+                      : row.hit.kind === 'chapter'
+                        ? // 【12 条 #9】服务端现在回所有命中，还带 nth/count。
+                          // 只显示「第 N 段」看不出这句在这章里出现了几次，补上「第 2/8 处」。
+                          `第 ${row.hit.chapter} 回 · 第 ${(Number(row.hit.para) || 0) + 1} 段${Number(row.hit.count) > 1 ? ` · 第 ${row.hit.nth}/${row.hit.count} 处` : ''}`
+                        : row.hit.title,
+                  ),
+                  h(
+                    'span',
+                    { className: 'nw-cmdk-hint' },
+                    row.type === 'cmd' ? row.item.hint : String(row.hit.quote ?? '').slice(0, 60),
+                  ),
+                  h('span', { className: 'nw-cmdk-go' }, '↵'),
+                ),
+          )
         : h(Empty, null, hits ? '没有匹配。' : '没有匹配的命令。'),
     ),
   )
@@ -399,20 +522,22 @@ function IntentChips({ onPick, toast, items }) {
     'div',
     { className: 'nw-chips' },
     h('span', { className: 'nw-chips-label' }, '最近用过'),
-    list.map((text, index) => h(
-      'button',
-      {
-        type: 'button',
-        key: index,
-        className: 'nw-chip',
-        title: text,
-        onClick: () => {
-          onPick?.(text)
-          toast?.('已填回最近第 ' + (index + 1) + ' 条意图')
+    list.map((text, index) =>
+      h(
+        'button',
+        {
+          type: 'button',
+          key: index,
+          className: 'nw-chip',
+          title: text,
+          onClick: () => {
+            onPick?.(text)
+            toast?.('已填回最近第 ' + (index + 1) + ' 条意图')
+          },
         },
-      },
-      `${index + 1}. ${text.slice(0, 16)}${text.length > 16 ? '…' : ''}`,
-    )),
+        `${index + 1}. ${text.slice(0, 16)}${text.length > 16 ? '…' : ''}`,
+      ),
+    ),
   )
 }
 
@@ -436,9 +561,7 @@ function heatTone(text, index, aiHits, issues) {
   return 'good'
 }
 
-function HeatStrip({
-  paragraphs, active, onPick, aiHits, issues,
-}) {
+function HeatStrip({ paragraphs, active, onPick, aiHits, issues }) {
   return h(
     'div',
     { className: 'nw-heat' },
@@ -446,17 +569,16 @@ function HeatStrip({
     h(
       'div',
       { className: 'nw-heat-track' },
-      paragraphs.map((para, index) => h(
-        'button',
-        {
+      paragraphs.map((para, index) =>
+        h('button', {
           type: 'button',
           key: index,
           className: `nw-heat-cell nw-heat-${heatTone(para, index, aiHits, issues)}${active === index ? ' on' : ''}`,
           style: { flexGrow: Math.max(1, Math.min(6, Math.ceil(String(para).length / 60))) },
           onClick: () => onPick?.(index),
           title: `第 ${index + 1} 段 · ${String(para).length} 字 · ${heatTone(para, index, aiHits, issues) === 'bad' ? 'AI 味重' : heatTone(para, index, aiHits, issues) === 'warn' ? '节奏拖' : '好段'}`,
-        },
-      )),
+        }),
+      ),
     ),
     h(
       'div',
@@ -479,9 +601,16 @@ function SourcePop({ source, onClose }) {
       onClose,
       footer: h(Btn, { kind: 'ghost', small: true, onClick: onClose }, '知道了'),
     },
-    h('div', { className: 'nw-source' },
+    h(
+      'div',
+      { className: 'nw-source' },
       h(Tag, { tone: 'amber' }, `第 ${source.chapter} 回`),
       h('p', { className: 'nw-source-quote' }, `「${source.quote}」`),
-      h('p', { className: 'nw-hint' }, '演示数据：真出处由 nightwrite_op 在写账本时一并记下 chapter + quote，点它就能跳回那一段。')),
+      h(
+        'p',
+        { className: 'nw-hint' },
+        '演示数据：真出处由 nightwrite_op 在写账本时一并记下 chapter + quote，点它就能跳回那一段。',
+      ),
+    ),
   )
 }

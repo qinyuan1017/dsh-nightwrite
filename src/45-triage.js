@@ -26,7 +26,10 @@ const PROBLEM_TONES = {
 }
 
 const SEVERITY_LABEL = {
-  critical: '致命', major: '重要', minor: '次要', note: '提示',
+  critical: '致命',
+  major: '重要',
+  minor: '次要',
+  note: '提示',
 }
 
 const PROBLEM_STATUS_LABEL = { open: '未修', fixed: '已修', ignored: '已忽略' }
@@ -41,25 +44,35 @@ function DiffRow({ diff, index }) {
     'div',
     { className: `nw-diff${stale ? ' nw-diff-stale' : ''}` },
     h('span', { className: 'nw-diff-n' }, String(index + 1).padStart(2, '0')),
-    pid ? h('span', { className: 'nw-diff-pid', title: stale ? '这一段已经对不上了' : '这条改动只动这一段' }, pid) : null,
+    pid
+      ? h(
+          'span',
+          { className: 'nw-diff-pid', title: stale ? '这一段已经对不上了' : '这条改动只动这一段' },
+          pid,
+        )
+      : null,
     stale ? h('span', { className: 'nw-diff-tag-stale' }, '对不上') : null,
     h(
       'div',
       { className: 'nw-diff-cols' },
-      h('div', { className: 'nw-diff-cell nw-diff-before' },
+      h(
+        'div',
+        { className: 'nw-diff-cell nw-diff-before' },
         h('span', { className: 'nw-diff-tag' }, '改前'),
-        h('p', null, diff.before || '（新增，原处为空）')),
-      h('div', { className: 'nw-diff-cell nw-diff-after' },
+        h('p', null, diff.before || '（新增，原处为空）'),
+      ),
+      h(
+        'div',
+        { className: 'nw-diff-cell nw-diff-after' },
         h('span', { className: 'nw-diff-tag' }, '改后'),
-        h('p', null, diff.after || '（删除这段）')),
+        h('p', null, diff.after || '（删除这段）'),
+      ),
     ),
     diff.why ? h('span', { className: 'nw-diff-why' }, diff.why) : null,
   )
 }
 
-function ProposalCard({
-  row, onDecide, onRemove, gate, busy, projectId, demo,
-}) {
+function ProposalCard({ row, onDecide, onRemove, gate, busy, projectId, demo }) {
   const [open, setOpen] = useState(false)
   const tone = PROPOSAL_TONE[row.status] ?? PROPOSAL_TONE.pending
   // 采纳前先问服务端：每条 before 在正文里出现几次。>1 就是「改了不该改的那一段」，
@@ -78,7 +91,11 @@ function ProposalCard({
       { type: 'button', className: 'nw-prop-head', onClick: () => setOpen(!open) },
       h('span', { className: 'nw-prop-n' }, `第 ${row.chapter} 回`),
       h('span', { className: 'nw-prop-title' }, row.title),
-      h(Tag, { tone: row.kind === 'rewrite' ? 'red' : 'grey' }, row.kind === 'rewrite' ? '整章重写' : `${row.diffs.length} 处替换`),
+      h(
+        Tag,
+        { tone: row.kind === 'rewrite' ? 'red' : 'grey' },
+        row.kind === 'rewrite' ? '整章重写' : `${row.diffs.length} 处替换`,
+      ),
       h(Tag, { tone: tone.tone }, tone.label),
       // 过期的条数直接摆在头上：点进去才发现对不上，等于白点。
       row.staleCount ? h(Tag, { tone: 'red' }, `过期 ${row.staleCount}`) : null,
@@ -88,27 +105,40 @@ function ProposalCard({
     row.hint ? h('p', { className: 'nw-prop-stale-hint' }, row.hint) : null,
     open
       ? h(
-        'div',
-        { className: 'nw-prop-body' },
-        risky.length
-          ? h(
-            'div',
-            { className: 'nw-prop-warn' },
-            h('span', { className: 'nw-prop-warn-icon' }, '⚠'),
-            h('span', null, `${risky.length} 处「改前」在正文里不唯一或找不到，采纳会改错位置：`),
-            h(
-              'ul',
-              { className: 'nw-prop-warn-list' },
-              risky.map((item) => h('li', { key: item.index },
-                `第 ${item.index + 1} 处 · ${item.missing ? '正文里找不到这句' : `正文里有 ${item.count} 处相同`} ·「${String(item.before ?? '').slice(0, 30)}」`)),
-            ),
-          )
-          : null,
-        row.diffs.map((diff, index) => h(DiffRow, { diff, index, key: index })),
-        row.status === 'accepted'
-          ? h('p', { className: 'nw-hint' }, `已写回正文：命中 ${row.applied ?? 0} 处${(row.missed ?? []).length ? `，未命中 ${row.missed.length} 处` : ''}`)
-          : null,
-      )
+          'div',
+          { className: 'nw-prop-body' },
+          risky.length
+            ? h(
+                'div',
+                { className: 'nw-prop-warn' },
+                h('span', { className: 'nw-prop-warn-icon' }, '⚠'),
+                h(
+                  'span',
+                  null,
+                  `${risky.length} 处「改前」在正文里不唯一或找不到，采纳会改错位置：`,
+                ),
+                h(
+                  'ul',
+                  { className: 'nw-prop-warn-list' },
+                  risky.map((item) =>
+                    h(
+                      'li',
+                      { key: item.index },
+                      `第 ${item.index + 1} 处 · ${item.missing ? '正文里找不到这句' : `正文里有 ${item.count} 处相同`} ·「${String(item.before ?? '').slice(0, 30)}」`,
+                    ),
+                  ),
+                ),
+              )
+            : null,
+          row.diffs.map((diff, index) => h(DiffRow, { diff, index, key: index })),
+          row.status === 'accepted'
+            ? h(
+                'p',
+                { className: 'nw-hint' },
+                `已写回正文：命中 ${row.applied ?? 0} 处${(row.missed ?? []).length ? `，未命中 ${row.missed.length} 处` : ''}`,
+              )
+            : null,
+        )
       : null,
     h(
       'div',
@@ -117,12 +147,34 @@ function ProposalCard({
       h(
         'div',
         { className: 'nw-actions' },
-        h(Btn, { small: true, kind: 'danger', onClick: () => onRemove(row), disabled: busy }, '删除'),
+        h(
+          Btn,
+          { small: true, kind: 'danger', onClick: () => onRemove(row), disabled: busy },
+          '删除',
+        ),
         row.status === 'pending'
-          ? h(Btn, { small: true, kind: 'ghost', onClick: () => onDecide(row, 'reject'), disabled: busy }, '✕ 驳回')
+          ? h(
+              Btn,
+              {
+                small: true,
+                kind: 'ghost',
+                onClick: () => onDecide(row, 'reject'),
+                disabled: busy,
+              },
+              '✕ 驳回',
+            )
           : null,
         row.status === 'pending'
-          ? h(Btn, { small: true, kind: 'primary', onClick: () => onDecide(row, 'accept'), disabled: busy }, '✓ 采纳并写回')
+          ? h(
+              Btn,
+              {
+                small: true,
+                kind: 'primary',
+                onClick: () => onDecide(row, 'accept'),
+                disabled: busy,
+              },
+              '✓ 采纳并写回',
+            )
           : null,
       ),
     ),
@@ -130,7 +182,9 @@ function ProposalCard({
 }
 
 function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
-  const res = useAsync(() => api('proposal.list', { projectId }), [projectId, refreshKey], { skip: !projectId })
+  const res = useAsync(() => api('proposal.list', { projectId }), [projectId, refreshKey], {
+    skip: !projectId,
+  })
   const [filter, setFilter] = useState('pending')
   // 【24 条 #16】按章收拢 + 批量处理：AI 一次提二十条，逐条点等于加班。
   const [chapterFilter, setChapterFilter] = useState(0)
@@ -148,8 +202,9 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
   const demo = realItems.length === 0 && showDemo
   const items = demo ? MOCK.proposalsDemo : realItems
   const allChapters = Array.from(new Set(items.map((row) => row.chapter))).sort((a, b) => a - b)
-  const rows = (filter === 'all' ? items : items.filter((row) => row.status === filter))
-    .filter((row) => (chapterFilter ? row.chapter === chapterFilter : true))
+  const rows = (filter === 'all' ? items : items.filter((row) => row.status === filter)).filter(
+    (row) => (chapterFilter ? row.chapter === chapterFilter : true),
+  )
   const pendingRows = rows.filter((row) => row.status === 'pending')
 
   // 【24 条 #16】按章分组：提案一多就是一堵墙，先按章折叠。
@@ -168,7 +223,9 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
 
   const decide = async (row, action) => {
     if (demo) {
-      toast(`演示：第 ${row.chapter} 回「${row.title}」${action === 'accept' ? '已采纳（未写盘）' : '已驳回（未写盘）'}`)
+      toast(
+        `演示：第 ${row.chapter} 回「${row.title}」${action === 'accept' ? '已采纳（未写盘）' : '已驳回（未写盘）'}`,
+      )
       return
     }
     setBusy(true)
@@ -195,7 +252,9 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
       return
     }
     if (demo) {
-      toast(`演示：${pendingRows.length} 条提案已${action === 'accept' ? '全采纳' : '全驳回'}（未写盘）`)
+      toast(
+        `演示：${pendingRows.length} 条提案已${action === 'accept' ? '全采纳' : '全驳回'}（未写盘）`,
+      )
       return
     }
     setBusy(true)
@@ -251,33 +310,41 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
         h(
           'div',
           { className: 'nw-seg' },
-          FILTERS.map((item) => h(
-            'button',
-            {
-              type: 'button',
-              key: item.value,
-              className: `nw-seg-btn${filter === item.value ? ' on' : ''}`,
-              'aria-pressed': filter === item.value ? 'true' : 'false',
-              onClick: () => setFilter(item.value),
-            },
-            item.label,
-            h('span', { className: 'nw-seg-n' }, String(
-              item.value === 'all' ? items.length : items.filter((row) => row.status === item.value).length,
-            )),
-          )),
+          FILTERS.map((item) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                key: item.value,
+                className: `nw-seg-btn${filter === item.value ? ' on' : ''}`,
+                'aria-pressed': filter === item.value ? 'true' : 'false',
+                onClick: () => setFilter(item.value),
+              },
+              item.label,
+              h(
+                'span',
+                { className: 'nw-seg-n' },
+                String(
+                  item.value === 'all'
+                    ? items.length
+                    : items.filter((row) => row.status === item.value).length,
+                ),
+              ),
+            ),
+          ),
         ),
         // 【24 条 #16】按章筛选
         allChapters.length > 1
           ? h(Select, {
-            value: String(chapterFilter),
-            onChange: (v) => setChapterFilter(Number(v) || 0),
-            options: [{ value: '0', label: `全部章（${items.length}）` }].concat(
-              allChapters.map((n) => ({
-                value: String(n),
-                label: `第 ${n} 回（${items.filter((row) => row.chapter === n).length}）`,
-              })),
-            ),
-          })
+              value: String(chapterFilter),
+              onChange: (v) => setChapterFilter(Number(v) || 0),
+              options: [{ value: '0', label: `全部章（${items.length}）` }].concat(
+                allChapters.map((n) => ({
+                  value: String(n),
+                  label: `第 ${n} 回（${items.filter((row) => row.chapter === n).length}）`,
+                })),
+              ),
+            })
           : null,
       ),
       h(
@@ -285,66 +352,119 @@ function ProposalBoard({ projectId, gate, toast, onRefresh, refreshKey }) {
         { className: 'nw-actions' },
         realItems.length === 0
           ? h(
-            'button',
-            {
-              type: 'button',
-              className: `nw-demo-sw${showDemo ? ' on' : ''}`,
-              'aria-pressed': showDemo ? 'true' : 'false',
-              onClick: () => {
-                setShowDemo(!showDemo)
-                toast(showDemo ? '已收起样例，回到你自己稿子的真实状态' : '现在看到的是样例：3 条假提案，采纳不会改你的稿子')
+              'button',
+              {
+                type: 'button',
+                className: `nw-demo-sw${showDemo ? ' on' : ''}`,
+                'aria-pressed': showDemo ? 'true' : 'false',
+                onClick: () => {
+                  setShowDemo(!showDemo)
+                  toast(
+                    showDemo
+                      ? '已收起样例，回到你自己稿子的真实状态'
+                      : '现在看到的是样例：3 条假提案，采纳不会改你的稿子',
+                  )
+                },
               },
-            },
-            showDemo ? '样例开着 · 点它收起' : '看样例（3 条假提案）',
-          )
+              showDemo ? '样例开着 · 点它收起' : '看样例（3 条假提案）',
+            )
           : null,
-        h(Btn, { small: true, kind: 'primary', onClick: () => decideAll('accept'), disabled: busy || !pendingRows.length }, `✓ 全采纳 ${pendingRows.length || ''}`.trim()),
-        h(Btn, { small: true, kind: 'ghost', onClick: () => decideAll('reject'), disabled: busy || !pendingRows.length }, `✕ 全驳回 ${pendingRows.length || ''}`.trim()),
-        h(Btn, {
-          small: true,
-          kind: 'ghost',
-          onClick: () => {
-            const next = {}
-            groups.forEach(([n]) => { next[n] = true })
-            setFolded(next)
-            toast('已按章折叠，点章头展开')
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'primary',
+            onClick: () => decideAll('accept'),
+            disabled: busy || !pendingRows.length,
           },
-        }, '⊟ 全部折叠'),
+          `✓ 全采纳 ${pendingRows.length || ''}`.trim(),
+        ),
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'ghost',
+            onClick: () => decideAll('reject'),
+            disabled: busy || !pendingRows.length,
+          },
+          `✕ 全驳回 ${pendingRows.length || ''}`.trim(),
+        ),
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'ghost',
+            onClick: () => {
+              const next = {}
+              groups.forEach(([n]) => {
+                next[n] = true
+              })
+              setFolded(next)
+              toast('已按章折叠，点章头展开')
+            },
+          },
+          '⊟ 全部折叠',
+        ),
       ),
     ),
     rows.length
-      ? h('div', { className: 'nw-prop-list' }, groups.map(([n, groupRows]) => (folded[n]
-        ? h(
-          'button',
-          {
-            type: 'button',
-            key: `fold-${n}`,
-            className: 'nw-prop-fold',
-            onClick: () => setFolded({ ...folded, [n]: false }),
-          },
-          h('span', { className: 'nw-prop-fold-n' }, `第 ${n} 回`),
-          h('span', { className: 'nw-hint' }, `${groupRows.length} 条提案 · 待批 ${groupRows.filter((row) => row.status === 'pending').length} · 点章头展开`),
-          h('span', { className: 'nw-prop-go' }, '▸'),
-        )
-        : h(
+      ? h(
           'div',
-          { className: 'nw-prop-group', key: `group-${n}` },
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'nw-prop-group-head',
-              onClick: () => setFolded({ ...folded, [n]: true }),
-            },
-            h('span', { className: 'nw-prop-fold-n' }, `第 ${n} 回`),
-            h('span', { className: 'nw-hint' }, `${groupRows.length} 条`),
-            h('span', { className: 'nw-prop-go' }, '▾'),
+          { className: 'nw-prop-list' },
+          groups.map(([n, groupRows]) =>
+            folded[n]
+              ? h(
+                  'button',
+                  {
+                    type: 'button',
+                    key: `fold-${n}`,
+                    className: 'nw-prop-fold',
+                    onClick: () => setFolded({ ...folded, [n]: false }),
+                  },
+                  h('span', { className: 'nw-prop-fold-n' }, `第 ${n} 回`),
+                  h(
+                    'span',
+                    { className: 'nw-hint' },
+                    `${groupRows.length} 条提案 · 待批 ${groupRows.filter((row) => row.status === 'pending').length} · 点章头展开`,
+                  ),
+                  h('span', { className: 'nw-prop-go' }, '▸'),
+                )
+              : h(
+                  'div',
+                  { className: 'nw-prop-group', key: `group-${n}` },
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'nw-prop-group-head',
+                      onClick: () => setFolded({ ...folded, [n]: true }),
+                    },
+                    h('span', { className: 'nw-prop-fold-n' }, `第 ${n} 回`),
+                    h('span', { className: 'nw-hint' }, `${groupRows.length} 条`),
+                    h('span', { className: 'nw-prop-go' }, '▾'),
+                  ),
+                  groupRows.map((row) =>
+                    h(ProposalCard, {
+                      key: row.id,
+                      row,
+                      gate,
+                      busy,
+                      projectId,
+                      demo,
+                      onDecide: decide,
+                      onRemove: remove,
+                    }),
+                  ),
+                ),
           ),
-          groupRows.map((row) => h(ProposalCard, {
-            key: row.id, row, gate, busy, projectId, demo, onDecide: decide, onRemove: remove,
-          })),
-        ))))
-      : h(Empty, null, filter === 'pending' ? '没有待批提案。AI 交稿后会用 nightwrite_op 的 proposal.save 提上来。' : '这个状态下没有提案。'),
+        )
+      : h(
+          Empty,
+          null,
+          filter === 'pending'
+            ? '没有待批提案。AI 交稿后会用 nightwrite_op 的 proposal.save 提上来。'
+            : '这个状态下没有提案。',
+        ),
   )
 }
 
@@ -358,24 +478,52 @@ function ProblemRow({ row, onStatus, onRemove, busy, onOpen }) {
       { type: 'button', className: 'nw-prob-main', onClick: () => onOpen(row) },
       h('span', { className: 'nw-prob-n' }, `第 ${row.chapter} 回`),
       h(Tag, { tone: tone.tone }, tone.label),
-      h(Tag, { tone: row.severity === 'critical' ? 'red' : 'grey' }, SEVERITY_LABEL[row.severity] ?? row.severity),
+      h(
+        Tag,
+        { tone: row.severity === 'critical' ? 'red' : 'grey' },
+        SEVERITY_LABEL[row.severity] ?? row.severity,
+      ),
       h('span', { className: 'nw-prob-text' }, row.text),
-      h(Tag, { tone: PROBLEM_STATUS_TONE[row.status] ?? 'grey' }, PROBLEM_STATUS_LABEL[row.status] ?? row.status),
+      h(
+        Tag,
+        { tone: PROBLEM_STATUS_TONE[row.status] ?? 'grey' },
+        PROBLEM_STATUS_LABEL[row.status] ?? row.status,
+      ),
     ),
     row.quote ? h('span', { className: 'nw-prob-quote' }, `「${row.quote}」`) : null,
     h(
       'span',
       { className: 'nw-prob-acts' },
-      row.status !== 'fixed' ? h(Btn, { small: true, kind: 'primary', onClick: () => onStatus(row, 'fixed'), disabled: busy }, '✓ 已修') : null,
-      row.status !== 'open' ? h(Btn, { small: true, kind: 'ghost', onClick: () => onStatus(row, 'open'), disabled: busy }, '↺ 重开') : null,
-      row.status !== 'ignored' ? h(Btn, { small: true, kind: 'ghost', onClick: () => onStatus(row, 'ignored'), disabled: busy }, '忽略') : null,
+      row.status !== 'fixed'
+        ? h(
+            Btn,
+            { small: true, kind: 'primary', onClick: () => onStatus(row, 'fixed'), disabled: busy },
+            '✓ 已修',
+          )
+        : null,
+      row.status !== 'open'
+        ? h(
+            Btn,
+            { small: true, kind: 'ghost', onClick: () => onStatus(row, 'open'), disabled: busy },
+            '↺ 重开',
+          )
+        : null,
+      row.status !== 'ignored'
+        ? h(
+            Btn,
+            { small: true, kind: 'ghost', onClick: () => onStatus(row, 'ignored'), disabled: busy },
+            '忽略',
+          )
+        : null,
       h(Btn, { small: true, kind: 'danger', onClick: () => onRemove(row), disabled: busy }, '删除'),
     ),
   )
 }
 
 function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenChapter }) {
-  const res = useAsync(() => api('problem.list', { projectId }), [projectId, refreshKey], { skip: !projectId })
+  const res = useAsync(() => api('problem.list', { projectId }), [projectId, refreshKey], {
+    skip: !projectId,
+  })
   const [status, setStatus] = useState('open')
   const [type, setType] = useState('all')
   const [busy, setBusy] = useState(false)
@@ -400,7 +548,9 @@ function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenCha
 
   const setOne = async (row, next) => {
     if (demo) {
-      toast(`演示：第 ${row.chapter} 回那条已标记为「${next === 'fixed' ? '已修' : next === 'ignored' ? '已忽略' : '未修'}」（未写盘）`)
+      toast(
+        `演示：第 ${row.chapter} 回那条已标记为「${next === 'fixed' ? '已修' : next === 'ignored' ? '已忽略' : '未修'}」（未写盘）`,
+      )
       return
     }
     setBusy(true)
@@ -478,38 +628,46 @@ function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenCha
         h(
           'div',
           { className: 'nw-seg' },
-          STATUS_FILTERS.map((item) => h(
-            'button',
-            {
-              type: 'button',
-              key: item.value,
-              className: `nw-seg-btn${status === item.value ? ' on' : ''}`,
-              'aria-pressed': status === item.value ? 'true' : 'false',
-              onClick: () => setStatus(item.value),
-            },
-            item.label,
-            h('span', { className: 'nw-seg-n' }, String(
-              item.value === 'all' ? items.length : items.filter((row) => row.status === item.value).length,
-            )),
-          )),
+          STATUS_FILTERS.map((item) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                key: item.value,
+                className: `nw-seg-btn${status === item.value ? ' on' : ''}`,
+                'aria-pressed': status === item.value ? 'true' : 'false',
+                onClick: () => setStatus(item.value),
+              },
+              item.label,
+              h(
+                'span',
+                { className: 'nw-seg-n' },
+                String(
+                  item.value === 'all'
+                    ? items.length
+                    : items.filter((row) => row.status === item.value).length,
+                ),
+              ),
+            ),
+          ),
         ),
         h(Select, { value: type, onChange: setType, options: TYPE_FILTERS }),
         // 【24 条 #17】只看本章
         chaptersInItems.length > 1
           ? h(Select, {
-            value: String(onlyChapter),
-            onChange: (v) => {
-              const next = Number(v) || 0
-              setOnlyChapter(next)
-              toast(next ? `只看第 ${next} 回` : '看全部章')
-            },
-            options: [{ value: '0', label: `全部章（${items.length}）` }].concat(
-              chaptersInItems.map((n) => ({
-                value: String(n),
-                label: `只看第 ${n} 回（${items.filter((row) => row.chapter === n).length}）`,
-              })),
-            ),
-          })
+              value: String(onlyChapter),
+              onChange: (v) => {
+                const next = Number(v) || 0
+                setOnlyChapter(next)
+                toast(next ? `只看第 ${next} 回` : '看全部章')
+              },
+              options: [{ value: '0', label: `全部章（${items.length}）` }].concat(
+                chaptersInItems.map((n) => ({
+                  value: String(n),
+                  label: `只看第 ${n} 回（${items.filter((row) => row.chapter === n).length}）`,
+                })),
+              ),
+            })
           : null,
       ),
       h(
@@ -517,83 +675,150 @@ function ProblemBoard({ projectId, gate, toast, onRefresh, refreshKey, onOpenCha
         { className: 'nw-actions' },
         realItems.length === 0
           ? h(
-            'button',
-            {
-              type: 'button',
-              className: `nw-demo-sw${showDemo ? ' on' : ''}`,
-              'aria-pressed': showDemo ? 'true' : 'false',
-              onClick: () => {
-                setShowDemo(!showDemo)
-                toast(showDemo ? '已收起样例' : '现在看到的是样例：4 条假问题，改状态不会写盘')
+              'button',
+              {
+                type: 'button',
+                className: `nw-demo-sw${showDemo ? ' on' : ''}`,
+                'aria-pressed': showDemo ? 'true' : 'false',
+                onClick: () => {
+                  setShowDemo(!showDemo)
+                  toast(showDemo ? '已收起样例' : '现在看到的是样例：4 条假问题，改状态不会写盘')
+                },
               },
-            },
-            showDemo ? '样例开着 · 点它收起' : '看样例（4 条假问题）',
-          )
+              showDemo ? '样例开着 · 点它收起' : '看样例（4 条假问题）',
+            )
           : null,
         h('span', { className: 'nw-hint' }, `门槛 ${gate} 分`),
-        h(Btn, { small: true, kind: 'ghost', onClick: () => setDraft({
-          chapter: 1, para: 0, type: 'other', severity: 'minor', scope: 'chapter', text: '', quote: '', fix: '',
-        }) }, '＋ 记一条'),
+        h(
+          Btn,
+          {
+            small: true,
+            kind: 'ghost',
+            onClick: () =>
+              setDraft({
+                chapter: 1,
+                para: 0,
+                type: 'other',
+                severity: 'minor',
+                scope: 'chapter',
+                text: '',
+                quote: '',
+                fix: '',
+              }),
+          },
+          '＋ 记一条',
+        ),
       ),
     ),
     rows.length
-      ? h('div', { className: 'nw-prob-list' }, rows.map((row) => h(ProblemRow, {
-        key: row.id, row, busy, onStatus: setOne, onRemove: remove, onOpen: (r) => onOpenChapter?.(r.chapter),
-      })))
-      : h(Empty, null, status === 'open' ? '没有未修问题。验收时记下的毛病会攒在这里。' : '这个筛选下没有条目。'),
-    draft
-      ? h(Modal, {
-        title: '记一条问题',
-        onClose: () => setDraft(null),
-        footer: h(
-          Fragment,
+      ? h(
+          'div',
+          { className: 'nw-prob-list' },
+          rows.map((row) =>
+            h(ProblemRow, {
+              key: row.id,
+              row,
+              busy,
+              onStatus: setOne,
+              onRemove: remove,
+              onOpen: (r) => onOpenChapter?.(r.chapter),
+            }),
+          ),
+        )
+      : h(
+          Empty,
           null,
-          h(Btn, { kind: 'ghost', small: true, onClick: () => setDraft(null) }, '取消'),
-          h(Btn, { kind: 'primary', small: true, onClick: saveDraft, disabled: busy }, '记下'),
+          status === 'open' ? '没有未修问题。验收时记下的毛病会攒在这里。' : '这个筛选下没有条目。',
         ),
-      },
-      h(
-        'div',
-        { className: 'nw-order-grid' },
-        h(Field, { label: '第几回' }, h(Input, {
-          type: 'number', value: draft.chapter, onChange: (v) => setDraft({ ...draft, chapter: Number(v) || 0 }),
-        })),
-        h(Field, { label: '类型' }, h(Select, {
-          value: draft.type,
-          onChange: (v) => setDraft({ ...draft, type: v }),
-          options: TYPE_FILTERS.slice(1),
-        })),
-        h(Field, { label: '严重度' }, h(Select, {
-          value: draft.severity,
-          onChange: (v) => setDraft({ ...draft, severity: v }),
-          options: [
-            { value: 'critical', label: '致命' },
-            { value: 'major', label: '重要' },
-            { value: 'minor', label: '次要' },
-            { value: 'note', label: '提示' },
-          ],
-        })),
-        h(Field, { label: '范围' }, h(Select, {
-          value: draft.scope,
-          onChange: (v) => setDraft({ ...draft, scope: v }),
-          options: [
-            { value: 'chapter', label: '本章' },
-            { value: 'cross', label: '跨章' },
-            { value: 'global', label: '全局' },
-          ],
-        })),
-      ),
-      h(Field, { label: '问题说明' }, h(TextArea, {
-        value: draft.text, rows: 3, onChange: (v) => setDraft({ ...draft, text: v }),
-        placeholder: '例：连续三段都用「仿佛」，AI 味重',
-      })),
-      h(Field, { label: '原文片段（可选）' }, h(Input, {
-        value: draft.quote, onChange: (v) => setDraft({ ...draft, quote: v }),
-      })),
-      h(Field, { label: '怎么改（可选）' }, h(Input, {
-        value: draft.fix, onChange: (v) => setDraft({ ...draft, fix: v }),
-      }))
-      )
+    draft
+      ? h(
+          Modal,
+          {
+            title: '记一条问题',
+            onClose: () => setDraft(null),
+            footer: h(
+              Fragment,
+              null,
+              h(Btn, { kind: 'ghost', small: true, onClick: () => setDraft(null) }, '取消'),
+              h(Btn, { kind: 'primary', small: true, onClick: saveDraft, disabled: busy }, '记下'),
+            ),
+          },
+          h(
+            'div',
+            { className: 'nw-order-grid' },
+            h(
+              Field,
+              { label: '第几回' },
+              h(Input, {
+                type: 'number',
+                value: draft.chapter,
+                onChange: (v) => setDraft({ ...draft, chapter: Number(v) || 0 }),
+              }),
+            ),
+            h(
+              Field,
+              { label: '类型' },
+              h(Select, {
+                value: draft.type,
+                onChange: (v) => setDraft({ ...draft, type: v }),
+                options: TYPE_FILTERS.slice(1),
+              }),
+            ),
+            h(
+              Field,
+              { label: '严重度' },
+              h(Select, {
+                value: draft.severity,
+                onChange: (v) => setDraft({ ...draft, severity: v }),
+                options: [
+                  { value: 'critical', label: '致命' },
+                  { value: 'major', label: '重要' },
+                  { value: 'minor', label: '次要' },
+                  { value: 'note', label: '提示' },
+                ],
+              }),
+            ),
+            h(
+              Field,
+              { label: '范围' },
+              h(Select, {
+                value: draft.scope,
+                onChange: (v) => setDraft({ ...draft, scope: v }),
+                options: [
+                  { value: 'chapter', label: '本章' },
+                  { value: 'cross', label: '跨章' },
+                  { value: 'global', label: '全局' },
+                ],
+              }),
+            ),
+          ),
+          h(
+            Field,
+            { label: '问题说明' },
+            h(TextArea, {
+              value: draft.text,
+              rows: 3,
+              onChange: (v) => setDraft({ ...draft, text: v }),
+              placeholder: '例：连续三段都用「仿佛」，AI 味重',
+            }),
+          ),
+          h(
+            Field,
+            { label: '原文片段（可选）' },
+            h(Input, {
+              value: draft.quote,
+              onChange: (v) => setDraft({ ...draft, quote: v }),
+            }),
+          ),
+          h(
+            Field,
+            { label: '怎么改（可选）' },
+            h(Input, {
+              value: draft.fix,
+              onChange: (v) => setDraft({ ...draft, fix: v }),
+            }),
+          ),
+        )
       : null,
   )
 }

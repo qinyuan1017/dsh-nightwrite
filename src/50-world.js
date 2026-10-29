@@ -33,44 +33,52 @@ function LedgerEditor({ projectId, kind, row, onClose, onSaved, toast }) {
         Fragment,
         null,
         draft.id
-          ? h(Btn, {
-            kind: 'danger',
-            small: true,
-            onClick: async () => {
-              try {
-                await api('ledger.remove', { projectId, kind, id: draft.id })
-                onSaved?.()
-                onClose?.()
-                toast('已删除')
-              } catch (error) {
-                toast(error.message)
-              }
-            },
-          }, '删除')
+          ? h(
+              Btn,
+              {
+                kind: 'danger',
+                small: true,
+                onClick: async () => {
+                  try {
+                    await api('ledger.remove', { projectId, kind, id: draft.id })
+                    onSaved?.()
+                    onClose?.()
+                    toast('已删除')
+                  } catch (error) {
+                    toast(error.message)
+                  }
+                },
+              },
+              '删除',
+            )
           : null,
         h(Btn, { kind: 'ghost', small: true, onClick: onClose }, '取消'),
         h(Btn, { kind: 'primary', small: true, onClick: save }, '保存'),
       ),
     },
-    cols.map((col) => h(
+    cols.map((col) =>
+      h(
+        Field,
+        { label: col.label, key: col.key },
+        h(Input, {
+          value: draft[col.key] ?? '',
+          onChange: (v) => setDraft({ ...draft, [col.key]: v }),
+        }),
+      ),
+    ),
+    h(
       Field,
-      { label: col.label, key: col.key },
-      h(Input, {
-        value: draft[col.key] ?? '',
-        onChange: (v) => setDraft({ ...draft, [col.key]: v }),
+      { label: '备注' },
+      h(TextArea, {
+        value: draft.note ?? '',
+        rows: 2,
+        onChange: (v) => setDraft({ ...draft, note: v }),
       }),
-    )),
-    h(Field, { label: '备注' }, h(TextArea, {
-      value: draft.note ?? '',
-      rows: 2,
-      onChange: (v) => setDraft({ ...draft, note: v }),
-    })),
+    ),
   )
 }
 
-function LedgerTable({
-  kind, rows, onEdit, onDelete, onSource,
-}) {
+function LedgerTable({ kind, rows, onEdit, onDelete, onSource }) {
   const cols = LEDGER_COLUMNS[kind] ?? []
   const grid = `grid-template-columns:${cols.map((col) => col.width).join(' ')} 84px`
   return h(
@@ -83,29 +91,46 @@ function LedgerTable({
       h('span', null, '操作'),
     ),
     rows.length
-      ? rows.map((row) => h(
-        'div',
-        { className: 'nw-table-row', style: { gridTemplateColumns: grid }, key: row.id },
-        cols.map((col, index) => h(
-          // 【24 条 #18】账本每格可点开看出处。不信账本的人不敢用账本。
-          'button',
-          {
-            type: 'button',
-            key: col.key,
-            className: `nw-td-cell${index === 0 ? ' nw-td-strong' : ''}`,
-            title: '点开看这一格是从哪回哪句话来的',
-            onClick: () => onSource?.({ kind, key: col.key, label: col.label, value: row[col.key], row }),
-          },
-          h('span', { className: 'nw-td-value' }, String(row[col.key] ?? '—')),
-          h('span', { className: 'nw-td-pin' }, '⤴'),
-        )),
-        h(
-          'span',
-          { className: 'nw-td-acts' },
-          h('button', { type: 'button', className: 'nw-link', onClick: () => onEdit(row) }, '改'),
-          h('button', { type: 'button', className: 'nw-link nw-link-danger', onClick: () => onDelete(row) }, '删'),
-        ),
-      ))
+      ? rows.map((row) =>
+          h(
+            'div',
+            { className: 'nw-table-row', style: { gridTemplateColumns: grid }, key: row.id },
+            cols.map((col, index) =>
+              h(
+                // 【24 条 #18】账本每格可点开看出处。不信账本的人不敢用账本。
+                'button',
+                {
+                  type: 'button',
+                  key: col.key,
+                  className: `nw-td-cell${index === 0 ? ' nw-td-strong' : ''}`,
+                  title: '点开看这一格是从哪回哪句话来的',
+                  onClick: () =>
+                    onSource?.({ kind, key: col.key, label: col.label, value: row[col.key], row }),
+                },
+                h('span', { className: 'nw-td-value' }, String(row[col.key] ?? '—')),
+                h('span', { className: 'nw-td-pin' }, '⤴'),
+              ),
+            ),
+            h(
+              'span',
+              { className: 'nw-td-acts' },
+              h(
+                'button',
+                { type: 'button', className: 'nw-link', onClick: () => onEdit(row) },
+                '改',
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'nw-link nw-link-danger',
+                  onClick: () => onDelete(row),
+                },
+                '删',
+              ),
+            ),
+          ),
+        )
       : h(Empty, null, '这一类还没有条目。'),
   )
 }
@@ -120,7 +145,9 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
   const filtered = onlyRecent
     ? all.filter((row) => Number(row.lastChapter) >= Math.max(1, lastChapter - 1))
     : all
-  const chars = (focusName ? filtered.filter((row) => String(row.name).includes(focusName)) : filtered).slice(0, 8)
+  const chars = (
+    focusName ? filtered.filter((row) => String(row.name).includes(focusName)) : filtered
+  ).slice(0, 8)
   const W = 640
   const H = 380
   if (!all.length) return h(Empty, null, '还没有人物。先记几个人，再看关系图。')
@@ -157,10 +184,14 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
         {
           type: 'button',
           className: `nw-seg-btn${onlyRecent ? ' on' : ''}`,
-              'aria-pressed': onlyRecent ? 'true' : 'false',
+          'aria-pressed': onlyRecent ? 'true' : 'false',
           onClick: () => {
             setOnlyRecent(!onlyRecent)
-            toast?.(!onlyRecent ? `只看近两章出场（第 ${Math.max(1, lastChapter - 1)}–${lastChapter} 回）` : '显示全部人物')
+            toast?.(
+              !onlyRecent
+                ? `只看近两章出场（第 ${Math.max(1, lastChapter - 1)}–${lastChapter} 回）`
+                : '显示全部人物',
+            )
           },
         },
         '只看最近出场',
@@ -180,106 +211,148 @@ function RelationGraph({ ledger, chapters, onPick, toast }) {
     chars.length === 0
       ? h(Empty, null, '这个筛选下没有人出场。放宽一点再看。')
       : h(
-        'svg',
-        { viewBox: `0 0 ${W} ${H}`, className: 'nw-graph-svg' },
-        nodes.slice(1).map((node, index) => h('line', {
-          key: `line-${index}`,
-          x1: nodes[0].x,
-          y1: nodes[0].y,
-          x2: node.x,
-          y2: node.y,
-          stroke: toneOf(node.row.role ?? node.row.state),
-          strokeWidth: 1.6,
-          strokeOpacity: 0.55,
-        })),
-        nodes.map((node, index) => h(
-          'g',
-          { key: node.row.id ?? index, onClick: () => onPick?.(node.row), style: { cursor: 'pointer' } },
-          h('circle', {
-            cx: node.x,
-            // 这里以前写的是 nw: node.y，SVG 不认这个属性 —— 圆全画在 y=0，
-            // 一屏关系图会变成顶部叠在一起的一堆点。cy 才是纵坐标。
-            cy: node.y,
-            r: node.r,
-            fill: index === 0 ? 'rgba(217,160,84,.18)' : 'rgba(127,135,146,.14)',
-            stroke: index === 0 ? '#d9a054' : toneOf(node.row.role ?? node.row.state),
-            strokeWidth: 1.6,
-          }),
-          h('text', {
-            x: node.x,
-            y: node.y + 4,
-            textAnchor: 'middle',
-            className: 'nw-graph-text',
-          }, String(node.row.name ?? '').slice(0, 5)),
-          h('text', {
-            x: node.x,
-            y: node.y + node.r + 14,
-            textAnchor: 'middle',
-            className: 'nw-graph-sub',
-          }, String(node.row.role ?? '').slice(0, 8)),
-        )),
-      ),
-    h('p', { className: 'nw-hint' }, '中心是主角，连线颜色按「定位」自动上色（敌红 / 盟绿 / 亲琥珀）。点节点可改。'),
+          'svg',
+          { viewBox: `0 0 ${W} ${H}`, className: 'nw-graph-svg' },
+          nodes.slice(1).map((node, index) =>
+            h('line', {
+              key: `line-${index}`,
+              x1: nodes[0].x,
+              y1: nodes[0].y,
+              x2: node.x,
+              y2: node.y,
+              stroke: toneOf(node.row.role ?? node.row.state),
+              strokeWidth: 1.6,
+              strokeOpacity: 0.55,
+            }),
+          ),
+          nodes.map((node, index) =>
+            h(
+              'g',
+              {
+                key: node.row.id ?? index,
+                onClick: () => onPick?.(node.row),
+                style: { cursor: 'pointer' },
+              },
+              h('circle', {
+                cx: node.x,
+                // 这里以前写的是 nw: node.y，SVG 不认这个属性 —— 圆全画在 y=0，
+                // 一屏关系图会变成顶部叠在一起的一堆点。cy 才是纵坐标。
+                cy: node.y,
+                r: node.r,
+                fill: index === 0 ? 'rgba(217,160,84,.18)' : 'rgba(127,135,146,.14)',
+                stroke: index === 0 ? '#d9a054' : toneOf(node.row.role ?? node.row.state),
+                strokeWidth: 1.6,
+              }),
+              h(
+                'text',
+                {
+                  x: node.x,
+                  y: node.y + 4,
+                  textAnchor: 'middle',
+                  className: 'nw-graph-text',
+                },
+                String(node.row.name ?? '').slice(0, 5),
+              ),
+              h(
+                'text',
+                {
+                  x: node.x,
+                  y: node.y + node.r + 14,
+                  textAnchor: 'middle',
+                  className: 'nw-graph-sub',
+                },
+                String(node.row.role ?? '').slice(0, 8),
+              ),
+            ),
+          ),
+        ),
+    h(
+      'p',
+      { className: 'nw-hint' },
+      '中心是主角，连线颜色按「定位」自动上色（敌红 / 盟绿 / 亲琥珀）。点节点可改。',
+    ),
   )
 }
 
 function TimelineView({ ledger, chapters, toast, onJump }) {
-  const events = (ledger.events ?? []).slice().sort((a, b) => Number(a.chapter ?? 0) - Number(b.chapter ?? 0))
+  const events = (ledger.events ?? [])
+    .slice()
+    .sort((a, b) => Number(a.chapter ?? 0) - Number(b.chapter ?? 0))
   // 【24 条 #20】逾期伏笔标红：该回收没回收的，是长篇最常见的塌方点。
   const current = chapters.length || 1
   const foreshadows = ledger.foreshadow ?? []
   const overdue = foreshadows
     .map((row) => ({ ...row, plan: Number(row.plannedChapter) || 0 }))
-    .filter((row) => row.plan > 0 && row.plan < current && !/已收|回收/.test(String(row.state ?? row.status ?? '')))
-  if (!events.length && !overdue.length) return h(Empty, null, '还没有事件。先把已写章节里的大事记进「事件」表。')
+    .filter(
+      (row) =>
+        row.plan > 0 &&
+        row.plan < current &&
+        !/已收|回收/.test(String(row.state ?? row.status ?? '')),
+    )
+  if (!events.length && !overdue.length)
+    return h(Empty, null, '还没有事件。先把已写章节里的大事记进「事件」表。')
   const max = Math.max(...events.map((row) => Number(row.chapter) || 1), current)
   return h(
     'div',
     { className: 'nw-timeline' },
     overdue.length
       ? h(
-        'div',
-        { className: 'nw-tl-overdue' },
-        h('span', { className: 'nw-tl-overdue-title' }, `⚠ ${overdue.length} 条伏笔逾期`),
-        overdue.map((row) => h(
-          'button',
-          {
-            type: 'button',
-            key: row.id ?? row.name,
-            className: 'nw-tl-overdue-row',
-            onClick: () => {
-              toast?.(`「${row.name}」本该在第 ${row.plan} 回收，现在写到第 ${current} 回还没收`)
-              onJump?.(row.plan)
-            },
-          },
-          h('span', { className: 'nw-tl-overdue-name' }, row.name ?? '(未命名伏笔)'),
-          h('span', { className: 'nw-tl-overdue-sub' }, `计划第 ${row.plan} 回 · 已逾期 ${current - row.plan} 回`),
-        )),
-      )
+          'div',
+          { className: 'nw-tl-overdue' },
+          h('span', { className: 'nw-tl-overdue-title' }, `⚠ ${overdue.length} 条伏笔逾期`),
+          overdue.map((row) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                key: row.id ?? row.name,
+                className: 'nw-tl-overdue-row',
+                onClick: () => {
+                  toast?.(
+                    `「${row.name}」本该在第 ${row.plan} 回收，现在写到第 ${current} 回还没收`,
+                  )
+                  onJump?.(row.plan)
+                },
+              },
+              h('span', { className: 'nw-tl-overdue-name' }, row.name ?? '(未命名伏笔)'),
+              h(
+                'span',
+                { className: 'nw-tl-overdue-sub' },
+                `计划第 ${row.plan} 回 · 已逾期 ${current - row.plan} 回`,
+              ),
+            ),
+          ),
+        )
       : h('div', { className: 'nw-tl-ok' }, '✓ 没有逾期伏笔'),
     h('div', { className: 'nw-tl-rail' }),
-    events.map((row, index) => h(
-      'div',
-      { className: 'nw-tl-row', key: row.id ?? index },
-      h('span', { className: 'nw-tl-dot' }),
-      h('span', { className: 'nw-tl-n' }, `第 ${row.chapter ?? '?'} 回`),
+    events.map((row, index) =>
       h(
-        'span',
-        { className: 'nw-tl-body' },
-        h('span', { className: 'nw-tl-title' }, row.name ?? '(未命名事件)'),
-        h('span', { className: 'nw-tl-sub' }, [row.actors, row.kind].filter(Boolean).join(' · ')),
+        'div',
+        { className: 'nw-tl-row', key: row.id ?? index },
+        h('span', { className: 'nw-tl-dot' }),
+        h('span', { className: 'nw-tl-n' }, `第 ${row.chapter ?? '?'} 回`),
+        h(
+          'span',
+          { className: 'nw-tl-body' },
+          h('span', { className: 'nw-tl-title' }, row.name ?? '(未命名事件)'),
+          h('span', { className: 'nw-tl-sub' }, [row.actors, row.kind].filter(Boolean).join(' · ')),
+        ),
+        h(
+          'span',
+          { className: 'nw-tl-bar' },
+          h('i', {
+            style: { width: `${Math.min(100, ((Number(row.chapter) || 1) / max) * 100)}%` },
+          }),
+        ),
       ),
-      h('span', { className: 'nw-tl-bar' }, h('i', {
-        style: { width: `${Math.min(100, ((Number(row.chapter) || 1) / max) * 100)}%` },
-      })),
-    )),
+    ),
   )
 }
 
-function WorldPage({
-  projectId, project, chapters, toast, onRefresh, focus, onJumpChapter,
-}) {
-  const led = useAsync(() => api('ledger.get', { projectId }), [projectId, focus?.id ?? ''], { skip: !projectId })
+function WorldPage({ projectId, project, chapters, toast, onRefresh, focus, onJumpChapter }) {
+  const led = useAsync(() => api('ledger.get', { projectId }), [projectId, focus?.id ?? ''], {
+    skip: !projectId,
+  })
   const [kind, setKind] = useState(readLS(LS.worldKind, 'characters'))
   const [view, setView] = useState(readLS(LS.worldView, 'table'))
   const [edit, setEdit] = useState(null)
@@ -316,7 +389,10 @@ function WorldPage({
   if (led.error) return h(ErrorBox, { error: led.error, onRetry: led.reload })
 
   const ws = project?.worldState
-  const totalItems = Object.values(ledger).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0)
+  const totalItems = Object.values(ledger).reduce(
+    (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+    0,
+  )
 
   return h(
     'div',
@@ -340,18 +416,20 @@ function WorldPage({
       h(
         'div',
         { className: 'nw-world-nav' },
-        LEDGER_TABS.map((tab) => h(
-          'button',
-          {
-            type: 'button',
-            key: tab.value,
-            className: `nw-world-nav-btn${kind === tab.value ? ' on' : ''}`,
-            onClick: () => setKind(tab.value),
-          },
-          h('span', { className: 'nw-world-nav-icon' }, tab.icon),
-          h('span', null, tab.label),
-          h('span', { className: 'nw-world-nav-n' }, String((ledger[tab.value] ?? []).length)),
-        )),
+        LEDGER_TABS.map((tab) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              key: tab.value,
+              className: `nw-world-nav-btn${kind === tab.value ? ' on' : ''}`,
+              onClick: () => setKind(tab.value),
+            },
+            h('span', { className: 'nw-world-nav-icon' }, tab.icon),
+            h('span', null, tab.label),
+            h('span', { className: 'nw-world-nav-n' }, String((ledger[tab.value] ?? []).length)),
+          ),
+        ),
         h('div', { className: 'nw-world-nav-foot' }, `共 ${totalItems} 条`),
       ),
       h(
@@ -370,17 +448,19 @@ function WorldPage({
               // 地图不是第四种「看法」，它是「地点」这一类独有的空间视图：
               // 别的类目（人物、伏笔）没有坐标可言，硬塞进去只会多一个空页签。
               { value: 'map', label: '地图' },
-            ].map((item) => h(
-              'button',
-              {
-                type: 'button',
-                key: item.value,
-                className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
-              'aria-pressed': view === item.value ? 'true' : 'false',
-                onClick: () => setView(item.value),
-              },
-              item.label,
-            )),
+            ].map((item) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  key: item.value,
+                  className: `nw-seg-btn${view === item.value ? ' on' : ''}`,
+                  'aria-pressed': view === item.value ? 'true' : 'false',
+                  onClick: () => setView(item.value),
+                },
+                item.label,
+              ),
+            ),
           ),
           h(
             'div',
@@ -391,49 +471,53 @@ function WorldPage({
         ),
         view === 'table'
           ? h(LedgerTable, {
-            kind,
-            rows,
-            onEdit: setEdit,
-            onDelete: del,
-            // 【24 条 #18】格 → 出处。账本行里有 sourceChapter / sourceQuote 就用真的，
-            // 没有就直说「这一类还没有记出处」——不再拿演示出处冒充。
-            onSource: (cell) => {
-              const chapter = Number(cell.row?.sourceChapter ?? 0)
-              const quote = String(cell.row?.sourceQuote ?? '').trim()
-              setSource({
-                chapter,
-                quote: quote || `「${cell.value ?? '（空）'}」（这一类还没有记出处）`,
-                title: `${LEDGER_TABS.find((t) => t.value === cell.kind)?.label ?? cell.kind} · ${cell.label}`,
-                demo: !quote,
-              })
-            },
-          })
+              kind,
+              rows,
+              onEdit: setEdit,
+              onDelete: del,
+              // 【24 条 #18】格 → 出处。账本行里有 sourceChapter / sourceQuote 就用真的，
+              // 没有就直说「这一类还没有记出处」——不再拿演示出处冒充。
+              onSource: (cell) => {
+                const chapter = Number(cell.row?.sourceChapter ?? 0)
+                const quote = String(cell.row?.sourceQuote ?? '').trim()
+                setSource({
+                  chapter,
+                  quote: quote || `「${cell.value ?? '（空）'}」（这一类还没有记出处）`,
+                  title: `${LEDGER_TABS.find((t) => t.value === cell.kind)?.label ?? cell.kind} · ${cell.label}`,
+                  demo: !quote,
+                })
+              },
+            })
           : view === 'graph'
             ? h(RelationGraph, {
-              ledger, chapters, onPick: setEdit, toast,
-            })
+                ledger,
+                chapters,
+                onPick: setEdit,
+                toast,
+              })
             : view === 'map'
               ? h(MapView, { projectId, toast })
               : h(TimelineView, {
-                ledger, chapters, toast, onJump: onJumpChapter,
-              }),
+                  ledger,
+                  chapters,
+                  toast,
+                  onJump: onJumpChapter,
+                }),
       ),
     ),
-    source
-      ? h(SourcePop, { source, onClose: () => setSource(null) })
-      : null,
+    source ? h(SourcePop, { source, onClose: () => setSource(null) }) : null,
     edit
       ? h(LedgerEditor, {
-        projectId,
-        kind,
-        row: edit,
-        onClose: () => setEdit(null),
-        onSaved: () => {
-          led.reload()
-          onRefresh?.()
-        },
-        toast,
-      })
+          projectId,
+          kind,
+          row: edit,
+          onClose: () => setEdit(null),
+          onSaved: () => {
+            led.reload()
+            onRefresh?.()
+          },
+          toast,
+        })
       : null,
   )
 }

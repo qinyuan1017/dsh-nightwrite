@@ -33,7 +33,7 @@ dsh plugin --profile desktop add file:C:/path/to/dsh-nightwrite
 | 📋 验收台 | `review` | 三档：逐章拍板（内含提案/问题单视图切换）/ 读者视角 / 历史版本 |
 | 🗂 世界库 | `world` | 8 栏账本：人物/地点/伏笔/事件/术语/规则/高光/冲突 |
 | 🔍 侦察 | `scout` | 拆文 / 扫榜 / 资料研究 / 封面 |
-| ⚙️ 设置 | `settings` | 系统 | 作品参数、写作原则、质量门、预算、数据位置 |
+| ⚙️ 设置 | `settings` | 作品参数、写作原则（按场景分条）、质量门、预算、数据位置 |
 
 两次合并都是因为「同一件事被拆成两个菜单」：
 
@@ -55,9 +55,11 @@ dsh plugin --profile desktop add file:C:/path/to/dsh-nightwrite
 顶栏把活量摊在一行里：品牌 + 当前页 · 状态灯 · 作品切换 · 待验收/队列/本月花销 · 快动作（续写一章 / 连更 3 章 / 体检）+ `＋ 新书`。
 底栏只管导航和两个常驻键（最新 / 新章）。预算超了在顶栏那个计量条上直接写明超了多少。
 
-顶栏下方那条黄色的「写作原则」是这本书的铁律：写进 `project.settings.writePrinciple`，
-派单时自动插到每张工作单的第一行（`src/30-studio.js` 的 `dispatch()`），设置页可改。
-这一条是 LNW 没有的：它把原则写死在源码里只能看，长夜让它每一轮都真的传到模型面前。
+顶栏下方那条黄色的「写作原则」是这本书的铁律，而且按场景分条：
+通用那句存在 `project.settings.writePrinciple`，各场景的存在 `project.settings.principles = [{name, text}]`（最多 12 条）。
+派单时看模板名和意图里出现哪个场景名，就只带那几条；一个都没提到才退回通用那句
+（`src/10-core.js` 的 `pickPrinciple()` → `src/30-studio.js` 的 `dispatch()`），设置页可改。
+这一条是 LNW 没有的：它把一句原则写死在源码里只能看；长夜让它分场景、可改、每一轮都真的传到模型面前。
 
 一本作品都没有时，上面八页一页都不显示 —— 整屏摊开的是三步建书向导（`src/12-create.js`）：
 第一步只问两件必须现在答的事（叫什么、想看什么）；第二步选一个体量（短篇/中篇/长篇/让 AI 定），
@@ -93,8 +95,8 @@ src/74-book.js    成书导出（TXT/MD/EPUB/DOCX）+ 检查更新
 src/85-css.js     全部样式（NIGHTWRITE_CSS）
 src/90-shell.js   顶栏 / 底栏胶囊导航 / 写作原则条 / Root / apply
 build.mjs         拼接 src/*.js → lib/client.js，并补 factory 的 return
-test/smoke.mjs    迷你 React 渲染器冒烟（438 项）
-test/backend.mjs  真实后端端到端（721 项）
+test/smoke.mjs    迷你 React 渲染器冒烟（460 项）
+test/backend.mjs  真实后端端到端（732 项）
 test/check24.mjs  24 条界面增补的落点核对（38 处标记，覆盖 24/24）
 test/wordcount-parity.mjs 客户端 countChars 与服务端 countWords 逐例比对（11 项）
 test/skills-check.mjs 25 份 SKILL.md 的结构校验（377 项）
@@ -112,8 +114,8 @@ nightwrite-skills-all.md  25 份 SKILL.md 的合并本（便于整份复制/通�
 ```bash
 node build.mjs                                      # 重建 lib/client.js
 node --check index.js lib/store.js src/*.js         # 语法
-node test/backend.mjs                               # 721 项
-node test/smoke.mjs                                 # 438 项
+node test/backend.mjs                               # 732 项
+node test/smoke.mjs                                 # 460 项
 node test/check24.mjs                               # 24 条落点
 node test/wordcount-parity.mjs                      # 字数口径一致
 node test/hooks.mjs                                 # hook 顺序（防白屏）

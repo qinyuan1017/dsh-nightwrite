@@ -33,7 +33,8 @@ function check(name, ok, detail = '') {
 }
 
 // 本项目所有自定义 hook 的名字都要在这里登记，否则漏检。
-const HOOK_RE = /(^|[^.\w$])(useState|useEffect|useMemo|useRef|useCallback|useContext|useReducer|useLayoutEffect|useTransitions?|useDeferredValue|useId|useSyncExternalStore|useAsync|useUndoText|useToast|useKeyed|useInterval)\s*\(/
+const HOOK_RE =
+  /(^|[^.\w$])(useState|useEffect|useMemo|useRef|useCallback|useContext|useReducer|useLayoutEffect|useTransitions?|useDeferredValue|useId|useSyncExternalStore|useAsync|useUndoText|useToast|useKeyed|useInterval)\s*\(/
 
 // 去掉引号内的内容和行内注释，只留下能影响括号深度的骨架。
 // 只处理单行字符串 / 模板片 / 注释；本项目没有跨行字符串参与 hook 判定的情形。
@@ -48,7 +49,9 @@ function stripNoise(line) {
 // 组件/自定义 hook 的开头：顶层 function 大写 或 function use 大写
 const HEAD_RE = /^function\s+([A-Z]\w*|use[A-Z]\w*)\s*\(/
 
-const files = readdirSync(srcDir).filter((f) => f.endsWith('.js')).sort()
+const files = readdirSync(srcDir)
+  .filter((f) => f.endsWith('.js'))
+  .sort()
 
 let scanned = 0
 let componentCount = 0
@@ -117,8 +120,8 @@ for (const file of files) {
     const earlyReturn = returns.find((i) => i < firstHook)
     if (earlyReturn !== undefined) {
       bad.push(
-        `${file}:${head.at + 1} ${head.name} — 第 ${earlyReturn + 1} 行就 return 了，`
-        + `第一个 hook 在第 ${firstHook + 1} 行；这个组件第一次渲染会少调 hook`,
+        `${file}:${head.at + 1} ${head.name} — 第 ${earlyReturn + 1} 行就 return 了，` +
+          `第一个 hook 在第 ${firstHook + 1} 行；这个组件第一次渲染会少调 hook`,
       )
       fail += 1
       return
@@ -131,8 +134,8 @@ for (const file of files) {
       if (returns.some((r) => r < i)) sawReturn = true
       if (sawReturn) {
         bad.push(
-          `${file}:${head.at + 1} ${head.name} — 第 ${i + 1} 行仍调 hook，`
-          + `但它上面已经有顶层 return（第 ${returns.filter((r) => r < i).pop() + 1} 行）`,
+          `${file}:${head.at + 1} ${head.name} — 第 ${i + 1} 行仍调 hook，` +
+            `但它上面已经有顶层 return（第 ${returns.filter((r) => r < i).pop() + 1} 行）`,
         )
         fail += 1
         return
@@ -142,7 +145,11 @@ for (const file of files) {
   })
 }
 
-check('扫到了组件（自我检查：防止路径写错导致 0 个组件也算全绿）', componentCount >= 40, `实扫 ${componentCount} 个`)
+check(
+  '扫到了组件（自我检查：防止路径写错导致 0 个组件也算全绿）',
+  componentCount >= 40,
+  `实扫 ${componentCount} 个`,
+)
 
 // ── eslint 兜底 ──
 // 手写扫描器总有边界漏（这个文件自己就漏过两版）。
@@ -184,7 +191,7 @@ if (bad.length) {
   bad.forEach((line) => console.log(`  - ${line}`))
   console.log('')
 }
-console.log(`${pass} 过 / ${fail} 不过 · 共 ${pass + fail} 项`);
+console.log(`${pass} 过 / ${fail} 不过 · 共 ${pass + fail} 项`)
 console.log(`hook 顺序检查 · ${eslintNote}`)
 if (fail) {
   console.log('\n修法：把这些 hook 全部挪到任何一个 `return` 之前。')
