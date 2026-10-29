@@ -1,6 +1,6 @@
 {
   "name": "dsh-nightwrite",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "长夜 · AI 主写的小说工作台：今天 / 正文 / 大纲 / 派单 / 验收台（含提案·问题单）/ 世界库 / 侦察 / 设置",
   "type": "module",
   "main": "index.js",
@@ -29,7 +29,8 @@
     "build.mjs",
     "cordis.patch.yml",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=22.19.0"

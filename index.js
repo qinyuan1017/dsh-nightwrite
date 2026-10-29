@@ -44,7 +44,7 @@ const REPO_ROOT = path.dirname(fileURLToPath(import.meta.url))
 
 export const name = 'nightwrite'
 export const inject = ['tools', 'subagents']
-export const VERSION = '0.1.0'
+export const VERSION = '0.2.0'
 export const ROUTE = '/nightwrite/api'
 export const TOOL_NAME = 'nightwrite_op'
 

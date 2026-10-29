@@ -693,7 +693,7 @@ const RUN_CLOSED = {
 function mockValue(op, payload) {
   switch (op) {
     case 'ping':
-      return { name: 'nightwrite', version: '0.1.0', ops: 70 }
+      return { name: 'nightwrite', version: '0.2.0', ops: 70 }
 
     // ── 停靠点（run.*）：状态灯和停靠点页都读这几个 ──
     // 当前这一轮是 open、停在第 3 回、上限 3 章已交 1 章 —— 正好让状态灯显示
